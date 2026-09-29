@@ -27,6 +27,14 @@ class Settings(BaseSettings):
     reranker_api_key: SecretStr = SecretStr("")
     model_timeout_seconds: float = Field(default=15, gt=0, le=120)
     worker_interval_seconds: float = Field(default=15, ge=1, le=60)
+    upload_max_bytes: int = Field(default=100 * 1024 * 1024, ge=1024, le=1024 * 1024 * 1024)
+    docx_expanded_max_bytes: int = Field(default=250 * 1024 * 1024, ge=1024)
+    extraction_max_pages: int = Field(default=1000, ge=1)
+    normalized_max_bytes: int = Field(default=20 * 1024 * 1024, ge=1024)
+    job_lease_seconds: int = Field(default=30, ge=10, le=300)
+    worker_poll_seconds: float = Field(default=2, ge=0.5, le=60)
+    conversion_timeout_seconds: int = Field(default=180, ge=10, le=1800)
+    retired_retention_days: int = Field(default=90, ge=0)
 
     @model_validator(mode="after")
     def validate_deployment(self):

@@ -8,7 +8,8 @@ La arquitectura, alcance y secuencia de entrega están en [PLAN_PROYECTO.md](PLA
 
 - H0: especificación y fixtures implementados; pendiente de aprobación de las decisiones de producto registradas.
 - H1: implementado y validado en Docker Compose; ver [instalacion y comprobaciones](docs/h1/README.md) y [resultados del ensayo](docs/h1/validation.md).
-- H2-H7: no iniciados.
+- H2: pipeline documental y administracion operativos; pendiente revisar fidelidad estructural de los PDF seleccionados. Ver [alcance y pruebas](docs/h2/README.md) y [diferencias de extraccion](docs/h2/validation.md).
+- H3-H7: no iniciados.
 
 ## Validación de H0
 

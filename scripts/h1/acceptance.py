@@ -59,7 +59,7 @@ def main():
     account = json.loads(args.credentials.read_text(encoding="utf-8"))
     origin = args.web_url.rstrip("/")
     report = {"schema": snapshot(), "restarted": args.restart}
-    if report["schema"]["revision"] != "0001_h1" or not report["schema"]["pgvector"]:
+    if report["schema"]["revision"] not in {"0001_h1", "0002_h2", "0003_h2_events"} or not report["schema"]["pgvector"]:
         raise RuntimeError("Esquema o pgvector no disponible")
     compose("exec", "-T", "api", "alembic", "upgrade", "head")
     assert snapshot() == report["schema"], "Reaplicar migraciones modifico registros"

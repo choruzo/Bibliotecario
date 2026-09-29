@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, CheckConstraint, DateTime, ForeignKey, Integer, String, Text, func
+from sqlalchemy import Boolean, CheckConstraint, DateTime, ForeignKey, Integer, String, Text, JSON, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .db import Base
@@ -51,3 +51,93 @@ class WorkerStatus(Base):
     heartbeat_at: Mapped[int] = mapped_column(Integer)
     state: Mapped[str] = mapped_column(String(16))
     __table_args__ = (CheckConstraint("state IN ('idle', 'stopped')", name="worker_state"),)
+
+
+class Document(Base):
+    __tablename__ = "documents"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    title: Mapped[str] = mapped_column(String(300))
+    active_version_id: Mapped[str | None] = mapped_column(ForeignKey("document_versions.id", use_alter=True, name="fk_document_active_version"))
+    deletion_requested: Mapped[bool] = mapped_column(Boolean, default=False)
+    deleted_at: Mapped[int | None] = mapped_column(Integer)
+    created_at: Mapped[int] = mapped_column(Integer)
+
+
+class DocumentVersion(Base):
+    __tablename__ = "document_versions"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    document_id: Mapped[str] = mapped_column(ForeignKey("documents.id"), index=True)
+    number: Mapped[int] = mapped_column(Integer)
+    status: Mapped[str] = mapped_column(String(32), default="subido")
+    original_sha256: Mapped[str] = mapped_column(String(64))
+    metadata_json: Mapped[dict] = mapped_column(JSON, default=dict)
+    current_revision_id: Mapped[str | None] = mapped_column(ForeignKey("normalized_revisions.id", use_alter=True, name="fk_version_current_revision"))
+    reviewed_at: Mapped[int | None] = mapped_column(Integer)
+    published_at: Mapped[int | None] = mapped_column(Integer)
+    retired_at: Mapped[int | None] = mapped_column(Integer)
+    created_at: Mapped[int] = mapped_column(Integer)
+    __table_args__ = (UniqueConstraint("document_id", "number"),
+                     CheckConstraint("status IN ('subido','procesando','requiere_revision','indexando','publicado','retirado','eliminando','eliminado','error')", name="version_state"))
+
+
+class DocumentFile(Base):
+    __tablename__ = "document_files"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    version_id: Mapped[str] = mapped_column(ForeignKey("document_versions.id"), unique=True)
+    storage_key: Mapped[str] = mapped_column(String(200), unique=True)
+    original_name: Mapped[str] = mapped_column(String(200))
+    format: Mapped[str] = mapped_column(String(8))
+    size_bytes: Mapped[int] = mapped_column(Integer)
+    sha256: Mapped[str] = mapped_column(String(64))
+
+
+class NormalizedRevision(Base):
+    __tablename__ = "normalized_revisions"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    version_id: Mapped[str] = mapped_column(ForeignKey("document_versions.id"), index=True)
+    number: Mapped[int] = mapped_column(Integer)
+    metadata_json: Mapped[dict] = mapped_column(JSON, default=dict)
+    storage_key: Mapped[str] = mapped_column(String(200), unique=True)
+    sha256: Mapped[str] = mapped_column(String(64))
+    provenance: Mapped[list] = mapped_column(JSON, default=list)
+    diagnostics: Mapped[list] = mapped_column(JSON, default=list)
+    created_at: Mapped[int] = mapped_column(Integer)
+    actor_id: Mapped[str | None] = mapped_column(ForeignKey("users.id"))
+    __table_args__ = (UniqueConstraint("version_id", "number"),)
+
+
+class IngestionJob(Base):
+    __tablename__ = "ingestion_jobs"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    document_id: Mapped[str] = mapped_column(ForeignKey("documents.id"), index=True)
+    version_id: Mapped[str | None] = mapped_column(ForeignKey("document_versions.id"), index=True)
+    kind: Mapped[str] = mapped_column(String(16), default="convert")
+    status: Mapped[str] = mapped_column(String(24), default="pendiente", index=True)
+    actor_id: Mapped[str] = mapped_column(ForeignKey("users.id"))
+    correlation_id: Mapped[str] = mapped_column(String(36))
+    idempotency_key: Mapped[str] = mapped_column(String(64))
+    payload: Mapped[dict] = mapped_column(JSON, default=dict)
+    progress: Mapped[int] = mapped_column(Integer, default=0)
+    attempts: Mapped[int] = mapped_column(Integer, default=0)
+    generation: Mapped[int] = mapped_column(Integer, default=0)
+    lease_owner: Mapped[str | None] = mapped_column(String(36))
+    lease_until: Mapped[int | None] = mapped_column(Integer)
+    available_at: Mapped[int] = mapped_column(Integer)
+    error_code: Mapped[str | None] = mapped_column(String(64))
+    created_at: Mapped[int] = mapped_column(Integer)
+    updated_at: Mapped[int] = mapped_column(Integer)
+    __table_args__ = (UniqueConstraint("actor_id", "idempotency_key"),
+        CheckConstraint("status IN ('pendiente','en_ejecucion','completado','reintentable','fallido','cancelando','cancelado')", name="job_state"),
+        CheckConstraint("kind IN ('convert','delete')", name="job_kind"))
+
+
+class JobEvent(Base):
+    __tablename__ = "job_events"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    job_id: Mapped[str] = mapped_column(ForeignKey("ingestion_jobs.id"), index=True)
+    number: Mapped[int] = mapped_column(Integer)
+    event: Mapped[str] = mapped_column(String(64))
+    attempt: Mapped[int] = mapped_column(Integer)
+    generation: Mapped[int] = mapped_column(Integer)
+    created_at: Mapped[int] = mapped_column(Integer)
+    __table_args__ = (UniqueConstraint("job_id", "number"),)

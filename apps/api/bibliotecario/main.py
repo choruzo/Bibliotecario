@@ -18,6 +18,8 @@ from .db import build_database
 from .logging import configure_logging
 from .models import AuditEvent, Session
 from .providers import ModelClients
+from .documents import router as documents_router
+from .body_limit import UploadBodyLimit
 
 logger = logging.getLogger("bibliotecario")
 
@@ -34,7 +36,7 @@ def database_check(engine):
             if engine.dialect.name == "postgresql":
                 version = connection.scalar(text("SELECT extversion FROM pg_extension WHERE extname='vector'"))
                 revision = connection.scalar(text("SELECT version_num FROM alembic_version"))
-                if not version or revision != "0001_h1":
+                if not version or revision != "0003_h2_events":
                     return {"status": "unavailable", "error": "schema_or_pgvector_missing"}
         return {"status": "available"}
     except Exception:
@@ -61,6 +63,8 @@ def create_app(settings: Settings | None = None, engine=None, sessions=None, cli
 
     app = FastAPI(title="Bibliotecario", version="0.1.0", lifespan=lifespan)
     app.state.settings, app.state.engine, app.state.sessions = settings, engine, sessions
+    app.include_router(documents_router)
+    app.add_middleware(UploadBodyLimit, max_bytes=settings.upload_max_bytes + 1024 * 1024)
 
     @app.exception_handler(RequestValidationError)
     async def validation_error(request, exc):
