@@ -13,3 +13,15 @@ __pycache__/
 *.py[cod]
 .pytest_cache/
 .venv/
+
+# H1: secretos, datos persistentes y builds locales.
+.env
+.env.*
+!.env.example
+bibliotecario-data/
+node_modules/
+.next/
+*.tsbuildinfo
+*.egg-info/
+.uv-cache/
+test-results/

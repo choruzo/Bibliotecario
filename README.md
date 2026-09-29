@@ -7,7 +7,8 @@ La arquitectura, alcance y secuencia de entrega están en [PLAN_PROYECTO.md](PLA
 ## Estado
 
 - H0: especificación y fixtures implementados; pendiente de aprobación de las decisiones de producto registradas.
-- H1-H7: no iniciados.
+- H1: implementado y validado en Docker Compose; ver [instalacion y comprobaciones](docs/h1/README.md) y [resultados del ensayo](docs/h1/validation.md).
+- H2-H7: no iniciados.
 
 ## Validación de H0
 

@@ -1,0 +1,14 @@
+services:
+  api:
+    environment:
+      BIB_ENVIRONMENT: production
+      BIB_COOKIE_SECURE: 'true'
+    ports: !reset []
+  worker:
+    environment:
+      BIB_ENVIRONMENT: production
+      BIB_COOKIE_SECURE: 'true'
+  migrate:
+    environment:
+      BIB_ENVIRONMENT: production
+      BIB_COOKIE_SECURE: 'true'

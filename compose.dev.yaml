@@ -1,0 +1,13 @@
+services:
+  api:
+    command: [uvicorn, 'bibliotecario.main:create_app', --factory, --host, 0.0.0.0, --port, '8000', --reload, --no-access-log]
+    volumes:
+      - ./apps/api/bibliotecario:/app/bibliotecario:ro
+  worker:
+    volumes:
+      - ./apps/api/bibliotecario:/app/bibliotecario:ro
+  web:
+    build:
+      target: development
+    volumes:
+      - ./apps/web/app:/app/app:ro

@@ -1,0 +1,130 @@
+name: bibliotecario
+
+x-app-env: &app-env
+  BIB_ENVIRONMENT: ${BIB_ENVIRONMENT:-development}
+  BIB_DATABASE_URL: postgresql+psycopg://bibliotecario:${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD en .env}@postgres:5432/bibliotecario?connect_timeout=5
+  BIB_STORAGE_PATH: /data/documents
+  BIB_PUBLIC_ORIGIN: ${BIB_PUBLIC_ORIGIN:-http://localhost:3000}
+  BIB_COOKIE_SECURE: ${BIB_COOKIE_SECURE:-false}
+  BIB_LLM_BASE_URL: http://litellm:4000/v1
+  BIB_LLM_MODEL: ${BIB_LLM_MODEL:-bibliotecario-generation}
+  BIB_LLM_API_KEY: ${LITELLM_MASTER_KEY:?Defina LITELLM_MASTER_KEY en .env}
+  BIB_EMBEDDING_BASE_URL: ${BIB_EMBEDDING_BASE_URL:-http://host.docker.internal:8081}
+  BIB_EMBEDDING_MODEL: ${BIB_EMBEDDING_MODEL:-nomic-embed-text-v1.5.f16.gguf}
+  BIB_EMBEDDING_DIMENSIONS: ${BIB_EMBEDDING_DIMENSIONS:-768}
+  BIB_EMBEDDING_API_KEY: ${BIB_EMBEDDING_API_KEY:-}
+  BIB_RERANKER_BASE_URL: ${BIB_RERANKER_BASE_URL:-http://host.docker.internal:8082}
+  BIB_RERANKER_MODEL: ${BIB_RERANKER_MODEL:-bge-reranker-v2-m3-Q8_0.gguf}
+  BIB_RERANKER_API_KEY: ${BIB_RERANKER_API_KEY:-}
+  BIB_MODEL_TIMEOUT_SECONDS: ${BIB_MODEL_TIMEOUT_SECONDS:-15}
+
+x-app: &app
+  image: bibliotecario-api:0.1.0
+  build:
+    context: .
+    dockerfile: apps/api/Dockerfile
+  environment: *app-env
+  volumes:
+    - ${BIB_DATA_DIR:?Defina un directorio absoluto BIB_DATA_DIR}/documents:/data/documents
+  extra_hosts:
+    - host.docker.internal:host-gateway
+  init: true
+
+services:
+  storage-init:
+    <<: *app
+    user: '0:0'
+    command: [python, -m, bibliotecario.storage_init]
+    restart: 'no'
+
+  postgres:
+    image: pgvector/pgvector:0.8.2-pg17
+    environment:
+      POSTGRES_DB: bibliotecario
+      POSTGRES_USER: bibliotecario
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD en .env}
+    volumes:
+      - ${BIB_DATA_DIR:?Defina BIB_DATA_DIR}/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -h 127.0.0.1 -U bibliotecario -d bibliotecario']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  migrate:
+    <<: *app
+    command: [alembic, upgrade, head]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: 'no'
+
+  api:
+    <<: *app
+    depends_on:
+      storage-init:
+        condition: service_completed_successfully
+      migrate:
+        condition: service_completed_successfully
+    ports:
+      - 127.0.0.1:${BIB_API_PORT:-8000}:8000
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/ready', timeout=6)"]
+      interval: 15s
+      timeout: 8s
+      retries: 5
+    restart: unless-stopped
+
+  worker:
+    <<: *app
+    command: [python, -m, bibliotecario.worker]
+    depends_on:
+      storage-init:
+        condition: service_completed_successfully
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: [CMD, python, -m, bibliotecario.worker_check]
+      interval: 20s
+      timeout: 8s
+      start_period: 20s
+      retries: 3
+    restart: unless-stopped
+
+  litellm:
+    image: ${LITELLM_IMAGE:-ghcr.io/berriai/litellm:main-stable}
+    command: [--config, /app/config.yaml, --port, '4000']
+    environment:
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:?Defina LITELLM_MASTER_KEY}
+      LLAMA_GENERATION_BASE_URL: ${LLAMA_GENERATION_BASE_URL:-http://host.docker.internal:8080/v1}
+      LLAMA_GENERATION_MODEL: ${LLAMA_GENERATION_MODEL:-openai/gpt-oss-20b-Q5_K_M.gguf}
+      LLAMA_GENERATION_API_KEY: ${LLAMA_GENERATION_API_KEY:-local-no-key}
+    volumes:
+      - ./config/h1/litellm.yaml:/app/config.yaml:ro
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://localhost:4000/health/liveliness', timeout=5)"]
+      interval: 20s
+      timeout: 8s
+      retries: 5
+    restart: unless-stopped
+
+  web:
+    image: bibliotecario-web:0.1.0
+    build:
+      context: apps/web
+    environment:
+      API_INTERNAL_URL: http://api:8000
+    ports:
+      - 127.0.0.1:${BIB_WEB_PORT:-3000}:3000
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://localhost:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 20s
+      timeout: 8s
+      retries: 5
+    restart: unless-stopped
