@@ -1,0 +1,43 @@
+{
+  "observed_at": "2026-09-29",
+  "network_notes": {
+    "host_processes": "Use 127.0.0.1 when probing from the host.",
+    "docker_desktop": "Use host.docker.internal from application containers.",
+    "linux": "Configure an explicit host-gateway or routable LAN address."
+  },
+  "services": [
+    {
+      "id": "generation",
+      "base_url_from_host": "http://127.0.0.1:8080",
+      "base_url_from_container": "http://host.docker.internal:8080",
+      "model": "gpt-oss-20b-Q5_K_M.gguf",
+      "api": "llama.cpp OpenAI-compatible",
+      "health_paths": ["/health", "/v1/models"],
+      "context_tokens_observed": 32768,
+      "via_litellm_in_application": true
+    },
+    {
+      "id": "embedding",
+      "base_url_from_host": "http://127.0.0.1:8081",
+      "base_url_from_container": "http://host.docker.internal:8081",
+      "model": "nomic-embed-text-v1.5.f16.gguf",
+      "api": "llama.cpp OpenAI-compatible embeddings",
+      "health_paths": ["/health", "/v1/models"],
+      "request_path": "/v1/embeddings",
+      "dimensions_observed": 768,
+      "context_tokens_observed": 1024,
+      "document_prefix": "search_document: ",
+      "query_prefix": "search_query: "
+    },
+    {
+      "id": "reranker",
+      "base_url_from_host": "http://127.0.0.1:8082",
+      "base_url_from_container": "http://host.docker.internal:8082",
+      "model": "bge-reranker-v2-m3-Q8_0.gguf",
+      "api": "llama.cpp reranking",
+      "health_paths": ["/health", "/v1/models"],
+      "request_paths": ["/v1/rerank", "/rerank"],
+      "context_tokens_observed": 2048
+    }
+  ]
+}

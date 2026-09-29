@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-09-29",
+  "privacy": "No document text is stored in this catalog.",
+  "documents": [
+    {"id":"DOC-001","path":"docs/Archivos-Doors-Know-How.md","sha256":"216831368e8bb4b5acf147e1cf34897442c4712e35593b8e7c3eebf6d0199434","bytes":4892,"lines":128,"headings":9,"list_items":42,"table_rows":0,"code_blocks":0},
+    {"id":"DOC-002","path":"docs/Cantata-Know-How.md","sha256":"02b33af9d46fc8842ecd5ffb8be69c9885ab385bb4d533d3a4002df444b84574","bytes":20387,"lines":412,"headings":30,"list_items":71,"table_rows":0,"code_blocks":0},
+    {"id":"DOC-003","path":"docs/Cisco-Switch-48P-Panel.md","sha256":"aaa9fd67af23d6d95ecfba6586dcf5a143af8e4467f8e1c4347a7e5890375f7e","bytes":9763,"lines":142,"headings":10,"list_items":0,"table_rows":72,"code_blocks":1},
+    {"id":"DOC-004","path":"docs/Documentacion_Entorno_VMware.md","sha256":"e5e6c179a44ffe5c122a3208a30bf1a371f6d12f178350da77c7909950424c49","bytes":45766,"lines":1181,"headings":121,"list_items":210,"table_rows":63,"code_blocks":28},
+    {"id":"DOC-005","path":"docs/Git-Know-How.md","sha256":"87b44a502895a703740824537904fa30dcc0a01a28d67584855c51a6d69aaabe","bytes":9209,"lines":175,"headings":11,"list_items":27,"table_rows":0,"code_blocks":0},
+    {"id":"DOC-006","path":"docs/Header-Know-How.md","sha256":"6fbebd7aa368dcceddd975298e13698e54f10fb52f39bb62130059dd98533bd1","bytes":18088,"lines":657,"headings":94,"list_items":34,"table_rows":0,"code_blocks":0},
+    {"id":"DOC-007","path":"docs/Instalación-configuracion-cisco-catalyst.md","sha256":"a4d03d65b8f3809618a4794c090d8da33478216ffa8226d8b62e0d6f6ac15627","bytes":9115,"lines":324,"headings":15,"list_items":3,"table_rows":12,"code_blocks":16},
+    {"id":"DOC-008","path":"docs/Know-how GTR.md","sha256":"4da9032db7c48b4209aa80a0f4e94edb2b9be50ea0b2a502e30adddb34f83bef","bytes":15295,"lines":259,"headings":13,"list_items":23,"table_rows":6,"code_blocks":0},
+    {"id":"DOC-009","path":"docs/know-how-Ramas-locales-para-la-implementación-de-PR-o-PCI.md","sha256":"656b0713d06af4451decb7f95b9802ec186fd264508b4412d4b48b66da74698e","bytes":2941,"lines":63,"headings":4,"list_items":3,"table_rows":0,"code_blocks":0},
+    {"id":"DOC-010","path":"docs/SBR-Know-How.md","sha256":"c39ddc3e6a112ad642a6ff80c1bf01d491ca524fd03cefca0bd26a78fbb4f851","bytes":13505,"lines":436,"headings":34,"list_items":89,"table_rows":101,"code_blocks":0},
+    {"id":"DOC-011","path":"docs/SonarQube-Know-How.md","sha256":"730e6939c6493647b1614d7268b3cece27c5414894a30afc6fbc7cf747a4452a","bytes":14744,"lines":158,"headings":7,"list_items":40,"table_rows":0,"code_blocks":0},
+    {"id":"DOC-012","path":"docs/SW-M&C-Obtener-Logs-de-VM.md","sha256":"e90357f3acbcceef505d4514d1f7eab50e8758161d1226708fa74a5754b18399","bytes":2428,"lines":45,"headings":4,"list_items":3,"table_rows":0,"code_blocks":0},
+    {"id":"DOC-013","path":"docs/TTCF_M&C_ReplayGuide.md","sha256":"2b5843fe62b8b1d4a2d0f37d36b1003c07148edd6930c9f4dccf1283eb829236","bytes":7702,"lines":242,"headings":0,"list_items":74,"table_rows":0,"code_blocks":0}
+  ]
+}

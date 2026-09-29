@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "output_directory": ".artifacts/h0/variants",
+  "documents": [
+    {"document_id":"DOC-003","profile":"tables","reason":"Tablas extensas y un bloque cercado."},
+    {"document_id":"DOC-007","profile":"code","reason":"Procedimiento con numerosos bloques de comandos y una tabla."},
+    {"document_id":"DOC-008","profile":"procedural","reason":"Jerarquía de encabezados, listas y tabla breve."}
+  ],
+  "thresholds": {
+    "pdf": {"token_recall":0.90,"heading_recall":0.90,"order_ratio":0.75},
+    "docx": {"token_recall":0.94,"heading_recall":0.95,"order_ratio":0.82}
+  }
+}

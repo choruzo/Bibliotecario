@@ -1,1 +1,15 @@
-docs/*
+# El corpus documental puede contener informacion interna y no se versiona.
+docs/*.md
+
+# La especificacion del producto si forma parte del repositorio.
+!docs/h0/
+!docs/h0/**
+
+# Artefactos regenerables de H0 (incluyen contenido del corpus).
+.artifacts/
+
+# Python local.
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
