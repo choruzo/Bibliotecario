@@ -5,6 +5,7 @@ from sqlalchemy import Boolean, CheckConstraint, DateTime, ForeignKey, Integer, 
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .db import Base
+from .vector import Vector768
 
 
 def new_id() -> str:
@@ -128,7 +129,7 @@ class IngestionJob(Base):
     updated_at: Mapped[int] = mapped_column(Integer)
     __table_args__ = (UniqueConstraint("actor_id", "idempotency_key"),
         CheckConstraint("status IN ('pendiente','en_ejecucion','completado','reintentable','fallido','cancelando','cancelado')", name="job_state"),
-        CheckConstraint("kind IN ('convert','delete')", name="job_kind"))
+        CheckConstraint("kind IN ('convert','delete','index')", name="job_kind"))
 
 
 class JobEvent(Base):
@@ -141,3 +142,36 @@ class JobEvent(Base):
     generation: Mapped[int] = mapped_column(Integer)
     created_at: Mapped[int] = mapped_column(Integer)
     __table_args__ = (UniqueConstraint("job_id", "number"),)
+
+
+class Chunk(Base):
+    __tablename__ = "chunks"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    version_id: Mapped[str] = mapped_column(ForeignKey("document_versions.id"), index=True)
+    revision_id: Mapped[str] = mapped_column(ForeignKey("normalized_revisions.id"), index=True)
+    number: Mapped[int] = mapped_column(Integer)
+    content: Mapped[str] = mapped_column(Text)
+    search_content: Mapped[str] = mapped_column(Text)
+    provenance: Mapped[list] = mapped_column(JSON)
+    embedding: Mapped[list] = mapped_column(Vector768().with_variant(JSON(), "sqlite"))
+    model_signature: Mapped[str] = mapped_column(String(64))
+    __table_args__ = (UniqueConstraint("version_id", "number"),)
+
+
+class RetrievalRun(Base):
+    __tablename__ = "retrieval_runs"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    actor_id: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    query: Mapped[str] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(String(16))
+    result: Mapped[dict] = mapped_column(JSON)
+    created_at: Mapped[int] = mapped_column(Integer)
+
+
+class EvidencePolicy(Base):
+    __tablename__ = "evidence_policies"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    signature: Mapped[str] = mapped_column(String(64), index=True)
+    corpus_signature: Mapped[str] = mapped_column(String(64))
+    report: Mapped[dict] = mapped_column(JSON)
+    created_at: Mapped[int] = mapped_column(Integer)

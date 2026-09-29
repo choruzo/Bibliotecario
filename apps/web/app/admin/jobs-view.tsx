@@ -33,9 +33,9 @@ export default function JobsView({ csrf }: { csrf: string }) {
   }
   return <section className="jobs-section">{error && <p className="error" role="alert">{error}</p>}
     <div className="table-wrap"><table><thead><tr><th>Documento</th><th>Operacion</th><th>Estado</th><th>Progreso</th><th>Intentos</th><th>Diagnostico</th><th>Acciones</th></tr></thead><tbody>
-      {jobs.map(job => <tr key={job.id}><th scope="row">{job.document_title}</th><td>{job.kind === 'convert' ? 'Conversion' : 'Eliminacion'}</td><td>{statusNames[job.status]}</td><td><progress value={job.progress} max={100} aria-label="Progreso"/><span className="progress-label">{job.progress}%</span></td><td>{job.attempts}</td><td>{job.error_code || '-'}</td><td><div className="job-actions">
+      {jobs.map(job => <tr key={job.id}><th scope="row">{job.document_title}</th><td>{job.kind === 'convert' ? 'Conversion' : job.kind === 'index' ? 'Indexacion' : 'Eliminacion'}</td><td>{statusNames[job.status]}</td><td><progress value={job.progress} max={100} aria-label="Progreso"/><span className="progress-label">{job.progress}%</span></td><td>{job.attempts}</td><td>{job.error_code || '-'}</td><td><div className="job-actions">
         <button className="icon-button" title="Ver eventos" aria-label="Ver eventos" disabled={busy} onClick={() => action(job, 'events')}><List size={17}/></button>
-        <button className="icon-button" title="Cancelar trabajo" aria-label="Cancelar trabajo" disabled={busy || job.kind !== 'convert' || !['pendiente', 'en_ejecucion', 'reintentable'].includes(job.status)} onClick={() => action(job, 'cancel')}><CircleStop size={17}/></button>
+        <button className="icon-button" title="Cancelar trabajo" aria-label="Cancelar trabajo" disabled={busy || !['convert', 'index'].includes(job.kind) || !['pendiente', 'en_ejecucion', 'reintentable'].includes(job.status)} onClick={() => action(job, 'cancel')}><CircleStop size={17}/></button>
         <button className="icon-button" title="Reintentar trabajo" aria-label="Reintentar trabajo" disabled={busy || !['fallido', 'cancelado'].includes(job.status)} onClick={() => action(job, 'retry')}><RotateCcw size={17}/></button>
       </div></td></tr>)}
     </tbody></table></div>{!jobs.length && <p className="muted">No hay trabajos</p>}

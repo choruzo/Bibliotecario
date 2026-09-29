@@ -81,6 +81,14 @@ class ModelClients:
         except (KeyError, TypeError, ValueError) as exc:
             raise ProviderError("invalid_embedding") from exc
 
+    async def embedding_tokens(self, content):
+        data = await self.post(self.settings.embedding_base_url, "/tokenize",
+                               {"content": content, "add_special": True}, self.settings.embedding_api_key)
+        if not isinstance(data, dict) or not isinstance(data.get("tokens"), list) or not data["tokens"] or any(
+                isinstance(token, bool) or not isinstance(token, int) for token in data["tokens"]):
+            raise ProviderError("invalid_tokenization")
+        return len(data["tokens"])
+
     async def rerank(self, query: str, documents: list[str]):
         if not documents:
             raise ValueError("documents no puede estar vacio")

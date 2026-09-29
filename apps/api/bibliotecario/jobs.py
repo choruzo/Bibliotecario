@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from sqlalchemy import delete, func, select
 
 from .models import (AuditEvent, Document, DocumentFile, DocumentVersion, IngestionJob, JobEvent,
-                     NormalizedRevision)
+                     NormalizedRevision, Chunk)
 from .storage import storage_path
 
 ACTIVE = {"pendiente", "en_ejecucion", "reintentable", "cancelando"}
@@ -37,6 +37,10 @@ def enqueue(db, document_id, version_id, actor_id, correlation_id, key, kind="co
 def restore_version(db, job):
     if job.version_id:
         version = db.get(DocumentVersion, job.version_id)
+        if job.kind == "index" and version and version.status not in {"retirado", "eliminado", "eliminando"}:
+            document = db.get(Document, job.document_id)
+            version.status = "publicado" if document.active_version_id == version.id else "requiere_revision"
+            return
         if version and version.status not in {"publicado", "retirado", "eliminado"}:
             version.status = "requiere_revision" if version.current_revision_id else "subido"
 
@@ -65,7 +69,10 @@ def claim(sessions, settings, owner):
             elif job.attempts >= 3:
                 job.status, job.error_code = "fallido", "lease_expired"
                 if job.version_id:
-                    db.get(DocumentVersion, job.version_id).status = "error"
+                    if job.kind == "index":
+                        restore_version(db, job)
+                    else:
+                        db.get(DocumentVersion, job.version_id).status = "error"
                 event(db, job, "attempts_exhausted")
             else:
                 job.status, job.available_at = "pendiente", now
@@ -85,8 +92,12 @@ def claim(sessions, settings, owner):
             job.attempts += 1
             job.generation += 1
             job.progress, job.error_code = 10, None
-            if job.version_id:
+            if job.version_id and job.kind != "index":
                 db.get(DocumentVersion, job.version_id).status = "procesando"
+            elif job.version_id and job.kind == "index":
+                version = db.get(DocumentVersion, job.version_id)
+                if version.status in {"requiere_revision", "error", "indexando"}:
+                    version.status = "indexando"
             event(db, job, "claimed")
             lease = Lease(job.id, job.generation, owner, job.kind)
         db.commit()
@@ -138,7 +149,7 @@ def fail(sessions, lease, code, permanent=False):
             job.status = "fallido" if permanent or job.attempts >= 3 else "reintentable"
             job.error_code, job.available_at = code, int(time.time()) + 2 ** job.attempts
             if job.version_id:
-                if job.status == "fallido":
+                if job.status == "fallido" and job.kind != "index":
                     db.get(DocumentVersion, job.version_id).status = "error"
                 else:
                     restore_version(db, job)
@@ -208,6 +219,7 @@ def process_delete(sessions, settings, lease):
         for version in versions:
             version.current_revision_id, version.metadata_json, version.status = None, {}, "eliminado"
         db.flush()
+        db.execute(delete(Chunk).where(Chunk.version_id.in_(ids)))
         db.execute(delete(DocumentFile).where(DocumentFile.version_id.in_(ids)))
         db.execute(delete(NormalizedRevision).where(NormalizedRevision.version_id.in_(ids)))
         job.status, job.progress, job.updated_at = "completado", 100, int(time.time())
@@ -229,12 +241,15 @@ def process(sessions, settings, lease, stop):
         job = owned_job(db, lease)
         if not job:
             return
-        source = db.scalar(select(DocumentFile).where(DocumentFile.version_id == job.version_id))
-        path, fmt = storage_path(settings, source.storage_key), source.format
+        if lease.kind == "index":
+            arguments = ["-m", "bibliotecario.index_task", "--revision", job.payload["revision_id"]]
+        else:
+            source = db.scalar(select(DocumentFile).where(DocumentFile.version_id == job.version_id))
+            path, fmt = storage_path(settings, source.storage_key), source.format
+            arguments = ["-m", "bibliotecario.convert_task", "--input", str(path), "--format", fmt]
     temporary = storage_path(settings, "normalized/.task-" + str(uuid.uuid4()) + ".json")
     temporary.parent.mkdir(parents=True, exist_ok=True)
-    child = subprocess.Popen([sys.executable, "-m", "bibliotecario.convert_task", "--input", str(path),
-                              "--format", fmt, "--output", str(temporary)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    child = subprocess.Popen([sys.executable, *arguments, "--output", str(temporary)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     started, renewed = time.monotonic(), 0
     try:
         while child.poll() is None:
@@ -243,7 +258,8 @@ def process(sessions, settings, lease, stop):
                 child.wait(timeout=10)
                 fail(sessions, lease, "worker_stopped")
                 return
-            if time.monotonic() - started > settings.conversion_timeout_seconds:
+            timeout = settings.index_timeout_seconds if lease.kind == "index" else settings.conversion_timeout_seconds
+            if time.monotonic() - started > timeout:
                 child.kill()
                 child.wait(timeout=10)
                 fail(sessions, lease, "conversion_timeout", permanent=True)
@@ -267,9 +283,14 @@ def process(sessions, settings, lease, stop):
             else:
                 result = json.loads(temporary.read_text(encoding="utf-8"))
                 if "error" in result:
-                    fail(sessions, lease, result["error"], permanent=True)
+                    fail(sessions, lease, result["error"], permanent=lease.kind != "index")
                 else:
-                    if not finalize_conversion(sessions, settings, lease, result):
+                    if lease.kind == "index":
+                        from .indexing import finalize_index
+                        finished = finalize_index(sessions, settings, lease, result)
+                    else:
+                        finished = finalize_conversion(sessions, settings, lease, result)
+                    if not finished:
                         finish_cancel(sessions, lease)
     except Exception as exc:
         LOGGER.error("job_attempt_failed", extra={"correlation_id": lease.id, "error_type": type(exc).__name__})

@@ -1,0 +1,707 @@
+{
+  "date": "2026-09-30",
+  "format": "md",
+  "query_mode": "raw_without_h4_reformulation",
+  "questions_sha256": "6fc1bfd2241efdcfdc81b614547f09d884d21a0ed402cd12ac755caf87bb9b4f",
+  "model_signature": "7d2455da0f26475e0a7532f8c70cf775e99ff4ee79d4bfd15ff6818a95b62a0d",
+  "corpus_signature": "c396bf8ecb92ff53d0b583594ae99a1a8889ce6cca03380b03ac7b15fa9230e0",
+  "indexed": [
+    {
+      "id": "DOC-001",
+      "chunks": 40,
+      "coverage_verified": true,
+      "latency_ms": 3213
+    },
+    {
+      "id": "DOC-002",
+      "chunks": 162,
+      "coverage_verified": true,
+      "latency_ms": 15566
+    },
+    {
+      "id": "DOC-003",
+      "chunks": 36,
+      "coverage_verified": true,
+      "latency_ms": 4833
+    },
+    {
+      "id": "DOC-004",
+      "chunks": 390,
+      "coverage_verified": true,
+      "latency_ms": 48630
+    },
+    {
+      "id": "DOC-005",
+      "chunks": 65,
+      "coverage_verified": true,
+      "latency_ms": 6507
+    },
+    {
+      "id": "DOC-006",
+      "chunks": 272,
+      "coverage_verified": true,
+      "latency_ms": 20654
+    },
+    {
+      "id": "DOC-007",
+      "chunks": 58,
+      "coverage_verified": true,
+      "latency_ms": 10372
+    },
+    {
+      "id": "DOC-008",
+      "chunks": 115,
+      "coverage_verified": true,
+      "latency_ms": 15003
+    },
+    {
+      "id": "DOC-009",
+      "chunks": 24,
+      "coverage_verified": true,
+      "latency_ms": 2477
+    },
+    {
+      "id": "DOC-010",
+      "chunks": 145,
+      "coverage_verified": true,
+      "latency_ms": 16775
+    },
+    {
+      "id": "DOC-011",
+      "chunks": 67,
+      "coverage_verified": true,
+      "latency_ms": 8678
+    },
+    {
+      "id": "DOC-012",
+      "chunks": 21,
+      "coverage_verified": true,
+      "latency_ms": 2049
+    },
+    {
+      "id": "DOC-013",
+      "chunks": 53,
+      "coverage_verified": true,
+      "latency_ms": 5115
+    }
+  ],
+  "cases": [
+    {
+      "id": "EVAL-A001",
+      "kind": "answerable",
+      "language": "es",
+      "expected_behavior": "answer",
+      "recall5": 1.0,
+      "recall10": 1.0,
+      "mrr10": 1.0,
+      "ndcg10": 0.8630152897016882,
+      "score": 5.12939453125,
+      "latency": {
+        "embedding_ms": 57.26,
+        "search_ms": 28.26,
+        "fusion_ms": 68.16,
+        "reranking_ms": 261.72
+      },
+      "run_id": "01420099-270d-40e2-afbd-064fc24651e0"
+    },
+    {
+      "id": "EVAL-A002",
+      "kind": "answerable",
+      "language": "es",
+      "expected_behavior": "answer",
+      "recall5": 1.0,
+      "recall10": 1.0,
+      "mrr10": 1.0,
+      "ndcg10": 1.0,
+      "score": -0.5720463395118713,
+      "latency": {
+        "embedding_ms": 55.74,
+        "search_ms": 17.78,
+        "fusion_ms": 54.53,
+        "reranking_ms": 161.64
+      },
+      "run_id": "72c5bce2-9750-4555-9052-aa6bd9b165c0"
+    },
+    {
+      "id": "EVAL-A003",
+      "kind": "answerable",
+      "language": "es",
+      "expected_behavior": "answer",
+      "recall5": 1.0,
+      "recall10": 1.0,
+      "mrr10": 1.0,
+      "ndcg10": 1.0,
+      "score": 2.052673101425171,
+      "latency": {
+        "embedding_ms": 49.91,
+        "search_ms": 15.82,
+        "fusion_ms": 27.09,
+        "reranking_ms": 157.96
+      },
+      "run_id": "65cd7471-94c9-4e4e-a5a9-46b83b0e3765"
+    },
+    {
+      "id": "EVAL-A004",
+      "kind": "answerable",
+      "language": "es",
+      "expected_behavior": "answer",
+      "recall5": 1.0,
+      "recall10": 1.0,
+      "mrr10": 1.0,
+      "ndcg10": 0.7948833326720564,
+      "score": -0.6011061668395996,
+      "latency": {
+        "embedding_ms": 39.29,
+        "search_ms": 15.81,
+        "fusion_ms": 28.99,
+        "reranking_ms": 168.21
+      },
+      "run_id": "77dffc4d-177b-4e43-96f5-400ebef49bae"
+    },
+    {
+      "id": "EVAL-A005",
+      "kind": "answerable",
+      "language": "es",
+      "expected_behavior": "answer",
+      "recall5": 1.0,
+      "recall10": 1.0,
+      "mrr10": 1.0,
+      "ndcg10": 1.0,
+      "score": 0.10419727861881256,
+      "latency": {
+        "embedding_ms": 44.46,
+        "search_ms": 16.9,
+        "fusion_ms": 43.57,
+        "reranking_ms": 214.49
+      },
+      "run_id": "1c59a2e6-09aa-41cc-afbb-5901386e93a2"
+    },
+    {
+      "id": "EVAL-A006",
+      "kind": "answerable",
+      "language": "es",
+      "expected_behavior": "answer",
+      "recall5": 0.5,
+      "recall10": 1.0,
+      "mrr10": 1.0,
+      "ndcg10": 0.07336392209936005,
+      "score": 1.3823637962341309,
+      "latency": {
+        "embedding_ms": 42.81,
+        "search_ms": 16.05,
+        "fusion_ms": 35.53,
+        "reranking_ms": 189.13
+      },
+      "run_id": "11b88d91-fc7d-46bf-9ec4-acdd8e79188d"
+    },
+    {
+      "id": "EVAL-A007",
+      "kind": "answerable",
+      "language": "es",
+      "expected_behavior": "answer",
+      "recall5": 0.6666666666666666,
+      "recall10": 0.6666666666666666,
+      "mrr10": 1.0,
+      "ndcg10": 0.5032251913410369,
+      "score": 0.27210310101509094,
+      "latency": {
+        "embedding_ms": 45.03,
+        "search_ms": 20.69,
+        "fusion_ms": 35.15,
+        "reranking_ms": 180.52
+      },
+      "run_id": "dde709fb-e451-44a6-a7a3-b4e7624e7eba"
+    },
+    {
+      "id": "EVAL-A008",
+      "kind": "answerable",
+      "language": "es",
+      "expected_behavior": "answer",
+      "recall5": 1.0,
+      "recall10": 1.0,
+      "mrr10": 1.0,
+      "ndcg10": 0.685119869332369,
+      "score": 2.0047452449798584,
+      "latency": {
+        "embedding_ms": 78.43,
+        "search_ms": 35.5,
+        "fusion_ms": 122.89,
+        "reranking_ms": 223.48
+      },
+      "run_id": "70ef87f1-8324-4ccc-9fea-5e8b4edef188"
+    },
+    {
+      "id": "EVAL-A009",
+      "kind": "answerable",
+      "language": "es",
+      "expected_behavior": "answer",
+      "recall5": 0.0,
+      "recall10": 0.4,
+      "mrr10": 0.14285714285714285,
+      "ndcg10": 0.3131900827121407,
+      "score": -1.2637009620666504,
+      "latency": {
+        "embedding_ms": 196.3,
+        "search_ms": 27.84,
+        "fusion_ms": 65.81,
+        "reranking_ms": 199.95
+      },
+      "run_id": "b71136df-a006-4d14-8f46-7cb1497617b8"
+    },
+    {
+      "id": "EVAL-A010",
+      "kind": "answerable",
+      "language": "es",
+      "expected_behavior": "answer",
+      "recall5": 0.6666666666666666,
+      "recall10": 1.0,
+      "mrr10": 1.0,
+      "ndcg10": 0.7799082337019198,
+      "score": 0.20375902950763702,
+      "latency": {
+        "embedding_ms": 110.82,
+        "search_ms": 26.76,
+        "fusion_ms": 42.84,
+        "reranking_ms": 186.33
+      },
+      "run_id": "6cd56dbb-8bb6-445a-b98a-7170ad7b2f88"
+    },
+    {
+      "id": "EVAL-U001",
+      "kind": "unanswerable",
+      "language": "es",
+      "expected_behavior": "abstain",
+      "recall5": null,
+      "recall10": null,
+      "mrr10": 0,
+      "ndcg10": 0,
+      "score": -8.549455642700195,
+      "latency": {
+        "embedding_ms": 47.65,
+        "search_ms": 19.13,
+        "fusion_ms": 51.45,
+        "reranking_ms": 178.06
+      },
+      "run_id": "600e0a9f-53e7-42fd-9b55-46126c3cd2d3"
+    },
+    {
+      "id": "EVAL-U002",
+      "kind": "unanswerable",
+      "language": "es",
+      "expected_behavior": "abstain",
+      "recall5": null,
+      "recall10": null,
+      "mrr10": 0,
+      "ndcg10": 0,
+      "score": -10.841367721557617,
+      "latency": {
+        "embedding_ms": 105.63,
+        "search_ms": 26.08,
+        "fusion_ms": 70.95,
+        "reranking_ms": 186.34
+      },
+      "run_id": "86e5cc38-1665-430d-b83e-0d2660fc58a9"
+    },
+    {
+      "id": "EVAL-U003",
+      "kind": "unanswerable",
+      "language": "es",
+      "expected_behavior": "abstain",
+      "recall5": null,
+      "recall10": null,
+      "mrr10": 0,
+      "ndcg10": 0,
+      "score": -10.573379516601562,
+      "latency": {
+        "embedding_ms": 57.45,
+        "search_ms": 25.57,
+        "fusion_ms": 57.86,
+        "reranking_ms": 191.83
+      },
+      "run_id": "2fea564a-51a9-4c13-90bf-d75663292652"
+    },
+    {
+      "id": "EVAL-U004",
+      "kind": "unanswerable",
+      "language": "es",
+      "expected_behavior": "abstain",
+      "recall5": null,
+      "recall10": null,
+      "mrr10": 0,
+      "ndcg10": 0,
+      "score": -2.6058759689331055,
+      "latency": {
+        "embedding_ms": 89.61,
+        "search_ms": 26.91,
+        "fusion_ms": 61.88,
+        "reranking_ms": 190.05
+      },
+      "run_id": "48fa555e-cac0-4d56-9c71-12d06a9d7f47"
+    },
+    {
+      "id": "EVAL-U005",
+      "kind": "unanswerable",
+      "language": "es",
+      "expected_behavior": "abstain",
+      "recall5": null,
+      "recall10": null,
+      "mrr10": 0,
+      "ndcg10": 0,
+      "score": -6.7877302169799805,
+      "latency": {
+        "embedding_ms": 39.65,
+        "search_ms": 25.94,
+        "fusion_ms": 66.11,
+        "reranking_ms": 197.26
+      },
+      "run_id": "dbe61b83-8ba7-41a6-ad96-139a077a1033"
+    },
+    {
+      "id": "EVAL-M001",
+      "kind": "ambiguous",
+      "language": "es",
+      "expected_behavior": "clarify",
+      "recall5": null,
+      "recall10": null,
+      "mrr10": 0,
+      "ndcg10": 0,
+      "score": 0.19684559106826782,
+      "latency": {
+        "embedding_ms": 56.06,
+        "search_ms": 25.03,
+        "fusion_ms": 62.51,
+        "reranking_ms": 196.47
+      },
+      "run_id": "eae1dc22-12bf-4629-9b9e-a36bc5fa9949"
+    },
+    {
+      "id": "EVAL-M002",
+      "kind": "ambiguous",
+      "language": "es",
+      "expected_behavior": "clarify",
+      "recall5": 1.0,
+      "recall10": 1.0,
+      "mrr10": 1.0,
+      "ndcg10": 0.8630152897016882,
+      "score": 3.7976465225219727,
+      "latency": {
+        "embedding_ms": 38.56,
+        "search_ms": 22.27,
+        "fusion_ms": 63.38,
+        "reranking_ms": 219.98
+      },
+      "run_id": "80dea4f6-40cf-4b4f-aaf6-bdced5e5d18d"
+    },
+    {
+      "id": "EVAL-M003",
+      "kind": "ambiguous",
+      "language": "es",
+      "expected_behavior": "clarify",
+      "recall5": 0.5,
+      "recall10": 0.5,
+      "mrr10": 1.0,
+      "ndcg10": 0.8643145546088337,
+      "score": 1.039678692817688,
+      "latency": {
+        "embedding_ms": 69.72,
+        "search_ms": 21.66,
+        "fusion_ms": 58.57,
+        "reranking_ms": 153.87
+      },
+      "run_id": "545e8c38-5bf9-40f9-a41c-26878e57f078"
+    },
+    {
+      "id": "EVAL-C001-T1",
+      "kind": "conversation",
+      "language": "es",
+      "expected_behavior": "answer",
+      "conversation_id": "CONV-001",
+      "recall5": 1.0,
+      "recall10": 1.0,
+      "mrr10": 1.0,
+      "ndcg10": 1.0,
+      "score": 2.678633689880371,
+      "latency": {
+        "embedding_ms": 39.04,
+        "search_ms": 21.42,
+        "fusion_ms": 30.49,
+        "reranking_ms": 181.54
+      },
+      "run_id": "725d6aa7-6cbb-4b15-ba13-a14718f8c94a"
+    },
+    {
+      "id": "EVAL-C001-T2",
+      "kind": "conversation",
+      "language": "es",
+      "expected_behavior": "answer",
+      "conversation_id": "CONV-001",
+      "recall5": 1.0,
+      "recall10": 1.0,
+      "mrr10": 0.3333333333333333,
+      "ndcg10": 0.5,
+      "score": -4.423398971557617,
+      "latency": {
+        "embedding_ms": 41.04,
+        "search_ms": 17.41,
+        "fusion_ms": 58.24,
+        "reranking_ms": 180.39
+      },
+      "run_id": "e204ff35-8e12-4e85-8062-863a464a2da6"
+    },
+    {
+      "id": "EVAL-C001-T3",
+      "kind": "conversation",
+      "language": "es",
+      "expected_behavior": "answer",
+      "conversation_id": "CONV-001",
+      "recall5": 0.0,
+      "recall10": 0.0,
+      "mrr10": 0,
+      "ndcg10": 0,
+      "score": -6.472307205200195,
+      "latency": {
+        "embedding_ms": 78.21,
+        "search_ms": 27.71,
+        "fusion_ms": 65.14,
+        "reranking_ms": 167.37
+      },
+      "run_id": "2e9ca731-d82e-46df-9633-7d436b3510a2"
+    },
+    {
+      "id": "EVAL-C002-T1",
+      "kind": "conversation",
+      "language": "es",
+      "expected_behavior": "answer",
+      "conversation_id": "CONV-002",
+      "recall5": 1.0,
+      "recall10": 1.0,
+      "mrr10": 1.0,
+      "ndcg10": 0.8899541168509599,
+      "score": -1.1037397384643555,
+      "latency": {
+        "embedding_ms": 39.11,
+        "search_ms": 24.07,
+        "fusion_ms": 57.69,
+        "reranking_ms": 169.8
+      },
+      "run_id": "e660d057-b459-4d59-9045-19791ea0614b"
+    },
+    {
+      "id": "EVAL-C002-T2",
+      "kind": "conversation",
+      "language": "es",
+      "expected_behavior": "answer",
+      "conversation_id": "CONV-002",
+      "recall5": 0.0,
+      "recall10": 0.0,
+      "mrr10": 0,
+      "ndcg10": 0,
+      "score": -6.977047920227051,
+      "latency": {
+        "embedding_ms": 43.79,
+        "search_ms": 18.19,
+        "fusion_ms": 46.99,
+        "reranking_ms": 154.35
+      },
+      "run_id": "025c1ff1-9434-4124-885a-e21f495fb8d7"
+    },
+    {
+      "id": "EVAL-C002-T3",
+      "kind": "conversation",
+      "language": "es",
+      "expected_behavior": "answer",
+      "conversation_id": "CONV-002",
+      "recall5": 0.6666666666666666,
+      "recall10": 0.6666666666666666,
+      "mrr10": 0.5,
+      "ndcg10": 0.6008757069344628,
+      "score": -2.1987149715423584,
+      "latency": {
+        "embedding_ms": 52.07,
+        "search_ms": 19.68,
+        "fusion_ms": 42.87,
+        "reranking_ms": 184.27
+      },
+      "run_id": "3b736558-f54f-4f02-8c80-c61d7d581c4a"
+    }
+  ],
+  "metrics": {
+    "by_kind": {
+      "ambiguous": {
+        "count": 3,
+        "errors": 0,
+        "recall5": 0.75,
+        "recall10": 0.75,
+        "mrr10": 0.6666666666666666,
+        "ndcg10": 0.575776614770174
+      },
+      "answerable": {
+        "count": 10,
+        "errors": 0,
+        "recall5": 0.7833333333333333,
+        "recall10": 0.9066666666666666,
+        "mrr10": 0.9142857142857143,
+        "ndcg10": 0.7012705921560571
+      },
+      "conversation": {
+        "count": 6,
+        "errors": 0,
+        "recall5": 0.6111111111111112,
+        "recall10": 0.6111111111111112,
+        "mrr10": 0.4722222222222222,
+        "ndcg10": 0.49847163729757044
+      },
+      "unanswerable": {
+        "count": 5,
+        "errors": 0,
+        "recall5": null,
+        "recall10": null,
+        "mrr10": 0,
+        "ndcg10": 0
+      }
+    },
+    "latency": {
+      "embedding_ms": {
+        "p50": 50.989999999999995,
+        "p95": 110.82,
+        "max": 196.3
+      },
+      "search_ms": {
+        "p50": 21.965,
+        "p95": 28.26,
+        "max": 35.5
+      },
+      "fusion_ms": {
+        "p50": 57.775,
+        "p95": 70.95,
+        "max": 122.89
+      },
+      "reranking_ms": {
+        "p50": 185.3,
+        "p95": 223.48,
+        "max": 261.72
+      }
+    }
+  },
+  "calibration": {
+    "threshold": 2.052673101425171,
+    "approved": false,
+    "train_ids": [
+      "EVAL-A001",
+      "EVAL-A003",
+      "EVAL-A005",
+      "EVAL-A007",
+      "EVAL-A009",
+      "EVAL-U001",
+      "EVAL-U003",
+      "EVAL-U005",
+      "EVAL-M001",
+      "EVAL-M003",
+      "EVAL-C001-T1",
+      "EVAL-C001-T2",
+      "EVAL-C001-T3"
+    ],
+    "holdout_ids": [
+      "EVAL-A002",
+      "EVAL-A004",
+      "EVAL-A006",
+      "EVAL-A008",
+      "EVAL-A010",
+      "EVAL-U002",
+      "EVAL-U004",
+      "EVAL-M002",
+      "EVAL-C002-T1",
+      "EVAL-C002-T2",
+      "EVAL-C002-T3"
+    ],
+    "train": {
+      "tp": 3,
+      "fp": 0,
+      "fn": 5,
+      "tn": 5,
+      "precision": 1.0,
+      "recall": 0.375,
+      "f1": 0.5454545454545454,
+      "accuracy": 0.6153846153846154,
+      "improper_answer_rate": 0.0
+    },
+    "holdout": {
+      "tp": 0,
+      "fp": 1,
+      "fn": 8,
+      "tn": 2,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0,
+      "accuracy": 0.18181818181818182,
+      "improper_answer_rate": 0.3333333333333333
+    },
+    "reason": "insufficient_safe_separation",
+    "limitations": [
+      "Small initial bank; no statistical guarantee",
+      "Raw follow-ups; contextual reformulation belongs to H4",
+      "Scalar score does not implement clarification; ambiguous cases remain abstentions"
+    ]
+  },
+  "decision_metrics": {
+    "tp": 0,
+    "fp": 0,
+    "fn": 16,
+    "tn": 8,
+    "precision": 0,
+    "recall": 0.0,
+    "f1": 0,
+    "accuracy": 0.3333333333333333,
+    "improper_answer_rate": 0.0
+  },
+  "clarification_accuracy": 0,
+  "ndcg_scope": "binary relevance within retrieved candidate pool",
+  "traces": "Recorded in isolated evaluation DB during run; sanitized case metrics exported",
+  "started_on": "2026-09-29",
+  "decisions_by_kind": {
+    "ambiguous": {
+      "tp": 0,
+      "fp": 0,
+      "fn": 0,
+      "tn": 3,
+      "precision": 0,
+      "recall": 0,
+      "f1": 0,
+      "accuracy": 1.0,
+      "improper_answer_rate": 0.0
+    },
+    "answerable": {
+      "tp": 0,
+      "fp": 0,
+      "fn": 10,
+      "tn": 0,
+      "precision": 0,
+      "recall": 0.0,
+      "f1": 0,
+      "accuracy": 0.0,
+      "improper_answer_rate": null
+    },
+    "conversation": {
+      "tp": 0,
+      "fp": 0,
+      "fn": 6,
+      "tn": 0,
+      "precision": 0,
+      "recall": 0.0,
+      "f1": 0,
+      "accuracy": 0.0,
+      "improper_answer_rate": null
+    },
+    "unanswerable": {
+      "tp": 0,
+      "fp": 0,
+      "fn": 0,
+      "tn": 5,
+      "precision": 0,
+      "recall": 0,
+      "f1": 0,
+      "accuracy": 1.0,
+      "improper_answer_rate": 0.0
+    }
+  }
+}

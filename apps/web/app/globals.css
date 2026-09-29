@@ -118,3 +118,6 @@ progress { display: block; width: 85px; height: 8px; accent-color: var(--accent)
   h1 { font-size: 23px; }th, td { padding: 16px 10px; }.empty-state { padding: 70px 10px; }
   table { min-width: 600px; }
 }
+.retrieval-card { margin: 1.2rem 0; padding: 1.2rem; border: 1px solid #cbd5e1; border-radius: 8px; }
+.retrieval-card h2, .retrieval-card p { overflow-wrap: anywhere; }
+.retrieval-excerpt { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 28rem; overflow: auto; font-size: .85rem; }

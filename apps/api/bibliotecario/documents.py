@@ -300,6 +300,25 @@ def withdraw(document_id: str, request: Request, identity=Depends(require_csrf),
     return document_json(db, document)
 
 
+@router.post("/versions/{version_id}/publish", status_code=202)
+def publish(version_id: str, body: RevisionConfirmation, request: Request, identity=Depends(require_csrf), db=Depends(database)):
+    version = get_version(db, version_id, lock=True)
+    no_active_job(db, document_id=version.document_id)
+    if (version.status not in {"requiere_revision", "publicado", "error"} or not version.reviewed_at
+            or body.expected_revision_id != version.current_revision_id):
+        raise HTTPException(409, "Se requiere una revision vigente aprobada")
+    document = get_document(db, version.document_id)
+    job = enqueue(db, document.id, version.id, identity.user.id, request.state.correlation_id,
+                  str(uuid.uuid4()), kind="index", payload={"revision_id": version.current_revision_id,
+                  "active_version_id": document.active_version_id})
+    # Keep an existing published version searchable while its replacement index is built.
+    if document.active_version_id != version.id:
+        version.status = "indexando"
+    audit(db, request, identity, "index_requested", version.id)
+    db.commit()
+    return job_json(job)
+
+
 @router.delete("/documents/{document_id}", status_code=202)
 def remove(document_id: str, body: Confirmation, request: Request, identity=Depends(require_csrf), db=Depends(database)):
     document = get_document(db, document_id, lock=True)
@@ -343,7 +362,7 @@ def cancel(job_id: str, request: Request, identity=Depends(require_csrf), db=Dep
     job = db.scalar(select(IngestionJob).where(IngestionJob.id == job_id).with_for_update())
     if not job:
         raise HTTPException(404, "Trabajo no encontrado")
-    if job.kind != "convert" or job.status not in ACTIVE - {"cancelando"}:
+    if job.kind not in {"convert", "index"} or job.status not in ACTIVE - {"cancelando"}:
         raise HTTPException(409, "Trabajo no cancelable")
     if job.status == "en_ejecucion":
         job.status = "cancelando"
@@ -372,6 +391,11 @@ def retry(job_id: str, request: Request, identity=Depends(require_csrf), db=Depe
         if version.status not in {"subido", "requiere_revision", "error"}:
             raise HTTPException(409, "Estado no convertible")
         version.reviewed_at = None
+    if job.kind == "index":
+        version = get_version(db, job.version_id, lock=True)
+        if not version.reviewed_at or version.current_revision_id != job.payload.get("revision_id") or version.status == "retirado":
+            raise HTTPException(409, "Revision no indexable")
+        job.payload = job.payload | {"active_version_id": document.active_version_id}
     no_active_job(db, document_id=job.document_id)
     new_job = enqueue(db, job.document_id, job.version_id, identity.user.id, request.state.correlation_id,
                       str(uuid.uuid4()), kind=job.kind, payload=job.payload | {"retry_of": job.id})

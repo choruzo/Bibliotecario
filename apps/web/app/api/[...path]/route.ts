@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 const allowed = new Set(['auth/login', 'auth/logout', 'auth/me', 'health/dependencies']);
-const adminRoutes = /^(admin\/documents(?:\/[a-f0-9-]{36}(?:\/versions|\/withdraw)?)?|admin\/versions\/[a-f0-9-]{36}(?:\/original|\/normalized|\/revisions|\/review|\/convert)?|admin\/jobs(?:\/[a-f0-9-]{36}\/(?:events|cancel|retry))?)$/;
+const adminRoutes = /^(admin\/documents(?:\/[a-f0-9-]{36}(?:\/versions|\/withdraw)?)?|admin\/versions\/[a-f0-9-]{36}(?:\/original|\/normalized|\/revisions|\/review|\/convert|\/publish)?|admin\/jobs(?:\/[a-f0-9-]{36}\/(?:events|cancel|retry))?|admin\/retrieval\/(?:search|policy|calibrate|runs(?:\/[a-f0-9-]{36})?))$/;
 
 async function proxy(request: NextRequest, context: { params: Promise<{ path: string[] }> }) {
   const { path } = await context.params;

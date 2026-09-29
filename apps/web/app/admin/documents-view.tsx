@@ -157,7 +157,8 @@ export default function DocumentsView({ csrf }: { csrf: string }) {
           <div className="review-actions"><button disabled={busy || !editable || !dirty || !metadata?.title.trim()} onClick={() => action(async () => {
             await adminRequest(`versions/${version.id}`, csrf, 'PATCH', { expected_revision_id: revisionId, markdown, metadata }); clearDirty(); setNotice('Revision guardada.');
           })}><Save size={17}/>Guardar revision</button>
-            <button disabled={busy || !editable || dirty || !markdown.trim() || !!version.reviewed_at} onClick={() => action(async () => { await adminRequest(`versions/${version.id}/review`, csrf, 'POST', { expected_revision_id: revisionId }); setNotice('Revision aprobada.'); })}><Check size={17}/>Marcar revisado</button></div>
+            <button disabled={busy || !editable || dirty || !markdown.trim() || !!version.reviewed_at} onClick={() => action(async () => { await adminRequest(`versions/${version.id}/review`, csrf, 'POST', { expected_revision_id: revisionId }); setNotice('Revision aprobada.'); })}><Check size={17}/>Marcar revisado</button>
+            <button disabled={busy || dirty || !version.reviewed_at || !['requiere_revision', 'publicado', 'error'].includes(version.status)} onClick={() => action(async () => { await adminRequest(`versions/${version.id}/publish`, csrf, 'POST', { expected_revision_id: revisionId }); setNotice('Indexacion en cola; la publicacion se completa al terminar.'); })}>{version.status === 'publicado' ? 'Reindexar' : 'Publicar'}</button></div>
         </>}
       </section>}
     </div>
