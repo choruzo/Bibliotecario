@@ -86,7 +86,7 @@ def test_abstention_never_generates_and_followup_retrieves_again(application, mo
     cid = conversation(client)
     calls = mock_retrieval(monkeypatch)
     generation = []
-    async def reformulate(messages, max_tokens):
+    async def reformulate(messages, max_tokens, **kwargs):
         generation.append(messages)
         return 'consulta autónoma sobre el texto'
     monkeypatch.setattr(app.state.clients, 'generate', reformulate)
@@ -113,9 +113,14 @@ def test_grounded_response_citations_and_semantic_rejection(application, monkeyp
         saved = db.get(Message, message['id'])
         assert db.get(RetrievalRun, saved.retrieval_run_id).result['chat_outcome']['status'] == message['status']
     assert len(calls) == 1
-    if invalid or reject:
+    if invalid:
         assert message['status'] == 'abstained' and not message['sources']
         assert all('Texto original.' not in e.get('content', '') for e in events)
+    elif reject:
+        assert message['status'] == 'completed'
+        assert 'Extractos literales' in message['content']
+        assert 'Piensa en una biblioteca' not in message['content']
+        assert message['sources'][0]['quote'] == candidate['content']
     else:
         assert message['status'] == 'completed' and '[C1]' in message['content']
         assert 'Explicación general' in message['content']
@@ -124,6 +129,35 @@ def test_grounded_response_citations_and_semantic_rejection(application, monkeyp
         assert client.get(f"/chat/messages/{message['id']}/sources/C2/original").status_code == 404
         login(client, 'lector')
         assert client.get(f"/chat/messages/{message['id']}/sources/C1/original").status_code == 404
+
+
+def test_rejected_paraphrase_can_publish_only_independently_verified_exact_passages(application, monkeypatch):
+    app, client, sessions = application
+    login(client)
+    candidate = indexed(application)
+    mock_retrieval(monkeypatch, answer=True, candidate=candidate)
+    mock_generation(monkeypatch, app, candidate)
+    checks = []
+    async def generate(messages, **kwargs):
+        validation = json.loads(messages[1]['content'])
+        checks.append(validation)
+        supported = all(c['claim'] == c['source'].strip() for c in validation['claims']) and not validation['general']
+        return json.dumps({'supported': supported, 'general_safe': supported})
+    monkeypatch.setattr(app.state.clients, 'generate', generate)
+    message = turn(client, conversation(client))[-1]['message']
+    assert len(checks) == 1 and message['status'] == 'completed'
+    assert '> ' + candidate['content'].strip() in message['content'] and '[C1]' in message['content']
+    assert 'Piensa en una biblioteca' not in message['content']
+    with sessions() as db:
+        assert db.get(RetrievalRun, message['retrieval_run_id']).result['chat_outcome']['reason'] == 'grounded_extract'
+
+
+def test_generation_cannot_omit_part_of_the_assessed_procedure():
+    sources = [{'citation_id': 'C1', 'quote': 'Primer paso.'},
+               {'citation_id': 'C2', 'quote': 'Paso obligatorio posterior.'}]
+    with pytest.raises(ValueError, match='incomplete_answer'):
+        validate_answer(json.dumps({'evidence': [{'citation_id': 'C1', 'quote': 'Primer paso.',
+                       'explanation': 'Primer paso.'}], 'general': ''}), sources)
 
 
 def test_withdrawal_during_generation_abstains(application, monkeypatch):

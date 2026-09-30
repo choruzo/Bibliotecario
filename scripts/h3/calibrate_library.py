@@ -17,12 +17,14 @@ ROOT = Path(__file__).resolve().parents[2]
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--scope', choices=['admin', 'usuario'], default='admin')
+    parser.add_argument('--calibration-bank', type=Path, default=ROOT / 'evaluation/h0/questions.jsonl')
+    parser.add_argument('--resume', action='store_true')
     parser.add_argument('--validation-bank', type=Path, default=ROOT / 'evaluation/h3/validation-v2.jsonl')
     args = parser.parse_args()
     origin = "http://localhost:3000"
     credentials = json.loads((ROOT / ".artifacts/h1/admin-credentials.json").read_text(encoding="utf-8"))
     catalog = json.loads((ROOT / "evaluation/h0/corpus_catalog.json").read_text(encoding="utf-8"))["documents"]
-    questions = ROOT / "evaluation/h0/questions.jsonl"
+    questions = args.calibration_bank
     validation = args.validation_bank
     cases = [json.loads(line) | {'split': split} for path, split in ((questions, 'calibration'), (validation, 'validation'))
              for line in path.read_text(encoding='utf-8').splitlines() if line.strip()]
@@ -54,9 +56,23 @@ def main():
             if len(matches) != 1:
                 raise ValueError("Se requiere exactamente una fuente publicada para " + source["id"])
             mapping[source["id"]] = matches[0]
+        checkpoint = ROOT / f'.artifacts/retrieval-fix/calibration-progress-{args.scope}.json'
+        checkpoint.parent.mkdir(parents=True, exist_ok=True)
+        saved = json.loads(checkpoint.read_text(encoding='utf-8')) if args.resume and checkpoint.exists() else []
         labeled, histories = [], {}
         for case in cases:
             group = case.get('conversation_id')
+            previous = next((row for row in saved if row['id'] == case['id']), None)
+            if previous:
+                detail = client.get('/admin/retrieval/runs/' + previous['run_id'])
+                detail.raise_for_status()
+                result = detail.json()['result']
+                if result.get('question', result.get('query')) != case['query']:
+                    raise ValueError('El checkpoint pertenece a otra pregunta: ' + case['id'])
+                labeled.append(previous)
+                if group:
+                    histories.setdefault(group, []).append(case['query'])
+                continue
             response = client.post("/admin/retrieval/search", json={"query": case["query"], 'scope': args.scope,
                                    'previous_questions': histories.get(group, []) if group else []}, headers=headers)
             response.raise_for_status()
@@ -66,6 +82,7 @@ def main():
                 "expected_sections": case["expected_sections"], "conversation_id": group, 'split': case['split']})
             if group:
                 histories.setdefault(group, []).append(case['query'])
+            checkpoint.write_text(json.dumps(labeled, indent=2), encoding='utf-8')
             print("Evaluated " + case["id"], flush=True)
         response = client.post("/admin/retrieval/calibrate", json={"cases": labeled, 'scope': args.scope}, headers=headers)
         response.raise_for_status()

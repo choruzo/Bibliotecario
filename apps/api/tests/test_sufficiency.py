@@ -12,16 +12,32 @@ from bibliotecario.indexing import model_signature
 from bibliotecario.providers import ModelClients, ProviderError
 
 
-def test_intent_assessment_never_sees_documents_and_short_circuits_ambiguous_queries():
+def test_intent_sees_titles_but_not_document_instructions_and_short_circuits_ambiguity():
     calls = []
     class Clients:
         async def generate(self, messages, **kwargs):
             calls.append(messages)
             return '{"clear":false}'
     result = asyncio.run(assess(Clients(), 'Objeto sin identificar',
-                               [{'chunk_id': 'one', 'search_content': 'INSTRUCCION DEL DOCUMENTO'}]))
-    assert result['action'] == 'clarify' and len(calls) == 1
+                               [{'chunk_id': 'one', 'title': 'Guía del switch', 'search_content': 'INSTRUCCION DEL DOCUMENTO'}]))
+    assert result['action'] == 'clarify' and len(calls) == 2
     assert 'INSTRUCCION DEL DOCUMENTO' not in json.dumps(calls)
+    assert 'Guía del switch' not in calls[0][1]['content']
+    assert 'Guía del switch' in calls[1][1]['content']
+
+
+def test_assessment_can_use_procedure_support_beyond_initial_ten_hits():
+    class Clients:
+        async def generate(self, messages, **kwargs):
+            if 'clear' in kwargs['response_schema']['properties']:
+                return '{"clear":true}'
+            assert 'Paso final.' in messages[1]['content']
+            return json.dumps({'action': 'answer', 'coverage_complete': True, 'contradiction': False,
+                               'support': [{'chunk_id': 'final'}]})
+    candidates = [{'chunk_id': str(i), 'title': 'Guía', 'search_content': 'Encabezado'} for i in range(10)]
+    candidates.append({'chunk_id': 'final', 'title': 'Guía', 'search_content': 'Paso final.'})
+    result = asyncio.run(assess(Clients(), 'Pasos de la guía', candidates))
+    assert result['action'] == 'answer' and result['support'][0]['quote'] == 'Paso final.'
 
 
 def test_valid_evidence_remains_eligible_but_errors_cannot_approve_calibration():
@@ -58,7 +74,8 @@ def test_assessment_rejects_invented_support_partial_coverage_and_invalid_types(
                 return '{"clear":true}'
             return json.dumps(value)
     result = asyncio.run(assess(Clients(), 'pregunta', [{'chunk_id': 'one', 'search_content': 'Texto fiel.'}]))
-    assert result['action'] == 'abstain' and result['reason'] == 'assessment_failed'
+    assert result['action'] == 'abstain'
+    assert result['reason'] == ('partial_evidence' if changes in ({'coverage_complete': False}, {'contradiction': True}) else 'assessment_failed')
 
 
 def test_ambiguity_blocks_high_scores_without_poisoning_threshold_selection():

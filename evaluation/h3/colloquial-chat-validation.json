@@ -1,0 +1,226 @@
+{
+  "date": "2026-09-30",
+  "cases_per_scope": 13,
+  "scopes": {
+    "admin": {
+      "passed": 13,
+      "total": 13,
+      "cases": [
+        {
+          "id": "cisco-install",
+          "expected": "answer",
+          "status": "completed",
+          "reason": "grounded_extract",
+          "sources": 10,
+          "passed": true
+        },
+        {
+          "id": "cisco-console",
+          "expected": "answer",
+          "status": "completed",
+          "reason": "grounded",
+          "sources": 2,
+          "passed": true
+        },
+        {
+          "id": "cisco-ssh",
+          "expected": "answer",
+          "status": "completed",
+          "reason": "grounded_extract",
+          "sources": 10,
+          "passed": true
+        },
+        {
+          "id": "cisco-followup",
+          "expected": "answer",
+          "status": "completed",
+          "reason": "grounded_extract",
+          "sources": 4,
+          "passed": true
+        },
+        {
+          "id": "vmware",
+          "expected": "answer",
+          "status": "completed",
+          "reason": "grounded_extract",
+          "sources": 10,
+          "passed": true
+        },
+        {
+          "id": "git",
+          "expected": "answer",
+          "status": "completed",
+          "reason": "grounded_extract",
+          "sources": 9,
+          "passed": true
+        },
+        {
+          "id": "cantata",
+          "expected": "answer",
+          "status": "completed",
+          "reason": "grounded_extract",
+          "sources": 5,
+          "passed": true
+        },
+        {
+          "id": "sonar",
+          "expected": "answer",
+          "status": "completed",
+          "reason": "grounded_extract",
+          "sources": 7,
+          "passed": true
+        },
+        {
+          "id": "unknown",
+          "expected": "abstain",
+          "status": "abstained",
+          "reason": "evidence_assessed",
+          "sources": 0,
+          "passed": true
+        },
+        {
+          "id": "missing-fact",
+          "expected": "abstain",
+          "status": "abstained",
+          "reason": "evidence_assessed",
+          "sources": 0,
+          "passed": true
+        },
+        {
+          "id": "ambiguous",
+          "expected": "clarify",
+          "status": "abstained",
+          "reason": "clarification_required",
+          "sources": 0,
+          "passed": true
+        },
+        {
+          "id": "ambiguous-restart",
+          "expected": "clarify",
+          "status": "abstained",
+          "reason": "clarification_required",
+          "sources": 0,
+          "passed": true
+        },
+        {
+          "id": "ambiguous-configuration",
+          "expected": "clarify",
+          "status": "abstained",
+          "reason": "clarification_required",
+          "sources": 0,
+          "passed": true
+        }
+      ]
+    },
+    "usuario": {
+      "passed": 13,
+      "total": 13,
+      "cases": [
+        {
+          "id": "cisco-install",
+          "expected": "answer",
+          "status": "completed",
+          "reason": "grounded_extract",
+          "sources": 10,
+          "passed": true
+        },
+        {
+          "id": "cisco-console",
+          "expected": "answer",
+          "status": "completed",
+          "reason": "grounded",
+          "sources": 2,
+          "passed": true
+        },
+        {
+          "id": "cisco-ssh",
+          "expected": "answer",
+          "status": "completed",
+          "reason": "grounded_extract",
+          "sources": 10,
+          "passed": true
+        },
+        {
+          "id": "cisco-followup",
+          "expected": "answer",
+          "status": "completed",
+          "reason": "grounded_extract",
+          "sources": 5,
+          "passed": true
+        },
+        {
+          "id": "vmware",
+          "expected": "answer",
+          "status": "completed",
+          "reason": "grounded_extract",
+          "sources": 10,
+          "passed": true
+        },
+        {
+          "id": "git",
+          "expected": "answer",
+          "status": "completed",
+          "reason": "grounded_extract",
+          "sources": 9,
+          "passed": true
+        },
+        {
+          "id": "cantata",
+          "expected": "answer",
+          "status": "completed",
+          "reason": "grounded_extract",
+          "sources": 5,
+          "passed": true
+        },
+        {
+          "id": "sonar",
+          "expected": "answer",
+          "status": "completed",
+          "reason": "grounded_extract",
+          "sources": 7,
+          "passed": true
+        },
+        {
+          "id": "unknown",
+          "expected": "abstain",
+          "status": "abstained",
+          "reason": "evidence_assessed",
+          "sources": 0,
+          "passed": true
+        },
+        {
+          "id": "missing-fact",
+          "expected": "abstain",
+          "status": "abstained",
+          "reason": "evidence_assessed",
+          "sources": 0,
+          "passed": true
+        },
+        {
+          "id": "ambiguous",
+          "expected": "clarify",
+          "status": "abstained",
+          "reason": "clarification_required",
+          "sources": 0,
+          "passed": true
+        },
+        {
+          "id": "ambiguous-restart",
+          "expected": "clarify",
+          "status": "abstained",
+          "reason": "clarification_required",
+          "sources": 0,
+          "passed": true
+        },
+        {
+          "id": "ambiguous-configuration",
+          "expected": "clarify",
+          "status": "abstained",
+          "reason": "clarification_required",
+          "sources": 0,
+          "passed": true
+        }
+      ]
+    }
+  }
+}

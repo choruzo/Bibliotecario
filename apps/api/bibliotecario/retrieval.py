@@ -1,6 +1,7 @@
 import hashlib
 import json
 import time
+import re
 from typing import Literal
 from time import perf_counter
 
@@ -20,6 +21,16 @@ from .evaluation import calibrate, ranking_metrics, summarize
 router = APIRouter(prefix="/admin/retrieval", dependencies=[Depends(administrator)])
 POOL = 30
 RRF_K = 60
+CONTEXT_POOL = 60
+CONTEXT_BYTES = 36000
+
+
+def lexical_query(query):
+    # OR supplies lexical recall for natural-language questions; BGE judges relevance.
+    # Quotes/operators from user input must not change the query's boolean semantics.
+    words = re.findall(r"[^\W_]+", query.lower(), re.UNICODE)
+    ignored = set("me puedes puede explicar explicas explica dime favor pasos paso como cómo que qué cuál cuáles para por los las el la un una del de al en se y o es son según sobre necesito quiero saber".split())
+    return " OR ".join(dict.fromkeys(w for w in words if w not in ignored)) or query
 
 
 class Search(BaseModel):
@@ -75,10 +86,44 @@ def candidate_pools(db, vector, query, signature, document_id, admin):
         ORDER BY score DESC, id LIMIT :pool
     ) SELECT 'vector' AS channel, id, score, rank FROM vectors
       UNION ALL SELECT 'text' AS channel, id, score, rank FROM lexical""")
-    rows = db.execute(stmt, {"signature": signature, "vector": json.dumps(vector), "query": query,
+    rows = db.execute(stmt, {"signature": signature, "vector": json.dumps(vector), "query": lexical_query(query),
                             "pool": POOL, "document_id": document_id, "admin": admin}).mappings().all()
     return tuple([dict(row) for row in sorted(rows, key=lambda r: r["rank"]) if row["channel"] == name]
                  for name in ("vector", "text"))
+
+
+def expand_context(db, candidates):
+    """Read exact sibling chunks of retrieved, eligible revisions; never invent passages.
+
+    Small guides can be read as a whole. Large guides use nearby chunks so a heading
+    does not lose the instructions immediately following it. The budget is global.
+    """
+    result = list(candidates)
+    seen = {c["chunk_id"] for c in result}
+    size = sum(len(c["search_content"].encode()) for c in result)
+    versions = set()
+    for seed in candidates[:10]:
+        if seed["version_id"] in versions:
+            continue
+        versions.add(seed["version_id"])
+        siblings = db.scalars(select(Chunk).where(Chunk.version_id == seed["version_id"],
+            Chunk.revision_id == seed["revision_id"]).order_by(Chunk.number)).all()
+        if len(siblings) > CONTEXT_POOL:
+            seed_ids = {c["chunk_id"] for c in candidates if c["version_id"] == seed["version_id"]}
+            numbers = [c.number for c in siblings if c.id in seed_ids]
+            siblings = sorted(siblings, key=lambda c: (min(abs(c.number - n) for n in numbers), c.number))
+        for chunk in siblings:
+            if chunk.id in seen:
+                continue
+            cost = len(chunk.search_content.encode())
+            if len(result) >= CONTEXT_POOL or size + cost > CONTEXT_BYTES:
+                continue
+            result.append(seed | {"chunk_id": chunk.id, "content": chunk.content,
+                "search_content": chunk.search_content, "provenance": chunk.provenance,
+                "rrf_score": 0, "channels": {"context": {"seed_chunk_id": seed["chunk_id"]}}})
+            seen.add(chunk.id)
+            size += cost
+    return result
 
 
 def evidence_decision(db, settings, corpus, results, filtered=False, admin=True, assessment=None):
@@ -125,6 +170,7 @@ async def retrieve(db, settings, clients, query, limit=10, document_id=None, adm
             "version_id": version.id, "version": version.number, "revision_id": chunk.revision_id,
             "title": version.metadata_json["title"], "content": chunk.content, "search_content": chunk.search_content,
             "provenance": chunk.provenance, "rrf_score": score, "channels": channels})
+    candidates = expand_context(db, candidates)
     db.rollback()  # Release snapshot before the slow reranker.
     timing["fusion_ms"] = (perf_counter() - started) * 1000
     started = perf_counter()
@@ -146,7 +192,11 @@ async def retrieve(db, settings, clients, query, limit=10, document_id=None, adm
     changed = corpus_signature(db) != corpus
     decision = {"action": "abstain", "reason": "corpus_changed"} if changed else evidence_decision(
         db, settings, corpus, candidates, filtered=document_id is not None, admin=admin, assessment=assessment)
-    return {"query": query, "candidates": candidates, "results": candidates[:limit],
+    supporting = {s["chunk_id"] for s in assessment.get("support", [])}
+    # Generation receives only the exact passages whose coverage was assessed.
+    results = ([c for c in candidates if c["chunk_id"] in supporting]
+               if assessment["action"] == "answer" else candidates)[:limit]
+    return {"query": query, "candidates": candidates, "results": results,
             "pools": {"vector": vector_rows, "text": text_rows}, "decision": decision,
             "scope": {"admin": admin, "document_id": document_id},
             "latency": {key: round(value, 2) for key, value in timing.items()},
@@ -160,11 +210,11 @@ async def inspect(body: Search, request: Request, identity=Depends(require_csrf)
         if body.previous_questions:
             if any(not q.strip() or len(q) > 1000 for q in body.previous_questions):
                 raise ValueError("invalid_history")
-            # Same contextual reformulation as chat, using user intent only.
-            from .chat import contextual_query
-            query = await contextual_query(request.app.state.clients, query, "",
-                                           [{"role": "user", "content": q, "references": []}
-                                            for q in body.previous_questions])
+        # Same query normalization and contextual reformulation as chat.
+        from .chat import contextual_query
+        query = await contextual_query(request.app.state.clients, query, "",
+                                       [{"role": "user", "content": q, "references": []}
+                                        for q in body.previous_questions])
         result = await retrieve(db, request.app.state.settings, request.app.state.clients,
                                 query, body.limit, body.document_id, admin=body.scope == "admin")
         result["question"] = body.query
@@ -249,7 +299,8 @@ def calibrate_recorded_runs(body: CalibrationBank, request: Request, identity=De
         expected = "answer" if case.kind in {"answerable", "conversation"} else "clarify" if case.kind == "ambiguous" else "abstain"
         row = case.model_dump() | {"expected_behavior": expected}
         results = run.result["candidates"]
-        row.update(ranking_metrics(row, results, {c["document_id"]: c["document_id"] for c in results}))
+        evidence = run.result.get("results", results)
+        row.update(ranking_metrics(row, evidence, {c["document_id"]: c["document_id"] for c in results}))
         row["score"] = results[0]["rerank_score"] if results else None
         row["answer_eligible"] = run.result["assessment"]["action"] == "answer"
         row["assessment_action"] = run.result["assessment"]["action"]

@@ -41,6 +41,7 @@ class ModelClients:
         if response_schema is not None:
             body["response_format"] = {"type": "json_schema", "json_schema": {
                 "name": "evidence_assessment", "strict": True, "schema": response_schema}}
+        if response_schema is not None or reasoning_effort is not None:
             effort = reasoning_effort or s.sufficiency_reasoning_effort
             if effort != "disabled":
                 body["reasoning_effort"] = effort
