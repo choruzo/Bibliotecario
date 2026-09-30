@@ -24,27 +24,37 @@ Una reindexación conserva el índice activo hasta el commit. Retirar un documen
 - La pantalla muestra fragmentos, citas, scores originales y fusionados, ranking, decisión, tiempos y enlace al original. Las trazas completas quedan en PostgreSQL, accesibles únicamente a administración.
 - `GET /admin/retrieval/runs` y `/runs/{id}` permiten inspeccionar historial y errores.
 
-Todas estas rutas requieren sesión administrativa; las operaciones POST requieren Origin y CSRF. No se llama al modelo generativo.
+Todas estas rutas requieren sesión administrativa; las operaciones POST requieren Origin y CSRF. La inspección llama al modelo local para evaluar ambigüedad y suficiencia, sin generar una respuesta documental.
 
 ## Suficiencia y evaluación
 
 La política inicial es **abstenerse**. No se configura un umbral manual. `POST /admin/retrieval/calibrate` recibe un banco de al menos 24 trazas etiquetadas, con las cuatro clases de H0, y calcula la política a partir de las puntuaciones observadas. Rechaza trazas antiguas, filtradas o de otros modelos/corpus.
 
-Cada caso contiene `id`, `run_id`, `kind`, `language`, `expected_documents` (IDs de la biblioteca), `expected_sections` y, para conversación, `conversation_id`. El comportamiento esperado deriva de la clase. Se separan calibración y validación por IDs dentro de cada clase, manteniendo los grupos conversacionales juntos. Solo se habilita un umbral si no produce respuestas indebidas en ninguno de los dos grupos, responde al menos un positivo en ambos y los casos aceptados recuperan todos sus localizadores esperados en los diez primeros resultados.
+Cada caso contiene `id`, `run_id`, `kind`, `language`, `expected_documents` (IDs de la biblioteca), `expected_sections` y, para conversación, `conversation_id`. El comportamiento esperado deriva de la clase. El campo opcional `split: calibration | validation` permite reservar un banco nuevo completo para validación; si se utiliza, debe aparecer en todos los casos y no dividir una conversación. Sin ese campo se conserva la separación por IDs dentro de cada clase. Solo se habilita un umbral si no hay errores ni respuestas indebidas en ninguno de los dos grupos, responde al menos un positivo en ambos y los casos aceptados recuperan todos sus localizadores esperados en los diez primeros resultados.
+
+Antes del umbral, `sufficiency.py` clasifica la pregunta sin mostrar documentos al modelo. Una pregunta ambigua produce una petición fija de aclaración, sin citas ni respuesta factual. Para preguntas claras, una segunda evaluación exige cobertura completa, ausencia de contradicciones y referencias a fragmentos recibidos. El servidor conserva sus pasajes originales; no pide al modelo que los copie. Fallos de proveedor, JSON inválido o referencias inexistentes producen abstención y bloquean la aprobación de la calibración. Estas evaluaciones usan temperatura cero.
 
 La política está ligada a firmas del corpus activo y de la configuración de modelos/algoritmo. Cambiar versiones, retirar contenido o cambiar la configuración invalida su uso. H4 añade firmas sensibles a metadatos y calibración separada por ámbito `admin`/`usuario`; las consultas filtradas siguen sin calibración propia. Las firmas identifican configuración y revisiones, no detectan una sustitución de pesos que conserve exactamente el mismo nombre/URL: ese cambio requiere reindexar y recalibrar.
 
-`GET /admin/retrieval/policy` devuelve la política vigente. La pantalla indica si falta calibración. Los casos ambiguos permanecen en abstención; pedir aclaración y reformular seguimientos forma parte de H4. Se mide esa limitación explícitamente.
+`GET /admin/retrieval/policy` devuelve la política vigente. La pantalla distingue abstención y aclaración. La firma de políticas incluye los prompts de suficiencia, temperatura y URL/nombre del modelo generativo, además de la configuración de recuperación. Cambiar esa evaluación invalida políticas sin obligar a regenerar los vectores. La semántica del juicio sigue dependiendo del modelo: referencias válidas no prueban por sí solas cobertura o ausencia de contradicciones.
 
 ### Evaluación de la biblioteca revisada
 
 Tras publicar una única copia de cada fuente de H0 y revisarla:
 
 ```powershell
-.venv/Scripts/python.exe scripts/h3/calibrate_library.py
+.venv/Scripts/python.exe scripts/h3/publish_catalog.py
+.venv/Scripts/python.exe scripts/h3/calibrate_library.py --scope admin
+.venv/Scripts/python.exe scripts/h3/calibrate_library.py --scope usuario
 ```
 
-El script comprueba los hashes originales contra el catálogo y ejecuta las 24 consultas mediante la API. Guarda las trazas en PostgreSQL y el informe privado en `.artifacts/h3/library-calibration.json`. Usa la cuenta local de `.artifacts/h1/admin-credentials.json`, sin imprimir credenciales. No carga ni aprueba documentos.
+`publish_catalog.py` comprueba todos los hashes antes de cargar fuentes, reutiliza versiones coincidentes sin alterar documentos ajenos, verifica el original, la igualdad exacta del Markdown convertido, diagnósticos y localizadores, y marca revisada/publica cada fuente. Se ejecuta únicamente con autorización para esa publicación. Conflictos, cambios manuales o fallos detienen el proceso; los documentos ya publicados se conservan.
+
+`calibrate_library.py` requiere una publicación única de cada fuente. Evalúa las 24 preguntas H0 como calibración y las 24 preguntas nuevas de `validation-v2.jsonl` como validación independiente (`--validation-bank` permite indicar otro banco). El intento con `validation-v1.jsonl` se conserva como rechazado en `attempt-v1-admin.json`; no se reutiliza para aprobar la versión posterior. Los seguimientos usan la misma reformulación de H4 con intención previa del usuario (`previous_questions`, máximo seis preguntas); no simulan respuestas previas como evidencia. Guarda trazas en PostgreSQL, informes privados en `.artifacts/h3/library-calibration-{scope}.json` e informes sin preguntas ni fragmentos en `evaluation/h3/library-calibration-{scope}.json`. Usa la cuenta local de H1 sin imprimir credenciales. No carga ni aprueba documentos. La calidad de las respuestas finales del chat se comprueba aparte.
+
+La clasificación y suficiencia solicitan salida JSON restringida por esquema al proveedor, incluidas referencias limitadas a los fragmentos recibidos. La API vuelve a validar tipos, referencias y coherencia del resultado. Se registran categorías de error sin exponer detalles del proveedor; un fallo nunca se convierte en evidencia suficiente.
+
+El cliente y proxy usan 60 segundos por petición; el chat mantiene 100 segundos por turno. Las decisiones estructuradas usan `BIB_SUFFICIENCY_REASONING_EFFORT=low`, configurable como `low`, `medium`, `high` o `disabled` si el proveedor no admite el parámetro. Presupuestos, esquemas, timeout y esfuerzo de razonamiento están ligados a la firma de política. Cambiarlos requiere recalibrar. Los tokens de razonamiento se incluyen en los límites de generación: una respuesta incompleta se rechaza aunque parezca JSON válido.
 
 ### Ensayo aislado reproducible
 

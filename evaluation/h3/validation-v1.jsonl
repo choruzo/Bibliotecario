@@ -1,0 +1,24 @@
+{"id":"VAL-A001","kind":"answerable","language":"es","query":"Según la guía Git, ¿qué aplicaciones se pueden instalar para trabajar con repositorios?","expected_documents":["DOC-005"],"expected_sections":["Aplicaciones instalables"]}
+{"id":"VAL-A002","kind":"answerable","language":"es","query":"¿Qué indica la guía de ramas locales para subir los cambios?","expected_documents":["DOC-009"],"expected_sections":["Subir los cambios"]}
+{"id":"VAL-A003","kind":"answerable","language":"es","query":"Según la guía Cisco Catalyst, ¿qué parámetros se usan en la conexión inicial por consola serie?","expected_documents":["DOC-007"],"expected_sections":["1. Conexión por consola serie (acceso inicial)"]}
+{"id":"VAL-A004","kind":"answerable","language":"es","query":"¿Qué documenta la guía Cisco Catalyst sobre dominio y claves RSA para SSH?","expected_documents":["DOC-007"],"expected_sections":["3.1 Dominio y claves RSA"]}
+{"id":"VAL-A005","kind":"answerable","language":"es","query":"¿Qué requisitos previos enumera la guía SonarQube?","expected_documents":["DOC-011"],"expected_sections":["Requisitos previos"]}
+{"id":"VAL-A006","kind":"answerable","language":"es","query":"¿Qué estructura de proyecto describe la guía SonarQube?","expected_documents":["DOC-011"],"expected_sections":["Estructura del proyecto"]}
+{"id":"VAL-A007","kind":"answerable","language":"es","query":"¿Qué explica la guía de cabeceras sobre el hook pre-commit?","expected_documents":["DOC-006"],"expected_sections":["Pre-commit"]}
+{"id":"VAL-A008","kind":"answerable","language":"es","query":"¿Qué explica la guía de cabeceras sobre el hook post-commit?","expected_documents":["DOC-006"],"expected_sections":["Post-commit"]}
+{"id":"VAL-A009","kind":"answerable","language":"es","query":"¿Dónde sitúa las plantillas la documentación DOORS?","expected_documents":["DOC-001"],"expected_sections":["Localizacion plantillas DOORS."]}
+{"id":"VAL-A010","kind":"answerable","language":"es","query":"Según la guía Git, ¿cómo se descarga un repositorio usando TortoiseGit?","expected_documents":["DOC-005"],"expected_sections":["TortoiseGit"]}
+{"id":"VAL-U001","kind":"unanswerable","language":"es","query":"¿Cuántas incidencias abiertas tiene hoy el equipo de operaciones?","expected_documents":[],"expected_sections":[]}
+{"id":"VAL-U002","kind":"unanswerable","language":"es","query":"¿Qué importe exacto se pagó este trimestre por las licencias de SonarQube?","expected_documents":[],"expected_sections":[]}
+{"id":"VAL-U003","kind":"unanswerable","language":"es","query":"¿Quién tiene asignada ahora la guardia nocturna del centro de datos?","expected_documents":[],"expected_sections":[]}
+{"id":"VAL-U004","kind":"unanswerable","language":"es","query":"¿Cuál es el token privado vigente para acceder al servidor Git?","expected_documents":[],"expected_sections":[]}
+{"id":"VAL-U005","kind":"unanswerable","language":"es","query":"¿Qué día exacto se comprará el próximo switch de producción?","expected_documents":[],"expected_sections":[]}
+{"id":"VAL-M001","kind":"ambiguous","language":"es","query":"Quiero eliminarlo, ¿qué comando ejecuto?","expected_documents":[],"expected_sections":[]}
+{"id":"VAL-M002","kind":"ambiguous","language":"es","query":"¿Cómo cambio la configuración?","expected_documents":[],"expected_sections":[]}
+{"id":"VAL-M003","kind":"ambiguous","language":"es","query":"¿Qué servidor debo reiniciar?","expected_documents":[],"expected_sections":[]}
+{"id":"VAL-C001-T1","kind":"conversation","conversation_id":"VAL-CONV-001","turn":1,"language":"es","query":"¿Cómo se descarga un repositorio con TortoiseGit según la guía Git?","expected_documents":["DOC-005"],"expected_sections":["TortoiseGit"]}
+{"id":"VAL-C001-T2","kind":"conversation","conversation_id":"VAL-CONV-001","turn":2,"language":"es","query":"¿Y con SourceTree?","expected_documents":["DOC-005"],"expected_sections":["SourceTree"]}
+{"id":"VAL-C001-T3","kind":"conversation","conversation_id":"VAL-CONV-001","turn":3,"language":"es","query":"Antes de descargarlo, ¿qué comprobaciones previas explica esa guía?","expected_documents":["DOC-005"],"expected_sections":["Comprobaciones previas"]}
+{"id":"VAL-C002-T1","kind":"conversation","conversation_id":"VAL-CONV-002","turn":1,"language":"es","query":"¿Qué explica la guía Cisco Catalyst sobre parámetros de sesión SSH?","expected_documents":["DOC-007"],"expected_sections":["3.3 Parámetros de sesión SSH"]}
+{"id":"VAL-C002-T2","kind":"conversation","conversation_id":"VAL-CONV-002","turn":2,"language":"es","query":"En esa misma guía, amplía la compatibilidad de algoritmos SSH.","expected_documents":["DOC-007"],"expected_sections":["3.4 Compatibilidad de algoritmos SSH"]}
+{"id":"VAL-C002-T3","kind":"conversation","conversation_id":"VAL-CONV-002","turn":3,"language":"es","query":"¿Y qué dice sobre los puertos trunk?","expected_documents":["DOC-007"],"expected_sections":["5.2 Configuración de puertos trunk"]}

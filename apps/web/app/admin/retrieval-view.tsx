@@ -35,7 +35,7 @@ export default function RetrievalView({ csrf }: { csrf: string }) {
     {error && <p className="error" role="alert">{error}</p>}
     {result && <div aria-live="polite">
       {result.chat_outcome && <p className="notice">Respuesta del chat: {result.chat_outcome.status} · {result.chat_outcome.reason || result.chat_outcome.error}</p>}
-      <p className="notice">Decision: {result.decision.action === 'answer' ? 'Evidencia suficiente' : 'Abstencion'} · {result.decision.reason}{result.decision.threshold !== undefined && ` · Umbral ${result.decision.threshold.toFixed(4)}`}</p>
+      <p className="notice">Decision: {result.decision.action === 'answer' ? 'Evidencia suficiente' : result.decision.action === 'clarify' ? 'Se necesita aclaración' : 'Abstencion'} · {result.decision.reason}{result.decision.threshold !== undefined && ` · Umbral ${result.decision.threshold.toFixed(4)}`}</p>
       <p className="muted">{Object.entries(result.latency).map(([name, ms]) => `${name}: ${ms} ms`).join(' · ')}</p>
       {!result.results.length && <p>No hay fragmentos publicados para esta consulta.</p>}
       {result.results.map((candidate, index) => <article className="retrieval-card" key={candidate.chunk_id}>

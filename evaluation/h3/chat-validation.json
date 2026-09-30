@@ -1,0 +1,52 @@
+{
+  "date": "2026-09-30",
+  "scopes": {
+    "admin": [
+      {
+        "kind": "ambiguous",
+        "status": "abstained",
+        "sources": 0,
+        "passed": true
+      },
+      {
+        "kind": "uncovered",
+        "status": "abstained",
+        "sources": 0,
+        "passed": true
+      },
+      {
+        "kind": "answerable",
+        "status": "completed",
+        "sources": 3,
+        "passed": true
+      }
+    ],
+    "usuario": [
+      {
+        "kind": "ambiguous",
+        "status": "abstained",
+        "sources": 0,
+        "passed": true
+      },
+      {
+        "kind": "uncovered",
+        "status": "abstained",
+        "sources": 0,
+        "passed": true
+      },
+      {
+        "kind": "answerable",
+        "status": "completed",
+        "sources": 2,
+        "passed": true
+      }
+    ]
+  },
+  "admin_contextual_followup": {
+    "new_retrieval": true,
+    "status": "completed",
+    "sources": 5,
+    "reason": "grounded"
+  },
+  "temporary_reader_disabled": true
+}

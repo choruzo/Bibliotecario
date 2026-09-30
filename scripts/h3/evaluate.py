@@ -26,6 +26,7 @@ from bibliotecario.jobs import claim, enqueue
 from bibliotecario.models import Document, DocumentVersion, EvidencePolicy, NormalizedRevision, Role, User, RetrievalRun
 from bibliotecario.providers import ModelClients
 from bibliotecario.retrieval import corpus_signature, retrieve
+from bibliotecario.sufficiency import policy_signature
 from bibliotecario.storage import storage_path
 
 
@@ -87,6 +88,10 @@ async def evaluate(settings, sessions, base):
                     traces.append({"case_id": case["id"], "result": result})
                     row.update(ranking_metrics(case, result["candidates"], mapping))
                     row["score"] = result["candidates"][0]["rerank_score"] if result["candidates"] else None
+                    row["answer_eligible"] = result["assessment"]["action"] == "answer"
+                    row["assessment_action"] = result["assessment"]["action"]
+                    if result["assessment"]["reason"] == "assessment_failed":
+                        row["error"] = "assessment_failed"
                     row["latency"] = result["latency"]
                     run = RetrievalRun(actor_id=actor_id, query=case["query"], status="completed", result=result, created_at=int(time.time()))
                     db.add(run)
@@ -103,11 +108,11 @@ async def evaluate(settings, sessions, base):
             calibration["reason"] = "evaluation_errors"
         with sessions() as db:
             corpus = corpus_signature(db)
-            db.add(EvidencePolicy(signature=model_signature(settings), corpus_signature=corpus, report=calibration, created_at=int(time.time())))
+            db.add(EvidencePolicy(signature=policy_signature(settings), corpus_signature=corpus, report=calibration, created_at=int(time.time())))
             db.commit()
         report = {"date": datetime.now(ZoneInfo("Europe/Madrid")).date().isoformat(), "format": "md", "query_mode": "raw_without_h4_reformulation",
                   "questions_sha256": hashlib.sha256(questions_path.read_bytes()).hexdigest(),
-                  "model_signature": model_signature(settings), "corpus_signature": corpus,
+                  "model_signature": policy_signature(settings), "corpus_signature": corpus,
                   "indexed": indexed, "cases": rows, "metrics": summarize(rows), "calibration": calibration,
                   "decision_metrics": decision_metrics(rows, calibration["threshold"] if calibration["approved"] else None),
                   "decisions_by_kind": {kind: decision_metrics([r for r in rows if r["kind"] == kind],

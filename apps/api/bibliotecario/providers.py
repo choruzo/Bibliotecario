@@ -33,12 +33,21 @@ class ModelClients:
         except ValueError as exc:
             raise ProviderError("invalid_json") from exc
 
-    async def generate(self, messages, max_tokens=128):
+    async def generate(self, messages, max_tokens=128, response_schema=None, reasoning_effort=None):
         s = self.settings
-        data = await self.post(s.llm_base_url, "/chat/completions", {
-            "model": s.llm_model, "messages": messages, "max_tokens": max_tokens, "stream": False
-        }, s.llm_api_key)
+        body = {
+            "model": s.llm_model, "messages": messages, "max_tokens": max_tokens, "stream": False, "temperature": 0
+        }
+        if response_schema is not None:
+            body["response_format"] = {"type": "json_schema", "json_schema": {
+                "name": "evidence_assessment", "strict": True, "schema": response_schema}}
+            effort = reasoning_effort or s.sufficiency_reasoning_effort
+            if effort != "disabled":
+                body["reasoning_effort"] = effort
+        data = await self.post(s.llm_base_url, "/chat/completions", body, s.llm_api_key)
         try:
+            if data["choices"][0].get("finish_reason") not in {None, "stop"}:
+                raise ProviderError("incomplete_generation")
             content = data["choices"][0]["message"]["content"]
             if not isinstance(content, str) or not content.strip():
                 raise ValueError()
@@ -46,11 +55,14 @@ class ModelClients:
         except (KeyError, TypeError, IndexError, ValueError) as exc:
             raise ProviderError("invalid_generation") from exc
 
-    async def stream_generate(self, messages, max_tokens=1800):
+    async def stream_generate(self, messages, max_tokens=1800, response_schema=None):
         s = self.settings
+        body = {"model": s.llm_model, "messages": messages, "max_tokens": max_tokens, "stream": True}
+        if response_schema is not None:
+            body["response_format"] = {"type": "json_schema", "json_schema": {
+                "name": "grounded_answer", "strict": True, "schema": response_schema}}
         async with self.http.stream("POST", s.llm_base_url.rstrip("/") + "/chat/completions",
-                headers=headers(s.llm_api_key), json={"model": s.llm_model, "messages": messages,
-                "max_tokens": max_tokens, "stream": True}) as response:
+                headers=headers(s.llm_api_key), json=body) as response:
             response.raise_for_status()
             total = 0
             finished = False

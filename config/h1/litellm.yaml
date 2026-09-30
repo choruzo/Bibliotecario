@@ -8,6 +8,6 @@ litellm_settings:
   set_verbose: false
   json_logs: true
   turn_off_message_logging: true
-  request_timeout: 15
+  request_timeout: 60
 general_settings:
   master_key: os.environ/LITELLM_MASTER_KEY

@@ -15,6 +15,7 @@ from bibliotecario.indexing import finalize_index, model_signature
 from bibliotecario.models import Conversation, Message, EvidencePolicy, RetrievalRun
 from bibliotecario.providers import ModelClients, ProviderError
 from bibliotecario.retrieval import corpus_signature, evidence_decision
+from bibliotecario.sufficiency import policy_signature, VERSION
 
 
 def conversation(client):
@@ -51,12 +52,12 @@ def indexed(application):
 
 
 def mock_generation(monkeypatch, app, candidate, invalid=False, reject=False, withdraw=None):
-    async def stream(messages):
+    async def stream(messages, **kwargs):
         if withdraw:
             withdraw()
         yield json.dumps({'evidence': [{'citation_id': 'C9' if invalid else 'C1', 'quote': candidate['content'],
                                       'explanation': 'Texto original.'}], 'general': 'Piensa en una biblioteca organizada.'})
-    async def generate(messages, max_tokens=128):
+    async def generate(messages, max_tokens=128, **kwargs):
         return json.dumps({'supported': not reject, 'general_safe': True})
     monkeypatch.setattr(app.state.clients, 'stream_generate', stream)
     monkeypatch.setattr(app.state.clients, 'generate', generate)
@@ -188,12 +189,13 @@ def test_scope_policies_do_not_cross_permissions(application):
     app, client, sessions = application
     with sessions() as db:
         corpus = corpus_signature(db)
-        db.add(EvidencePolicy(scope='admin', signature=model_signature(app.state.settings), corpus_signature=corpus,
+        db.add(EvidencePolicy(scope='admin', signature=policy_signature(app.state.settings), corpus_signature=corpus,
                               report={'approved': True, 'threshold': 0.5}, created_at=0))
         db.commit()
         results = [{'rerank_score': 0.9}]
-        assert evidence_decision(db, app.state.settings, corpus, results, admin=True)['action'] == 'answer'
-        assert evidence_decision(db, app.state.settings, corpus, results, admin=False)['action'] == 'abstain'
+        assessment = {'version': VERSION, 'action': 'answer', 'reason': 'evidence_assessed'}
+        assert evidence_decision(db, app.state.settings, corpus, results, admin=True, assessment=assessment)['action'] == 'answer'
+        assert evidence_decision(db, app.state.settings, corpus, results, admin=False, assessment=assessment)['action'] == 'abstain'
 
 
 @pytest.mark.parametrize('finish', ['stop', 'length', None])

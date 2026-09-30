@@ -11,6 +11,7 @@ from bibliotecario.indexing import finalize_index, model_signature
 from bibliotecario.jobs import claim, fail, finish_cancel
 from bibliotecario.models import Chunk, Document, DocumentVersion, RetrievalRun
 from bibliotecario.retrieval import fuse, corpus_signature
+from bibliotecario.sufficiency import policy_signature, VERSION
 
 
 def reviewed(application, content=b"# Titulo\n\nTexto original.\n", path="/admin/documents"):
@@ -175,7 +176,8 @@ def test_calibration_endpoint_uses_recorded_traces_and_rejects_stale_models(appl
                 score = .9 if kind in {"answerable", "conversation"} else .1
                 candidate = {"document_id": "document", "provenance": [{"section_path": ["Tema"]}], "rerank_score": score}
                 run = RetrievalRun(query=f"synthetic-{kind}-{i}", status="completed", created_at=int(time.time()),
-                    result={"corpus_signature": corpus, "model_signature": model_signature(app.state.settings),
+                    result={"corpus_signature": corpus, "model_signature": policy_signature(app.state.settings),
+                            "assessment": {"version": VERSION, "action": "answer" if score == .9 else "clarify" if kind == "ambiguous" else "abstain", "reason": "evidence_assessed"},
                             "scope": {"admin": True, "document_id": None}, "candidates": [candidate], "latency": {}})
                 db.add(run)
                 db.flush()

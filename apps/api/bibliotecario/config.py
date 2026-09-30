@@ -25,7 +25,8 @@ class Settings(BaseSettings):
     reranker_base_url: str = "http://host.docker.internal:8082"
     reranker_model: str = "bge-reranker-v2-m3-Q8_0.gguf"
     reranker_api_key: SecretStr = SecretStr("")
-    model_timeout_seconds: float = Field(default=15, gt=0, le=120)
+    model_timeout_seconds: float = Field(default=60, gt=0, le=120)
+    sufficiency_reasoning_effort: str = Field(default="low", pattern="^(low|medium|high|disabled)$")
     worker_interval_seconds: float = Field(default=15, ge=1, le=60)
     upload_max_bytes: int = Field(default=100 * 1024 * 1024, ge=1024, le=1024 * 1024 * 1024)
     docx_expanded_max_bytes: int = Field(default=250 * 1024 * 1024, ge=1024)

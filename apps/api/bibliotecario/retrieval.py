@@ -14,6 +14,7 @@ from .auth import administrator, database, require_csrf
 from .indexing import model_signature
 from .models import Chunk, Document, DocumentVersion, EvidencePolicy, RetrievalRun
 from .providers import ProviderError
+from .sufficiency import assess, policy_signature, VERSION
 from .evaluation import calibrate, ranking_metrics, summarize
 
 router = APIRouter(prefix="/admin/retrieval", dependencies=[Depends(administrator)])
@@ -26,6 +27,7 @@ class Search(BaseModel):
     limit: int = Field(default=10, ge=1, le=10)
     document_id: str | None = None
     scope: Literal["admin", "usuario"] = "admin"
+    previous_questions: list[str] = Field(default_factory=list, max_length=6)
 
 
 def corpus_signature(db):
@@ -79,10 +81,14 @@ def candidate_pools(db, vector, query, signature, document_id, admin):
                  for name in ("vector", "text"))
 
 
-def evidence_decision(db, settings, corpus, results, filtered=False, admin=True):
+def evidence_decision(db, settings, corpus, results, filtered=False, admin=True, assessment=None):
     if filtered:
         return {"action": "abstain", "reason": "filtered_scope_uncalibrated"}
-    policy = db.scalar(select(EvidencePolicy).where(EvidencePolicy.scope == ("admin" if admin else "usuario"), EvidencePolicy.signature == model_signature(settings),
+    if not assessment or assessment.get("version") != VERSION:
+        return {"action": "abstain", "reason": "assessment_missing"}
+    if assessment["action"] != "answer":
+        return {"action": assessment["action"], "reason": assessment["reason"]}
+    policy = db.scalar(select(EvidencePolicy).where(EvidencePolicy.scope == ("admin" if admin else "usuario"), EvidencePolicy.signature == policy_signature(settings),
                       EvidencePolicy.corpus_signature == corpus).order_by(EvidencePolicy.created_at.desc()).limit(1))
     if not policy or not policy.report.get("approved"):
         return {"action": "abstain", "reason": "uncalibrated", "policy_id": policy.id if policy else None}
@@ -126,6 +132,9 @@ async def retrieve(db, settings, clients, query, limit=10, document_id=None, adm
         ranking = await clients.rerank(query, [c["search_content"] for c in candidates])
         candidates = [candidates[row["index"]] | {"rerank_score": row["relevance_score"]} for row in ranking]
     timing["reranking_ms"] = (perf_counter() - started) * 1000
+    started = perf_counter()
+    assessment = await assess(clients, query, candidates)
+    timing["sufficiency_ms"] = (perf_counter() - started) * 1000
     # A withdrawal/deletion during inference must invalidate the returned evidence.
     db.execute(text("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ"))
     ids = [c["chunk_id"] for c in candidates]
@@ -136,20 +145,31 @@ async def retrieve(db, settings, clients, query, limit=10, document_id=None, adm
     candidates = [c for c in candidates if c["chunk_id"] in visible]
     changed = corpus_signature(db) != corpus
     decision = {"action": "abstain", "reason": "corpus_changed"} if changed else evidence_decision(
-        db, settings, corpus, candidates, filtered=document_id is not None, admin=admin)
+        db, settings, corpus, candidates, filtered=document_id is not None, admin=admin, assessment=assessment)
     return {"query": query, "candidates": candidates, "results": candidates[:limit],
             "pools": {"vector": vector_rows, "text": text_rows}, "decision": decision,
             "scope": {"admin": admin, "document_id": document_id},
             "latency": {key: round(value, 2) for key, value in timing.items()},
-            "corpus_signature": corpus, "model_signature": model_signature(settings)}
+            "corpus_signature": corpus, "model_signature": policy_signature(settings), "assessment": assessment}
 
 
 @router.post("/search")
 async def inspect(body: Search, request: Request, identity=Depends(require_csrf), db=Depends(database)):
     try:
+        query = body.query
+        if body.previous_questions:
+            if any(not q.strip() or len(q) > 1000 for q in body.previous_questions):
+                raise ValueError("invalid_history")
+            # Same contextual reformulation as chat, using user intent only.
+            from .chat import contextual_query
+            query = await contextual_query(request.app.state.clients, query, "",
+                                           [{"role": "user", "content": q, "references": []}
+                                            for q in body.previous_questions])
         result = await retrieve(db, request.app.state.settings, request.app.state.clients,
-                                body.query, body.limit, body.document_id, admin=body.scope == "admin")
-        run = RetrievalRun(actor_id=identity.user.id, query=body.query, status="completed", result=result, created_at=int(time.time()))
+                                query, body.limit, body.document_id, admin=body.scope == "admin")
+        result["question"] = body.query
+        result["previous_questions"] = body.previous_questions
+        run = RetrievalRun(actor_id=identity.user.id, query=query, status="completed", result=result, created_at=int(time.time()))
         db.add(run)
         db.commit()
         return result | {"run_id": run.id}
@@ -183,6 +203,7 @@ class LabeledRun(BaseModel):
     expected_documents: list[str] = Field(default_factory=list, max_length=30)
     expected_sections: list[str] = Field(default_factory=list, max_length=30)
     conversation_id: str | None = Field(default=None, max_length=100)
+    split: Literal["calibration", "validation"] | None = None
     language: str = Field(default="es", max_length=16)
 
 
@@ -193,7 +214,7 @@ class CalibrationBank(BaseModel):
 
 @router.get("/policy")
 def current_policy(request: Request, scope: Literal["admin", "usuario"] = "admin", db=Depends(database)):
-    signature = model_signature(request.app.state.settings)
+    signature = policy_signature(request.app.state.settings)
     corpus = corpus_signature(db)
     policy = db.scalar(select(EvidencePolicy).where(EvidencePolicy.scope == scope, EvidencePolicy.signature == signature,
                       EvidencePolicy.corpus_signature == corpus).order_by(EvidencePolicy.created_at.desc()).limit(1))
@@ -208,12 +229,17 @@ def calibrate_recorded_runs(body: CalibrationBank, request: Request, identity=De
     minimums = {"answerable": 10, "unanswerable": 5, "ambiguous": 3, "conversation": 6}
     if any(sum(c.kind == kind for c in body.cases) < count for kind, count in minimums.items()):
         raise HTTPException(422, "El banco no cubre las cuatro clases de H0")
-    corpus, signature = corpus_signature(db), model_signature(request.app.state.settings)
+    if any(c.split for c in body.cases) and any(
+            sum(c.kind == kind and c.split == split for c in body.cases) < count
+            for split in ("calibration", "validation") for kind, count in minimums.items()):
+        raise HTTPException(422, "Cada banco independiente debe cubrir las cuatro clases de H0")
+    corpus, signature = corpus_signature(db), policy_signature(request.app.state.settings)
     rows = []
     for case in body.cases:
         run = db.get(RetrievalRun, case.run_id)
         if (not run or run.status != "completed" or run.result.get("corpus_signature") != corpus
                 or run.result.get("model_signature") != signature
+                or run.result.get("assessment", {}).get("version") != VERSION
                 or run.result.get("scope") != {"admin": body.scope == "admin", "document_id": None}):
             raise HTTPException(409, "Las trazas deben pertenecer al corpus y modelos vigentes, sin filtros")
         if case.kind in {"answerable", "conversation"} and not case.expected_documents:
@@ -225,9 +251,15 @@ def calibrate_recorded_runs(body: CalibrationBank, request: Request, identity=De
         results = run.result["candidates"]
         row.update(ranking_metrics(row, results, {c["document_id"]: c["document_id"] for c in results}))
         row["score"] = results[0]["rerank_score"] if results else None
+        row["answer_eligible"] = run.result["assessment"]["action"] == "answer"
+        row["assessment_action"] = run.result["assessment"]["action"]
+        row["error"] = run.result["assessment"].get("error", "assessment_failed") if run.result["assessment"]["reason"] == "assessment_failed" else None
         row["latency"] = run.result["latency"]
         rows.append(row)
-    report = calibrate(rows) | {"metrics": summarize(rows), "cases": rows}
+    try:
+        report = calibrate(rows) | {"metrics": summarize(rows), "cases": rows}
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
     policy = EvidencePolicy(scope=body.scope, signature=signature, corpus_signature=corpus, report=report, created_at=int(time.time()))
     db.add(policy)
     from .models import AuditEvent

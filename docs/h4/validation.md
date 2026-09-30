@@ -21,7 +21,7 @@ Conversaciones ajenas y originales de sus citas no son accesibles; las mutacione
 
 ## Límites y ajustes del ensayo
 
-La calibración de H3 sigue rechazada: el chat de la biblioteca actual conserva la abstención. La generación positiva se comprueba con fuentes sintéticas y pruebas controladas; esto no demuestra que el corpus actual supere la suficiencia ni evalúa calidad pedagógica en todo el banco H0. Se añadió calibración independiente por ámbito y firma sensible a metadatos/visibilidad; las políticas anteriores deben recalibrarse.
+En la validación inicial de H4 la calibración de H3 seguía rechazada y el chat conservaba la abstención. La generación positiva se comprobó con fuentes sintéticas y pruebas controladas; ese ensayo no demostraba suficiencia del corpus real ni calidad pedagógica en todo el banco H0. Se añadió calibración independiente por ámbito y firma sensible a metadatos/visibilidad. La corrección posterior y la evaluación de la biblioteca publicada se documentan en `docs/h3/calibration-fix.md`.
 
 La validación semántica usa el mismo proveedor generativo en una llamada separada y es probabilística. No sustituye la evaluación adversarial de H7. Los IDs y pasajes completos se verifican determinísticamente; el contenido generado no se envía hasta superar ambos controles. Las citas históricas conservan su fragmento incluso tras retirada; el original deja de descargarse cuando se elimina.
 
