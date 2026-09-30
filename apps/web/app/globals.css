@@ -135,3 +135,12 @@ progress { display: block; width: 85px; height: 8px; accent-color: var(--accent)
 @media(max-width: 760px) { .chat-layout { grid-template-columns: minmax(0, 1fr); }.conversation-list nav { max-height: 180px; overflow: auto; } }
 .retrieval-card h2, .retrieval-card p { overflow-wrap: anywhere; }
 .retrieval-excerpt { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 28rem; overflow: auto; font-size: .85rem; }
+
+.operation-tabs, .document-filters { display: flex; flex-wrap: wrap; gap: 12px; margin: 18px 0; }
+.document-filters label { display: grid; gap: 6px; flex: 1; min-width: 150px; }
+.operations-section td { overflow-wrap: anywhere; }
+.operations-section .metadata-fields { margin: 20px 0; }
+.operations-section small { overflow-wrap: anywhere; color: var(--muted); }
+.operations-section summary { cursor: pointer; overflow-wrap: anywhere; }
+.operations-section a { color: #24699a; text-decoration: underline; }
+.operation-tabs button[aria-pressed=true] { background: #e0ebe4; }

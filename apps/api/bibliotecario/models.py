@@ -51,6 +51,7 @@ class WorkerStatus(Base):
     name: Mapped[str] = mapped_column(String(64), primary_key=True)
     heartbeat_at: Mapped[int] = mapped_column(Integer)
     state: Mapped[str] = mapped_column(String(16))
+    settings_signature: Mapped[str | None] = mapped_column(String(64))
     __table_args__ = (CheckConstraint("state IN ('idle', 'stopped')", name="worker_state"),)
 
 
@@ -204,3 +205,18 @@ class Message(Base):
     retrieval_run_id: Mapped[str | None] = mapped_column(ForeignKey("retrieval_runs.id"))
     created_at: Mapped[int] = mapped_column(Integer)
     __table_args__ = (UniqueConstraint("conversation_id", "number"),)
+
+
+class AppSetting(Base):
+    __tablename__ = "app_settings"
+    name: Mapped[str] = mapped_column(String(64), primary_key=True)
+    value: Mapped[dict] = mapped_column(JSON)
+    revision: Mapped[int] = mapped_column(Integer, default=1)
+
+
+class ReindexBatch(Base):
+    __tablename__ = "reindex_batches"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    actor_id: Mapped[str] = mapped_column(ForeignKey("users.id"))
+    job_ids: Mapped[list] = mapped_column(JSON)
+    created_at: Mapped[int] = mapped_column(Integer)

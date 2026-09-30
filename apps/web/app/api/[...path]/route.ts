@@ -3,12 +3,13 @@ import { NextRequest } from 'next/server';
 export const dynamic = 'force-dynamic';
 const allowed = new Set(['auth/login', 'auth/logout', 'auth/me', 'health/dependencies']);
 const chatRoutes = /^chat\/(?:conversations(?:\/[a-f0-9-]{36}(?:\/messages)?)?|messages\/[a-f0-9-]{36}\/sources\/C[1-9][0-9]*\/original)$/;
-const adminRoutes = /^(admin\/documents(?:\/[a-f0-9-]{36}(?:\/versions|\/withdraw)?)?|admin\/versions\/[a-f0-9-]{36}(?:\/original|\/normalized|\/revisions|\/review|\/convert|\/publish)?|admin\/jobs(?:\/[a-f0-9-]{36}\/(?:events|cancel|retry))?|admin\/retrieval\/(?:search|policy|calibrate|runs(?:\/[a-f0-9-]{36})?))$/;
+const operationRoutes = /^admin\/operations\/(?:settings|status|audit|responses|evaluations|reindex(?:\/preview)?|batches(?:\/[a-f0-9-]{36})?|export\/(?:diagnostics|evaluations\/[a-f0-9-]{36}))$/;
+const adminRoutes = /^(admin\/documents(?:\/[a-f0-9-]{36}(?:\/versions|\/withdraw)?)?|admin\/versions\/[a-f0-9-]{36}(?:\/original|\/normalized|\/revisions|\/review|\/convert|\/publish|\/classification)?|admin\/jobs(?:\/[a-f0-9-]{36}\/(?:events|cancel|retry))?|admin\/retrieval\/(?:search|policy|calibrate|runs(?:\/[a-f0-9-]{36})?))$/;
 
 async function proxy(request: NextRequest, context: { params: Promise<{ path: string[] }> }) {
   const { path } = await context.params;
   const route = path.join('/');
-  if (!allowed.has(route) && !adminRoutes.test(route) && !chatRoutes.test(route)) return Response.json({ detail: 'Ruta no encontrada' }, { status: 404 });
+  if (!allowed.has(route) && !adminRoutes.test(route) && !chatRoutes.test(route) && !operationRoutes.test(route)) return Response.json({ detail: 'Ruta no encontrada' }, { status: 404 });
   const headers = new Headers();
   for (const name of ['cookie', 'content-type', 'origin', 'x-csrf-token', 'x-request-id', 'idempotency-key']) {
     const value = request.headers.get(name); if (value) headers.set(name, value);
@@ -31,4 +32,4 @@ async function proxy(request: NextRequest, context: { params: Promise<{ path: st
     return Response.json({ detail: 'Servicio no disponible' }, { status: 503 });
   }
 }
-export { proxy as GET, proxy as POST, proxy as PATCH, proxy as DELETE };
+export { proxy as GET, proxy as POST, proxy as PUT, proxy as PATCH, proxy as DELETE };

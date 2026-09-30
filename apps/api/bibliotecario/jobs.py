@@ -1,6 +1,7 @@
 import hashlib
 import json
 import logging
+import os
 import subprocess
 import sys
 import time
@@ -249,7 +250,11 @@ def process(sessions, settings, lease, stop):
             arguments = ["-m", "bibliotecario.convert_task", "--input", str(path), "--format", fmt]
     temporary = storage_path(settings, "normalized/.task-" + str(uuid.uuid4()) + ".json")
     temporary.parent.mkdir(parents=True, exist_ok=True)
-    child = subprocess.Popen([sys.executable, *arguments, "--output", str(temporary)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    from .admin_settings import public_settings
+    child_env = os.environ.copy()
+    child_env.update({"BIB_" + name.upper(): str(value) for name, value in public_settings(settings).items()})
+    child = subprocess.Popen([sys.executable, *arguments, "--output", str(temporary)], env=child_env,
+                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     started, renewed = time.monotonic(), 0
     try:
         while child.poll() is None:

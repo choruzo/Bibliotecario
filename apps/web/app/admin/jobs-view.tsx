@@ -10,14 +10,17 @@ type Event = { event: string; attempt: number; generation: number; created_at: n
 export default function JobsView({ csrf }: { csrf: string }) {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [offset, setOffset] = useState(0);
+  const [status, setStatus] = useState('');
+  const [kind, setKind] = useState('');
+  const [documentId, setDocumentId] = useState('');
   const [more, setMore] = useState(false);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [events, setEvents] = useState<Event[] | null>(null);
   const refresh = useCallback(async () => {
-    const data = await adminRequest(`jobs?offset=${offset}`, csrf);
+    const data = await adminRequest(`jobs?offset=${offset}&status=${status}&kind=${kind}&document_id=${encodeURIComponent(documentId)}`, csrf);
     setJobs(data.items); setMore(data.has_more);
-  }, [csrf, offset]);
+  }, [csrf, offset, status, kind, documentId]);
   useEffect(() => {
     const update = () => refresh().catch((e: Error) => setError(e.message));
     update(); const timer = setInterval(update, 2500); return () => clearInterval(timer);
@@ -32,6 +35,7 @@ export default function JobsView({ csrf }: { csrf: string }) {
     finally { setBusy(false); }
   }
   return <section className="jobs-section">{error && <p className="error" role="alert">{error}</p>}
+    <div className="document-filters"><label>Estado del trabajo<select value={status} onChange={e => { setStatus(e.target.value); setOffset(0); }}><option value="">Todos</option>{['pendiente', 'en_ejecucion', 'reintentable', 'fallido', 'cancelado', 'completado'].map(s => <option key={s} value={s}>{statusNames[s]}</option>)}</select></label><label>Tipo de trabajo<select value={kind} onChange={e => { setKind(e.target.value); setOffset(0); }}><option value="">Todos</option><option value="convert">Conversion</option><option value="index">Indexacion</option><option value="delete">Eliminacion</option></select></label><label>ID de documento<input value={documentId} onChange={e => { setDocumentId(e.target.value); setOffset(0); }}/></label></div>
     <div className="table-wrap"><table><thead><tr><th>Documento</th><th>Operacion</th><th>Estado</th><th>Progreso</th><th>Intentos</th><th>Diagnostico</th><th>Acciones</th></tr></thead><tbody>
       {jobs.map(job => <tr key={job.id}><th scope="row">{job.document_title}</th><td>{job.kind === 'convert' ? 'Conversion' : job.kind === 'index' ? 'Indexacion' : 'Eliminacion'}</td><td>{statusNames[job.status]}</td><td><progress value={job.progress} max={100} aria-label="Progreso"/><span className="progress-label">{job.progress}%</span></td><td>{job.attempts}</td><td>{job.error_code || '-'}</td><td><div className="job-actions">
         <button className="icon-button" title="Ver eventos" aria-label="Ver eventos" disabled={busy} onClick={() => action(job, 'events')}><List size={17}/></button>

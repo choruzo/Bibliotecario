@@ -15,12 +15,14 @@ type Revision = { id: string; number: number; created_at: number; edited: boolea
 export default function DocumentsView({ csrf }: { csrf: string }) {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [query, setQuery] = useState('');
+  const [filters, setFilters] = useState({ category: '', tag: '', visibility: '', status: '' });
   const [offset, setOffset] = useState(0);
   const [more, setMore] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
   const [versionId, setVersionId] = useState('');
   const [metadata, setMetadata] = useState<Metadata | null>(null);
   const [tagText, setTagText] = useState('');
+  const [classification, setClassification] = useState({ category: '', tags: '', visibility: 'usuarios' });
   const [markdown, setMarkdown] = useState('');
   const [provenance, setProvenance] = useState<Locator[]>([]);
   const [revisions, setRevisions] = useState<Revision[]>([]);
@@ -44,9 +46,9 @@ export default function DocumentsView({ csrf }: { csrf: string }) {
   function markDirty() { setDirty(true); dirtyRef.current = true; setNotice(''); }
   function clearDirty() { setDirty(false); dirtyRef.current = false; }
   const refresh = useCallback(async () => {
-    const data = await adminRequest(`documents?q=${encodeURIComponent(query)}&offset=${offset}`, csrf);
+    const data = await adminRequest(`documents?q=${encodeURIComponent(query)}&offset=${offset}&${new URLSearchParams(filters)}`, csrf);
     setDocuments(data.items); setMore(data.has_more);
-  }, [csrf, query, offset]);
+  }, [csrf, query, offset, filters]);
   useEffect(() => {
     let active = true;
     const update = () => refresh().catch((e: Error) => { if (active) setError(e.message); });
@@ -56,6 +58,7 @@ export default function DocumentsView({ csrf }: { csrf: string }) {
   useEffect(() => {
     if (!version) return;
     setMetadata(version.metadata);
+    setClassification({ category: version.metadata.category, tags: version.metadata.tags.join(', '), visibility: version.metadata.visibility });
     setTagText(version.metadata.tags.join(', '));
     setRevisionId(version.revision_id || '');
     setMarkdown(''); setProvenance([]); setRevisions([]); clearDirty();
@@ -117,6 +120,7 @@ export default function DocumentsView({ csrf }: { csrf: string }) {
     <div className="document-toolbar"><div className="search-field"><Search size={17} aria-hidden="true"/><input aria-label="Buscar documentos" placeholder="Buscar documentos" value={query} onChange={e => { setQuery(e.target.value); setOffset(0); }}/></div>
       <button className="upload-button" disabled={busy} onClick={() => uploadInput.current?.click()}><Upload size={17}/>Cargar documento</button>
       <input ref={uploadInput} type="file" accept=".md,.txt,.pdf,.docx" hidden onChange={e => { upload(e.target.files?.[0]); e.target.value = ''; }}/></div>
+    <div className="document-filters"><label>Filtrar categoria<input value={filters.category} onChange={e => { setFilters({ ...filters, category: e.target.value }); setOffset(0); }}/></label><label>Filtrar etiqueta<input value={filters.tag} onChange={e => { setFilters({ ...filters, tag: e.target.value }); setOffset(0); }}/></label><label>Filtrar visibilidad<select value={filters.visibility} onChange={e => { setFilters({ ...filters, visibility: e.target.value }); setOffset(0); }}><option value="">Todas</option><option value="usuarios">Usuarios</option><option value="admin">Administradores</option></select></label><label>Filtrar estado<select value={filters.status} onChange={e => { setFilters({ ...filters, status: e.target.value }); setOffset(0); }}><option value="">Todos</option>{['subido', 'procesando', 'requiere_revision', 'indexando', 'publicado', 'retirado', 'error'].map(s => <option key={s} value={s}>{statusNames[s]}</option>)}</select></label></div>
     {error && <p className="error" role="alert">{error}</p>}{notice && <p className="notice" role="status">{notice}</p>}
     <div className={`document-layout ${doc ? 'selected-document' : ''}`}>
       <section className="document-list" aria-label="Lista de documentos">
@@ -136,6 +140,7 @@ export default function DocumentsView({ csrf }: { csrf: string }) {
           <button className="icon-button" title="Reconvertir original" aria-label="Reconvertir original" disabled={busy || dirty || !['subido', 'requiere_revision', 'error'].includes(version.status)} onClick={() => action(async () => { await adminRequest(`versions/${version.id}/convert`, csrf, 'POST'); setNotice('Conversion en cola.'); })}><RotateCcw size={18}/></button>
           <button className="icon-button" title="Retirar version publicada" aria-label="Retirar version publicada" disabled={busy || !doc.active_version_id} onClick={() => action(() => adminRequest(`documents/${doc.id}/withdraw`, csrf, 'POST'))}><ArchiveX size={18}/></button>
           <button className="icon-button danger-button" title="Eliminar documento" aria-label="Eliminar documento" disabled={busy || !canDelete} onClick={() => { setConfirmation(''); setDeleting(true); }}><Trash2 size={18}/></button></div>
+        {version.status === 'publicado' && <form className="retrieval-card" onSubmit={e => { e.preventDefault(); action(async () => { await adminRequest(`versions/${version.id}/classification`, csrf, 'PATCH', { expected_revision_id: version.revision_id, expected_metadata: version.metadata, category: classification.category, tags: classification.tags.split(',').map(t => t.trim()).filter(Boolean), visibility: classification.visibility }); setNotice('Clasificacion actualizada.'); }); }}><h3>Clasificacion publicada</h3><div className="metadata-fields"><label>Categoria publicada<input maxLength={100} value={classification.category} onChange={e => setClassification({ ...classification, category: e.target.value })}/></label><label>Etiquetas publicadas<input value={classification.tags} onChange={e => setClassification({ ...classification, tags: e.target.value })}/></label><label>Visibilidad publicada<select value={classification.visibility} onChange={e => setClassification({ ...classification, visibility: e.target.value })}><option value="usuarios">Usuarios</option><option value="admin">Administradores</option></select></label></div><button disabled={busy}>Guardar clasificacion</button></form>}
         <div className="review-status"><span>{statusNames[version.status]}</span><span className={version.reviewed_at ? 'ok' : 'muted'}>{version.reviewed_at ? 'Revisado' : 'Sin aprobar'}</span>{dirty && <span className="unsaved">Cambios sin guardar</span>}</div>
         {version.diagnostics.length > 0 && <ul className="diagnostics-list">{version.diagnostics.map(code => <li key={code}>{diagnosticNames[code] || (code.startsWith('possible_ocr_page_') ? `Posible necesidad de OCR en pagina ${code.split('_').pop()}` : code)}</li>)}</ul>}
         {metadata && <fieldset className="metadata-fields" disabled={!editable || busy}>
@@ -158,7 +163,7 @@ export default function DocumentsView({ csrf }: { csrf: string }) {
             await adminRequest(`versions/${version.id}`, csrf, 'PATCH', { expected_revision_id: revisionId, markdown, metadata }); clearDirty(); setNotice('Revision guardada.');
           })}><Save size={17}/>Guardar revision</button>
             <button disabled={busy || !editable || dirty || !markdown.trim() || !!version.reviewed_at} onClick={() => action(async () => { await adminRequest(`versions/${version.id}/review`, csrf, 'POST', { expected_revision_id: revisionId }); setNotice('Revision aprobada.'); })}><Check size={17}/>Marcar revisado</button>
-            <button disabled={busy || dirty || !version.reviewed_at || !['requiere_revision', 'publicado', 'error'].includes(version.status)} onClick={() => action(async () => { await adminRequest(`versions/${version.id}/publish`, csrf, 'POST', { expected_revision_id: revisionId }); setNotice('Indexacion en cola; la publicacion se completa al terminar.'); })}>{version.status === 'publicado' ? 'Reindexar' : 'Publicar'}</button></div>
+            <button disabled={busy || dirty || !version.reviewed_at || !['requiere_revision', 'publicado', 'error'].includes(version.status)} onClick={() => action(async () => { if (version.status === 'publicado' && !window.confirm('Reindexar esta version publicada?')) return; await adminRequest(`versions/${version.id}/publish`, csrf, 'POST', { expected_revision_id: revisionId }); setNotice('Indexacion en cola; la publicacion se completa al terminar.'); })}>{version.status === 'publicado' ? 'Reindexar' : 'Publicar'}</button></div>
         </>}
       </section>}
     </div>

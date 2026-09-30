@@ -300,6 +300,8 @@ Las rutas se configurarán mediante variables y se montarán dentro de los conte
 
 ### H5 — Operación administrativa completa
 
+Implementado el 2026-09-30. Guía operativa y validación: [docs/h5/README.md](docs/h5/README.md).
+
 **Resultado:** el sistema puede mantenerse sin intervenir manualmente en la base de datos.
 
 - Panel de trabajos, fallos, reintentos y estado de modelos.

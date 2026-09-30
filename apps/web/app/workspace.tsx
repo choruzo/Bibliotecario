@@ -6,6 +6,7 @@ import { BookOpen, LogOut, MessageSquare, Activity, RefreshCw, Library, Files, L
 import DocumentsView from './admin/documents-view';
 import JobsView from './admin/jobs-view';
 import RetrievalView from './admin/retrieval-view';
+import OperationsView from './admin/operations-view';
 import ChatView from './chat/chat-view';
 
 type User = { username: string; role: string; csrf_token: string };
@@ -13,7 +14,7 @@ type Check = { status: string; error?: string; latency_ms?: number };
 type Health = { checks: Record<string, Check> };
 const names: Record<string, string> = { database: 'Base de datos', llm: 'Generacion', embedding: 'Embeddings', reranker: 'Reranker' };
 
-export default function Workspace({ admin = false, view = 'services' }: { admin?: boolean; view?: 'services' | 'documents' | 'jobs' | 'retrieval' }) {
+export default function Workspace({ admin = false, view = 'services' }: { admin?: boolean; view?: 'services' | 'documents' | 'jobs' | 'retrieval' | 'operations' }) {
   const router = useRouter();
   const path = usePathname();
   const [user, setUser] = useState<User | null>(null);
@@ -61,14 +62,15 @@ export default function Workspace({ admin = false, view = 'services' }: { admin?
       {user.role === 'admin' && <><Link href="/admin/documents" aria-current={path === '/admin/documents' ? 'page' : undefined}><Files size={19}/>Documentos</Link>
         <Link href="/admin/jobs" aria-current={path === '/admin/jobs' ? 'page' : undefined}><ListChecks size={19}/>Trabajos</Link>
         <Link href="/admin/retrieval" aria-current={path === '/admin/retrieval' ? 'page' : undefined}><Library size={19}/>Recuperacion</Link>
+        <Link href="/admin/operations" aria-current={path === '/admin/operations' ? 'page' : undefined}><ListChecks size={19}/>Operacion</Link>
         <Link href="/admin" aria-current={path === '/admin' ? 'page' : undefined}><Activity size={19}/>Administracion</Link></>}</nav>
     <div className="account"><div><strong>{user.username}</strong><span>{user.role === 'admin' ? 'Administrador' : 'Usuario'}</span></div>
       <button className="icon-button" onClick={logout} disabled={busy} title="Cerrar sesion" aria-label="Cerrar sesion"><LogOut size={19}/></button></div>
   </aside><main className="content">
-    <header className="page-header"><div><p className="eyebrow">Biblioteca local</p><h1>{admin ? view === 'documents' ? 'Documentos' : view === 'jobs' ? 'Trabajos de ingesta' : view === 'retrieval' ? 'Inspeccion de recuperacion' : 'Estado de los servicios' : 'Biblioteca'}</h1></div>
+    <header className="page-header"><div><p className="eyebrow">Biblioteca local</p><h1>{admin ? view === 'documents' ? 'Documentos' : view === 'jobs' ? 'Trabajos de ingesta' : view === 'operations' ? 'Operacion administrativa' : view === 'retrieval' ? 'Inspeccion de recuperacion' : 'Estado de los servicios' : 'Biblioteca'}</h1></div>
       {admin && view === 'services' && <button onClick={check} disabled={busy}><RefreshCw size={17} className={busy ? 'spin' : ''}/>{busy ? 'Comprobando...' : 'Comprobar'}</button>}</header>
     {error && <p role="alert" className="error">{error}</p>}
-    {admin && view === 'documents' ? <DocumentsView csrf={user.csrf_token}/> : admin && view === 'jobs' ? <JobsView csrf={user.csrf_token}/> : admin && view === 'retrieval' ? <RetrievalView csrf={user.csrf_token}/> : admin ? <><div className="status-summary"><span>Disponibilidad</span><span className="muted">{checked ? `Ultima comprobacion: ${checked}` : 'Sin comprobar'}</span></div>
+    {admin && view === 'operations' ? <OperationsView csrf={user.csrf_token}/> : admin && view === 'documents' ? <DocumentsView csrf={user.csrf_token}/> : admin && view === 'jobs' ? <JobsView csrf={user.csrf_token}/> : admin && view === 'retrieval' ? <RetrievalView csrf={user.csrf_token}/> : admin ? <><div className="status-summary"><span>Disponibilidad</span><span className="muted">{checked ? `Ultima comprobacion: ${checked}` : 'Sin comprobar'}</span></div>
       <div className="table-wrap"><table><thead><tr><th>Servicio</th><th>Estado</th><th>Latencia</th><th>Diagnostico</th></tr></thead><tbody>
         {Object.entries(names).map(([key, label]) => { const result = health?.checks[key]; return <tr key={key}><th scope="row">{label}</th>
           <td><span className={`status ${result?.status === 'available' ? 'ok' : result ? 'bad' : ''}`}><span className="dot"/>{result ? result.status === 'available' ? 'Disponible' : 'No disponible' : 'Sin comprobar'}</span></td>

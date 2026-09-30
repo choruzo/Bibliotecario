@@ -6,14 +6,15 @@ import uuid
 from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field, field_validator
-from sqlalchemy import func, select
+from sqlalchemy import func, select, text
+from sqlalchemy.orm import aliased
 from sqlalchemy.exc import IntegrityError
 
 from .auth import administrator, database, require_csrf
 from .converters import edited_provenance
 from .jobs import ACTIVE, enqueue, event, restore_version
 from .models import (AuditEvent, Document, DocumentFile, DocumentVersion, IngestionJob,
-                     JobEvent, NormalizedRevision)
+                     JobEvent, NormalizedRevision, ReindexBatch)
 from .storage import InvalidFile, save_upload, storage_path
 
 router = APIRouter(prefix="/admin", dependencies=[Depends(administrator)])
@@ -28,6 +29,13 @@ class Metadata(BaseModel):
     language: str = Field(default="es", min_length=2, max_length=16)
     version: str = Field(default="1", min_length=1, max_length=64)
     visibility: str = Field(default="usuarios", pattern="^(usuarios|admin)$")
+
+    @field_validator("tags")
+    @classmethod
+    def clean_tags(cls, values):
+        if any(not v.strip() or len(v) > 100 for v in values):
+            raise ValueError("Etiqueta vacia o demasiado larga")
+        return list(dict.fromkeys(v.strip() for v in values))
 
     @field_validator("title")
     @classmethod
@@ -49,6 +57,19 @@ class Confirmation(BaseModel):
 
 class RevisionConfirmation(BaseModel):
     expected_revision_id: str
+
+
+class Classification(BaseModel):
+    expected_revision_id: str
+    expected_metadata: Metadata
+    category: str = Field(max_length=100)
+    tags: list[str] = Field(max_length=30)
+    visibility: str = Field(pattern="^(usuarios|admin)$")
+
+    @field_validator("tags")
+    @classmethod
+    def clean_tags(cls, value):
+        return Metadata.clean_tags(value)
 
 
 def audit(db, request, actor, action, object_id):
@@ -114,12 +135,26 @@ def job_json(job):
 
 
 @router.get("/documents")
-def list_documents(q: str = "", offset: int = 0, db=Depends(database)):
-    if len(q) > 300 or offset < 0:
+def list_documents(q: str = "", offset: int = 0, category: str = "", tag: str = "",
+                   visibility: str = "", status: str = "", db=Depends(database)):
+    if len(q) > 300 or offset < 0 or any(len(v) > 100 for v in (category, tag, visibility, status)):
         raise HTTPException(422, "Filtro no valido")
     query = select(Document).where(Document.deleted_at.is_(None))
+    latest = aliased(DocumentVersion)
+    latest_number = select(func.max(latest.number)).where(latest.document_id == Document.id).correlate(Document).scalar_subquery()
+    query = query.join(DocumentVersion, DocumentVersion.document_id == Document.id).where(DocumentVersion.number == latest_number)
     if q:
         query = query.where(Document.title.icontains(q, autoescape=True))
+    for key, value in [("category", category), ("visibility", visibility)]:
+        if value:
+            query = query.where(DocumentVersion.metadata_json[key].as_string() == value)
+    if status:
+        query = query.where(DocumentVersion.status == status)
+    if tag:
+        expression = ("EXISTS (SELECT 1 FROM json_array_elements_text(document_versions.metadata_json->'tags') t(value) WHERE t.value = :filter_tag)"
+                      if db.bind.dialect.name == "postgresql" else
+                      "EXISTS (SELECT 1 FROM json_each(document_versions.metadata_json, '$.tags') WHERE value = :filter_tag)")
+        query = query.where(text(expression)).params(filter_tag=tag)
     documents = db.scalars(query.order_by(Document.created_at.desc(), Document.id).offset(offset).limit(50)).all()
     return {"items": [document_json(db, document) for document in documents], "offset": offset, "has_more": len(documents) == 50}
 
@@ -127,6 +162,20 @@ def list_documents(q: str = "", offset: int = 0, db=Depends(database)):
 @router.get("/documents/{document_id}")
 def detail(document_id: str, db=Depends(database)):
     return document_json(db, get_document(db, document_id))
+
+
+@router.patch("/versions/{version_id}/classification")
+def classification(version_id: str, body: Classification, request: Request,
+                   identity=Depends(require_csrf), db=Depends(database)):
+    version = get_version(db, version_id, lock=True)
+    no_active_job(db, document_id=version.document_id)
+    if (version.status != "publicado" or version.current_revision_id != body.expected_revision_id
+            or version.metadata_json != body.expected_metadata.model_dump()):
+        raise HTTPException(409, "La version o sus metadatos cambiaron; recargue el documento")
+    version.metadata_json = version.metadata_json | {"category": body.category, "tags": body.tags, "visibility": body.visibility}
+    audit(db, request, identity, "document_classified", version.id)
+    db.commit()
+    return version_json(db, version)
 
 
 @router.post("/documents", status_code=201)
@@ -339,12 +388,16 @@ def remove(document_id: str, body: Confirmation, request: Request, identity=Depe
 
 
 @router.get("/jobs")
-def jobs(document_id: str | None = None, offset: int = 0, db=Depends(database)):
+def jobs(document_id: str | None = None, offset: int = 0, status: str = "", kind: str = "", db=Depends(database)):
     if offset < 0:
         raise HTTPException(422, "Offset no valido")
     query = select(IngestionJob, Document.title).join(Document, Document.id == IngestionJob.document_id)
     if document_id:
         query = query.where(IngestionJob.document_id == document_id)
+    if status:
+        query = query.where(IngestionJob.status == status)
+    if kind:
+        query = query.where(IngestionJob.kind == kind)
     rows = db.execute(query.order_by(IngestionJob.created_at.desc(), IngestionJob.id).offset(offset).limit(50)).all()
     return {"items": [job_json(row) | {"document_title": title} for row, title in rows], "has_more": len(rows) == 50}
 
@@ -399,6 +452,10 @@ def retry(job_id: str, request: Request, identity=Depends(require_csrf), db=Depe
     no_active_job(db, document_id=job.document_id)
     new_job = enqueue(db, job.document_id, job.version_id, identity.user.id, request.state.correlation_id,
                       str(uuid.uuid4()), kind=job.kind, payload=job.payload | {"retry_of": job.id})
+    if job.payload.get("batch_id"):
+        batch = db.scalar(select(ReindexBatch).where(ReindexBatch.id == job.payload["batch_id"]).with_for_update())
+        if batch and job.id in batch.job_ids:
+            batch.job_ids = [new_job.id if id == job.id else id for id in batch.job_ids]
     restore_version(db, new_job)
     event(db, new_job, "manual_retry")
     audit(db, request, identity, "job_retried", new_job.id)
