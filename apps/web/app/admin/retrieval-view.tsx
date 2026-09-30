@@ -6,7 +6,7 @@ type Candidate = { chunk_id: string; version_id: string; revision_id: string; ti
 type Result = { run_id?: string; results: Candidate[]; candidates: Candidate[]; decision: { action: string; reason: string; threshold?: number }; latency: Record<string, number>; chat_outcome?: { status: string; reason?: string; error?: string } };
 type Run = { id: string; query: string; status: string; error?: string };
 
-export default function RetrievalView({ csrf }: { csrf: string }) {
+export default function RetrievalView({ csrf, runId }: { csrf: string; runId?: string }) {
   const [query, setQuery] = useState('');
   const [scope, setScope] = useState('admin');
   const [busy, setBusy] = useState(false);
@@ -14,6 +14,16 @@ export default function RetrievalView({ csrf }: { csrf: string }) {
   const [result, setResult] = useState<Result | null>(null);
   const [runs, setRuns] = useState<Run[]>([]);
   const [policy, setPolicy] = useState<{ approved: boolean; reason: string; threshold?: number | null } | null>(null);
+  useEffect(() => {
+    if (!runId) return;
+    let active = true;
+    adminRequest(`retrieval/runs/${encodeURIComponent(runId)}`, csrf).then(data => {
+      if (!active) return;
+      if (data.status === 'completed') setResult(data.result);
+      else setError(data.result?.error || 'La consulta todavía no tiene una traza completada.');
+    }).catch(e => { if (active) setError(e.message); });
+    return () => { active = false; };
+  }, [csrf, runId]);
   async function refresh() { setRuns((await adminRequest('retrieval/runs', csrf)).items); }
   useEffect(() => {
     adminRequest('retrieval/runs', csrf).then(r => setRuns(r.items)).catch(e => setError(e.message));
@@ -49,7 +59,7 @@ export default function RetrievalView({ csrf }: { csrf: string }) {
       <details><summary>Todos los candidatos y puntuaciones</summary><pre className="retrieval-excerpt">{JSON.stringify(result.candidates, null, 2)}</pre></details>
     </div>}
     <h2>Consultas recientes</h2>
-    <div className="table-wrap"><table><thead><tr><th>Consulta</th><th>Estado</th><th>Traza</th></tr></thead><tbody>{runs.map(run => <tr key={run.id}><td>{run.query}</td><td>{run.error || run.status}</td><td><button disabled={busy} onClick={async () => {
+    <div className="table-wrap" role="region" aria-label="Consultas recientes" tabIndex={0}><table><thead><tr><th scope="col">Consulta</th><th scope="col">Estado</th><th scope="col">Traza</th></tr></thead><tbody>{runs.map(run => <tr key={run.id}><td>{run.query}</td><td>{run.error || run.status}</td><td><button disabled={busy} onClick={async () => {
       try { const data = await adminRequest(`retrieval/runs/${run.id}`, csrf); if (data.status === 'completed') setResult(data.result); else setError(data.result.error); }
       catch (e) { setError(e instanceof Error ? e.message : 'Error'); }
     }}>Ver traza</button></td></tr>)}</tbody></table></div>

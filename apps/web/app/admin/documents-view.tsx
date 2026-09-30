@@ -12,13 +12,14 @@ type Document = { id: string; title: string; versions: Version[]; active_version
 type Locator = { page: number | null; section_path: string[]; line_start: number; line_end: number; origin: string };
 type Revision = { id: string; number: number; created_at: number; edited: boolean };
 
-export default function DocumentsView({ csrf }: { csrf: string }) {
+export default function DocumentsView({ csrf, documentId }: { csrf: string; documentId?: string }) {
   const [documents, setDocuments] = useState<Document[]>([]);
+  const [linkedDocument, setLinkedDocument] = useState<Document | null>(null);
   const [query, setQuery] = useState('');
   const [filters, setFilters] = useState({ category: '', tag: '', visibility: '', status: '' });
   const [offset, setOffset] = useState(0);
   const [more, setMore] = useState(false);
-  const [selected, setSelected] = useState<string | null>(null);
+  const [selected, setSelected] = useState<string | null>(documentId || null);
   const [versionId, setVersionId] = useState('');
   const [metadata, setMetadata] = useState<Metadata | null>(null);
   const [tagText, setTagText] = useState('');
@@ -37,7 +38,7 @@ export default function DocumentsView({ csrf }: { csrf: string }) {
   const [confirmation, setConfirmation] = useState('');
   const uploadInput = useRef<HTMLInputElement>(null);
   const replaceInput = useRef<HTMLInputElement>(null);
-  const doc = documents.find(item => item.id === selected);
+  const doc = documents.find(item => item.id === selected) || (linkedDocument?.id === selected ? linkedDocument : undefined);
   const version = doc?.versions.find(item => item.id === versionId) || doc?.versions[0];
   const current = revisionId === version?.revision_id;
   const editable = version?.status === 'requiere_revision' && current && !doc?.deletion_requested;
@@ -47,8 +48,11 @@ export default function DocumentsView({ csrf }: { csrf: string }) {
   function clearDirty() { setDirty(false); dirtyRef.current = false; }
   const refresh = useCallback(async () => {
     const data = await adminRequest(`documents?q=${encodeURIComponent(query)}&offset=${offset}&${new URLSearchParams(filters)}`, csrf);
+    if (documentId && !data.items.some((item: Document) => item.id === documentId)) {
+      setLinkedDocument(await adminRequest(`documents/${encodeURIComponent(documentId)}`, csrf));
+    }
     setDocuments(data.items); setMore(data.has_more);
-  }, [csrf, query, offset, filters]);
+  }, [csrf, query, offset, filters, documentId]);
   useEffect(() => {
     let active = true;
     const update = () => refresh().catch((e: Error) => { if (active) setError(e.message); });
@@ -124,12 +128,12 @@ export default function DocumentsView({ csrf }: { csrf: string }) {
     {error && <p className="error" role="alert">{error}</p>}{notice && <p className="notice" role="status">{notice}</p>}
     <div className={`document-layout ${doc ? 'selected-document' : ''}`}>
       <section className="document-list" aria-label="Lista de documentos">
-        {documents.length ? <div className="table-wrap"><table><thead><tr><th>Documento</th><th>Estado</th>{!doc && <><th>Formato</th><th>Version</th></>}</tr></thead><tbody>
+        {documents.length ? <div className="table-wrap" role="region" aria-label="Lista de documentos" tabIndex={0}><table><thead><tr><th scope="col">Documento</th><th scope="col">Estado</th>{!doc && <><th scope="col">Formato</th><th scope="col">Version</th></>}</tr></thead><tbody>
           {documents.map(item => <tr key={item.id} className={selected === item.id ? 'selected-row' : ''}><td><button className="row-button" onClick={() => changeSelection(item.id)}>{item.title}</button></td>
             <td><span className={`status ${item.versions[0]?.status === 'error' ? 'bad' : ''}`}>{item.deletion_requested ? 'Eliminando' : statusNames[item.versions[0]?.status]}</span></td>
             {!doc && <><td>{item.versions[0]?.format.toUpperCase()}</td><td>{item.versions[0]?.number}</td></>}</tr>)}
         </tbody></table></div> : <div className="empty-state"><Files size={36} strokeWidth={1.4}/><h2>No hay documentos</h2></div>}
-        <div className="pagination"><button disabled={offset === 0 || busy} onClick={() => setOffset(Math.max(0, offset - 50))}>Anterior</button><span>{offset + 1} - {offset + documents.length}</span><button disabled={!more || busy} onClick={() => setOffset(offset + 50)}>Siguiente</button></div>
+        <div className="pagination"><button disabled={offset === 0 || busy} onClick={() => setOffset(Math.max(0, offset - 50))}>Anterior</button><span>{documents.length ? `${offset + 1} - ${offset + documents.length}` : '0 documentos'}</span><button disabled={!more || busy} onClick={() => setOffset(offset + 50)}>Siguiente</button></div>
       </section>
       {doc && version && <section className="document-review" aria-label="Revision documental">
         <div className="review-heading"><h2>{doc.title}</h2><button className="icon-button" aria-label="Cerrar documento" title="Cerrar documento" onClick={() => { if (!dirty || window.confirm('Descartar cambios sin guardar?')) { clearDirty(); setSelected(null); } }}><X size={18}/></button></div>
@@ -158,7 +162,7 @@ export default function DocumentsView({ csrf }: { csrf: string }) {
           <select aria-label="Revision normalizada" value={revisionId} onChange={e => historical(e.target.value)}>{revisions.map(r => <option key={r.id} value={r.id}>Revision {r.number}{r.edited ? ' - editada' : ' - conversion'}</option>)}</select></div>
           {mode === 'editor' && <textarea className="markdown-editor" aria-label="Markdown" value={markdown} readOnly={!editable || busy} spellCheck={false} onChange={e => { setMarkdown(e.target.value); markDirty(); }}/>}
           {mode === 'preview' && <div className="markdown-preview"><ReactMarkdown remarkPlugins={[remarkGfm]} skipHtml components={{ img: ({ alt }) => <span>{alt}</span>, a: ({ href, children }) => <a href={href} target="_blank" rel="noopener noreferrer">{children}</a> }}>{markdown}</ReactMarkdown></div>}
-          {mode === 'provenance' && <div className="table-wrap provenance-table"><table><thead><tr><th>Lineas</th><th>Pagina</th><th>Seccion</th><th>Origen</th></tr></thead><tbody>{provenance.map((locator, index) => <tr key={index}><td>{locator.line_start}-{locator.line_end}</td><td>{locator.page || '-'}</td><td>{locator.section_path.join(' / ') || '-'}</td><td>{locator.origin === 'manual' ? 'Edicion manual' : 'Original'}</td></tr>)}</tbody></table></div>}
+          {mode === 'provenance' && <div className="table-wrap provenance-table" role="region" aria-label="Procedencia documental" tabIndex={0}><table><thead><tr><th scope="col">Lineas</th><th scope="col">Pagina</th><th scope="col">Seccion</th><th scope="col">Origen</th></tr></thead><tbody>{provenance.map((locator, index) => <tr key={index}><td>{locator.line_start}-{locator.line_end}</td><td>{locator.page || '-'}</td><td>{locator.section_path.join(' / ') || '-'}</td><td>{locator.origin === 'manual' ? 'Edicion manual' : 'Original'}</td></tr>)}</tbody></table></div>}
           <div className="review-actions"><button disabled={busy || !editable || !dirty || !metadata?.title.trim()} onClick={() => action(async () => {
             await adminRequest(`versions/${version.id}`, csrf, 'PATCH', { expected_revision_id: revisionId, markdown, metadata }); clearDirty(); setNotice('Revision guardada.');
           })}><Save size={17}/>Guardar revision</button>

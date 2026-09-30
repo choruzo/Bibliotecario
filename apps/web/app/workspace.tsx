@@ -8,13 +8,14 @@ import JobsView from './admin/jobs-view';
 import RetrievalView from './admin/retrieval-view';
 import OperationsView from './admin/operations-view';
 import ChatView from './chat/chat-view';
+import ThemeControl from './theme-control';
 
 type User = { username: string; role: string; csrf_token: string };
 type Check = { status: string; error?: string; latency_ms?: number };
 type Health = { checks: Record<string, Check> };
 const names: Record<string, string> = { database: 'Base de datos', llm: 'Generacion', embedding: 'Embeddings', reranker: 'Reranker' };
 
-export default function Workspace({ admin = false, view = 'services' }: { admin?: boolean; view?: 'services' | 'documents' | 'jobs' | 'retrieval' | 'operations' }) {
+export default function Workspace({ admin = false, view = 'services', documentId, runId }: { admin?: boolean; view?: 'services' | 'documents' | 'jobs' | 'retrieval' | 'operations'; documentId?: string; runId?: string }) {
   const router = useRouter();
   const path = usePathname();
   const [user, setUser] = useState<User | null>(null);
@@ -55,23 +56,23 @@ export default function Workspace({ admin = false, view = 'services' }: { admin?
     } catch { setError('No se ha podido cerrar la sesion.'); }
     finally { setBusy(false); }
   }
-  if (!user) return <main className="loading" role="status">{error || 'Conectando...'}</main>;
+  if (!user) return <main id="main-content" tabIndex={-1} className="loading" role="status">{error || 'Conectando...'}</main>;
   return <div className="workspace"><aside className="sidebar">
-    <Link className="brand" href="/chat"><BookOpen size={25}/><span>Bibliotecario</span></Link>
+    <div className="sidebar-heading"><ThemeControl/><Link className="brand" href="/chat"><BookOpen size={25}/><span>Bibliotecario</span></Link></div>
     <nav aria-label="Principal"><Link href="/chat" aria-current={path === '/chat' ? 'page' : undefined}><MessageSquare size={19}/>Biblioteca</Link>
-      {user.role === 'admin' && <><Link href="/admin/documents" aria-current={path === '/admin/documents' ? 'page' : undefined}><Files size={19}/>Documentos</Link>
+      {user.role === 'admin' && <><Link href="/admin/documents" aria-current={path.startsWith('/admin/documents') ? 'page' : undefined}><Files size={19}/>Documentos</Link>
         <Link href="/admin/jobs" aria-current={path === '/admin/jobs' ? 'page' : undefined}><ListChecks size={19}/>Trabajos</Link>
-        <Link href="/admin/retrieval" aria-current={path === '/admin/retrieval' ? 'page' : undefined}><Library size={19}/>Recuperacion</Link>
+        <Link href="/admin/retrieval" aria-current={path.startsWith('/admin/retrieval') ? 'page' : undefined}><Library size={19}/>Recuperacion</Link>
         <Link href="/admin/operations" aria-current={path === '/admin/operations' ? 'page' : undefined}><ListChecks size={19}/>Operacion</Link>
         <Link href="/admin" aria-current={path === '/admin' ? 'page' : undefined}><Activity size={19}/>Administracion</Link></>}</nav>
-    <div className="account"><div><strong>{user.username}</strong><span>{user.role === 'admin' ? 'Administrador' : 'Usuario'}</span></div>
+    <div className="sidebar-footer"><div className="account"><div><strong>{user.username}</strong><span>{user.role === 'admin' ? 'Administrador' : 'Usuario'}</span></div>
       <button className="icon-button" onClick={logout} disabled={busy} title="Cerrar sesion" aria-label="Cerrar sesion"><LogOut size={19}/></button></div>
-  </aside><main className="content">
+  </div></aside><main id="main-content" tabIndex={-1} className="content">
     <header className="page-header"><div><p className="eyebrow">Biblioteca local</p><h1>{admin ? view === 'documents' ? 'Documentos' : view === 'jobs' ? 'Trabajos de ingesta' : view === 'operations' ? 'Operacion administrativa' : view === 'retrieval' ? 'Inspeccion de recuperacion' : 'Estado de los servicios' : 'Biblioteca'}</h1></div>
       {admin && view === 'services' && <button onClick={check} disabled={busy}><RefreshCw size={17} className={busy ? 'spin' : ''}/>{busy ? 'Comprobando...' : 'Comprobar'}</button>}</header>
     {error && <p role="alert" className="error">{error}</p>}
-    {admin && view === 'operations' ? <OperationsView csrf={user.csrf_token}/> : admin && view === 'documents' ? <DocumentsView csrf={user.csrf_token}/> : admin && view === 'jobs' ? <JobsView csrf={user.csrf_token}/> : admin && view === 'retrieval' ? <RetrievalView csrf={user.csrf_token}/> : admin ? <><div className="status-summary"><span>Disponibilidad</span><span className="muted">{checked ? `Ultima comprobacion: ${checked}` : 'Sin comprobar'}</span></div>
-      <div className="table-wrap"><table><thead><tr><th>Servicio</th><th>Estado</th><th>Latencia</th><th>Diagnostico</th></tr></thead><tbody>
+    {admin && view === 'operations' ? <OperationsView csrf={user.csrf_token}/> : admin && view === 'documents' ? <DocumentsView key={documentId || "list"} csrf={user.csrf_token} documentId={documentId}/> : admin && view === 'jobs' ? <JobsView csrf={user.csrf_token}/> : admin && view === 'retrieval' ? <RetrievalView key={runId || "list"} csrf={user.csrf_token} runId={runId}/> : admin ? <><div className="status-summary"><span>Disponibilidad</span><span className="muted">{checked ? `Ultima comprobacion: ${checked}` : 'Sin comprobar'}</span></div>
+      <div className="table-wrap" role="region" aria-label="Disponibilidad de servicios" tabIndex={0}><table><thead><tr><th scope="col">Servicio</th><th scope="col">Estado</th><th scope="col">Latencia</th><th scope="col">Diagnostico</th></tr></thead><tbody>
         {Object.entries(names).map(([key, label]) => { const result = health?.checks[key]; return <tr key={key}><th scope="row">{label}</th>
           <td><span className={`status ${result?.status === 'available' ? 'ok' : result ? 'bad' : ''}`}><span className="dot"/>{result ? result.status === 'available' ? 'Disponible' : 'No disponible' : 'Sin comprobar'}</span></td>
           <td>{result?.latency_ms !== undefined ? `${result.latency_ms} ms` : '-'}</td><td className="diagnostic">{result?.error || '-'}</td></tr>; })}

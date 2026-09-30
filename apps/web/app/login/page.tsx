@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { BookOpen, LogIn } from 'lucide-react';
+import ThemeControl from '../theme-control';
 
 export default function Login() {
   const router = useRouter();
@@ -19,12 +20,12 @@ export default function Login() {
     } catch { setError('No se puede conectar con el servicio.'); }
     finally { setBusy(false); }
   }
-  return <main className="login-page"><form className="login-form" onSubmit={submit}>
+  return <main id="main-content" tabIndex={-1} className="login-page"><div className="login-theme"><ThemeControl/></div><div className="login-shell"><form className="login-form" onSubmit={submit}>
     <BookOpen size={34} className="brand-icon" aria-hidden="true"/><h1>Bibliotecario</h1>
     <p className="muted">Acceso a la biblioteca</p>
     <label htmlFor="username">Usuario</label><input id="username" name="username" autoComplete="username" required maxLength={64}/>
     <label htmlFor="password">Contrasena</label><input id="password" name="password" type="password" autoComplete="current-password" required maxLength={1024}/>
     {error && <p className="error" role="alert">{error}</p>}
     <button className="primary" disabled={busy}><LogIn size={18}/>{busy ? 'Accediendo...' : 'Entrar'}</button>
-  </form></main>;
+  </form></div></main>;
 }

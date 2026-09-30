@@ -1,5 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 type Source = { citation_id: string; title: string; version: number; quote: string; locator: { page?: number; section_path?: string[]; line_start?: number; line_end?: number } };
 type Message = { id: string; role: string; content: string; status: string; sources: Source[] };
@@ -17,6 +19,21 @@ export default function ChatView({ csrf }: { csrf: string }) {
   const [source, setSource] = useState<{ message: string; source: Source } | null>(null);
   const abort = useRef<AbortController | null>(null);
   const selected = useRef('');
+  const sourceRef = useRef<HTMLElement>(null);
+  const sourceTrigger = useRef<HTMLElement | null>(null);
+  function showSource(message: string, citation: Source) {
+    sourceTrigger.current = document.activeElement as HTMLElement;
+    setSource({ message, source: citation });
+  }
+  useEffect(() => {
+    if (source) sourceRef.current?.focus();
+    else if (sourceTrigger.current) {
+      const trigger = sourceTrigger.current;
+      const citation = trigger.dataset.citation;
+      (trigger.isConnected ? trigger : citation ? document.querySelector<HTMLElement>(`[data-citation="${CSS.escape(citation)}"]`) : null)?.focus();
+      sourceTrigger.current = null;
+    }
+  }, [source]);
   async function api(path: string, method = 'GET', body?: unknown) {
     const response = await fetch(`/api/chat/${path}`, { method, cache: 'no-store',
       headers: method === 'GET' ? {} : { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
@@ -85,10 +102,14 @@ export default function ChatView({ csrf }: { csrf: string }) {
   }
   function renderContent(message: Message) {
     const [documentary, general] = message.content.split('\n\nExplicación general\n\n');
-    return <><div className="chat-text">{documentary.split(/(\[C\d+\])/g).map((text, i) => {
-      const citation = message.sources.find(s => `[${s.citation_id}]` === text);
-      return citation ? <button key={i} className="citation-link" onClick={() => setSource({ message: message.id, source: citation })}>{text}</button> : text;
-    })}</div>{general && <aside className="general-explanation"><strong>Explicación general</strong><p>{general}</p></aside>}</>;
+    const markdown = documentary.replace(/\[(C\d+)\]/g, (text, id) => message.sources.some(s => s.citation_id === id) ? `[${text}](#bibliotecario-citation-${id})` : text);
+    return <><div className="chat-text chat-markdown"><ReactMarkdown remarkPlugins={[remarkGfm]} skipHtml components={{
+      img: ({ alt }) => <span>{alt}</span>,
+      a: ({ href, children }) => {
+        const citation = message.sources.find(s => href === `#bibliotecario-citation-${s.citation_id}`);
+        return citation ? <button data-citation={`${message.id}-${citation.citation_id}-inline`} className="citation-link" onClick={() => showSource(message.id, citation)}>{children}</button> : <a href={href} target="_blank" rel="noopener noreferrer">{children}</a>;
+      }
+    }}>{markdown}</ReactMarkdown></div>{general && <aside className="general-explanation"><strong>Explicación general</strong><p>{general}</p></aside>}</>;
   }
   return <section className="chat-layout"><aside className="conversation-list">
     <button onClick={create} disabled={busy}>Nueva conversación</button>
@@ -100,16 +121,16 @@ export default function ChatView({ csrf }: { csrf: string }) {
       <div className="conversation-settings"><label>Título de la conversación<input maxLength={200} value={current.title} disabled={busy} onChange={e => setCurrent({ ...current, title: e.target.value })}/></label>
         <label>Preferencias pedagógicas<input maxLength={500} placeholder="Ej.: explicación sencilla, ejemplos y pasos" disabled={busy} value={current.preferences} onChange={e => setCurrent({ ...current, preferences: e.target.value })}/></label>
         <button disabled={busy} onClick={save}>Guardar cambios</button></div>
-      <div className="chat-messages" aria-label="Mensajes">{current.messages.map(message => <article key={message.id} className={`chat-message ${message.role}`}>
+      <section className="chat-messages" aria-label="Mensajes">{current.messages.map(message => <article key={message.id} className={`chat-message ${message.role}`}>
         <strong>{message.role === 'user' ? 'Tú' : 'Bibliotecario'}</strong>
         {message.status === 'pending' ? <p>{current.busy ? 'Respuesta en curso…' : 'Respuesta interrumpida. Puedes volver a preguntar.'}</p> : renderContent(message)}
-        {message.sources.length > 0 && <div className="citation-list">{message.sources.map(s => <button key={s.citation_id} onClick={() => setSource({ message: message.id, source: s })}>[{s.citation_id}] {s.title} · v{s.version}</button>)}</div>}
-      </article>)}{draft && <div className="chat-text">{draft}</div>}</div>
+        {message.sources.length > 0 && <div className="citation-list">{message.sources.map(s => <button key={s.citation_id} data-citation={`${message.id}-${s.citation_id}-list`} onClick={() => showSource(message.id, s)}>[{s.citation_id}] {s.title} · v{s.version}</button>)}</div>}
+      </article>)}{draft && <div className="chat-text">{draft}</div>}</section>
       {progress && <p role="status">{progress}</p>}
       <form className="chat-composer" onSubmit={send}><label htmlFor="question">Pregunta a la biblioteca</label><textarea id="question" maxLength={1000} disabled={busy} value={question} onChange={e => setQuestion(e.target.value)} required/>
         <div><button disabled={busy || !question.trim()} type="submit">Enviar</button>{busy && <button type="button" onClick={() => abort.current?.abort()}>Detener</button>}</div></form>
     </>}
-    {source && <section className="source-view" aria-label="Fragmento citado"><h2>{source.source.title} · v{source.source.version}</h2>
+    {source && <section ref={sourceRef} tabIndex={-1} className="source-view" aria-label="Fragmento citado"><h2>{source.source.title} · v{source.source.version}</h2>
       <p>{source.source.locator.page ? `Página ${source.source.locator.page}` : source.source.locator.section_path?.join(' / ') || `Líneas ${source.source.locator.line_start}–${source.source.locator.line_end}`}</p>
       <pre>{source.source.quote}</pre><a href={`/api/chat/messages/${source.message}/sources/${source.source.citation_id}/original`} target="_blank" rel="noreferrer">Descargar original</a>
       <button onClick={() => setSource(null)}>Cerrar fragmento</button></section>}
