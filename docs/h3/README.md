@@ -1,6 +1,6 @@
 # H3 — Indexación y recuperación medible
 
-La administración permite publicar una revisión aprobada, reindexarla e inspeccionar consultas en `/admin/retrieval`. El chat sigue reservado a H4.
+La administración permite publicar una revisión aprobada, reindexarla e inspeccionar consultas en `/admin/retrieval`. El chat está implementado en [H4](../h4/README.md) y utiliza esta puerta de suficiencia.
 
 ## Publicación
 
@@ -32,7 +32,7 @@ La política inicial es **abstenerse**. No se configura un umbral manual. `POST 
 
 Cada caso contiene `id`, `run_id`, `kind`, `language`, `expected_documents` (IDs de la biblioteca), `expected_sections` y, para conversación, `conversation_id`. El comportamiento esperado deriva de la clase. Se separan calibración y validación por IDs dentro de cada clase, manteniendo los grupos conversacionales juntos. Solo se habilita un umbral si no produce respuestas indebidas en ninguno de los dos grupos, responde al menos un positivo en ambos y los casos aceptados recuperan todos sus localizadores esperados en los diez primeros resultados.
 
-La política está ligada a firmas del corpus activo y de la configuración de modelos/algoritmo. Cambiar versiones, retirar contenido o cambiar la configuración invalida su uso. Las consultas filtradas y el futuro ámbito de usuario necesitan calibración propia. Las firmas identifican configuración y revisiones, no detectan una sustitución de pesos que conserve exactamente el mismo nombre/URL: ese cambio requiere reindexar y recalibrar.
+La política está ligada a firmas del corpus activo y de la configuración de modelos/algoritmo. Cambiar versiones, retirar contenido o cambiar la configuración invalida su uso. H4 añade firmas sensibles a metadatos y calibración separada por ámbito `admin`/`usuario`; las consultas filtradas siguen sin calibración propia. Las firmas identifican configuración y revisiones, no detectan una sustitución de pesos que conserve exactamente el mismo nombre/URL: ese cambio requiere reindexar y recalibrar.
 
 `GET /admin/retrieval/policy` devuelve la política vigente. La pantalla indica si falta calibración. Los casos ambiguos permanecen en abstención; pedir aclaración y reformular seguimientos forma parte de H4. Se mide esa limitación explícitamente.
 

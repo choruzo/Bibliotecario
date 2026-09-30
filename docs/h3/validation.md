@@ -58,3 +58,13 @@ Pytest requirió ejecución fuera del sandbox por permisos de sus directorios te
 Los documentos sintéticos se dejan retirados para respetar la retención de H2. La evaluación del corpus usó una base temporal eliminada al terminar y un almacén temporal dentro del contenedor; no publicó ni editó las fuentes de la biblioteca actual. Los informes y las trazas se exportaron antes de terminar. El cambio previo en `.gitignore` se preservó.
 
 La evaluación cubre únicamente Markdown español. La fidelidad de variantes PDF/DOCX sigue pendiente en H2; no se declara medida su recuperación. La abstención segura y las métricas quedan disponibles, pero este banco pequeño no demuestra suficiencia general ni resuelve ambigüedad o seguimiento conversacional.
+
+## Revalidación con H4 — 2026-09-30
+
+Se repitió el ensayo con los 13 documentos reales de `docs/`, verificando todos sus hashes contra H0, PostgreSQL vacío con la cadena completa de migraciones hasta `0005_h4`, Nomic y BGE reales. Se corrigió el esquema histórico de `evidence_policies` en `0004_h3`: importar el ORM vigente incluía anticipadamente `scope` y hacía fallar la migración H4 en instalaciones nuevas. Las migraciones desde cero y la indexación posterior pasaron.
+
+Resultado: **13 documentos, 1.448 fragmentos, 24 consultas y cero errores**. Recall@10 respondible **0,9067**, MRR@10 **0,9143**; Recall@10 conversacional sin reformular **0,6111**. El umbral candidato **2,052673** vuelve a rechazarse: validación contiene **0 positivos aceptados y 1 respuesta indebida**, correspondiente a `EVAL-M002`, que es ambigua. La abstención segura permanece vigente. No se ajustó la política para forzar su aprobación.
+
+El informe sin consultas ni fragmentos está en [`evaluation/h3/revalidation-h4.json`](../../evaluation/h3/revalidation-h4.json). Las trazas privadas se conservan en `.artifacts/h4/h3-real-docs-traces.json`. La base temporal se eliminó al finalizar. Esta prueba conserva los seguimientos originales del banco H3; no mide la reformulación contextual de H4.
+
+La biblioteca activa tiene nueve documentos, pero **ninguna de las 13 fuentes del catálogo está publicada en ella**. `scripts/h3/calibrate_library.py` rechazó el preflight porque requiere una única publicación de cada fuente. No se cargaron ni aprobaron documentos de producción ni se modificó su política: la calibración ensayada pertenece exclusivamente al corpus temporal y al ámbito administrativo. Para calibrar el chat de la biblioteca será necesario revisar y publicar las fuentes y evaluar cada ámbito.
