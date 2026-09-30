@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { adminRequest } from './api';
+import { adminRequest, statusTone } from './api';
 
 type Candidate = { chunk_id: string; version_id: string; revision_id: string; title: string; version: number; content: string; rerank_score: number; rrf_score: number; channels: Record<string, { rank: number; score: number }>; provenance: { page: number | null; section_path: string[]; origin: string; chunk_line_start: number; chunk_line_end: number }[] };
 type Result = { run_id?: string; results: Candidate[]; candidates: Candidate[]; decision: { action: string; reason: string; threshold?: number }; latency: Record<string, number>; chat_outcome?: { status: string; reason?: string; error?: string } };
@@ -40,7 +40,7 @@ export default function RetrievalView({ csrf, runId }: { csrf: string; runId?: s
     <form className="document-toolbar" onSubmit={e => { e.preventDefault(); search(); }}>
       <label>Ámbito<select value={scope} disabled={busy} onChange={e => { setScope(e.target.value); setResult(null); }}><option value="admin">Administrador</option><option value="usuario">Usuario</option></select></label>
       <label className="search-field">Consulta<input value={query} maxLength={1000} onChange={e => setQuery(e.target.value)} required aria-label="Consulta de recuperacion"/></label>
-      <button disabled={busy || !query.trim()}>{busy ? 'Buscando...' : 'Inspeccionar'}</button>
+      <button className="primario" disabled={busy || !query.trim()}>{busy ? 'Buscando...' : 'Inspeccionar'}</button>
     </form>
     {error && <p className="error" role="alert">{error}</p>}
     {result && <div aria-live="polite">
@@ -59,7 +59,7 @@ export default function RetrievalView({ csrf, runId }: { csrf: string; runId?: s
       <details><summary>Todos los candidatos y puntuaciones</summary><pre className="retrieval-excerpt">{JSON.stringify(result.candidates, null, 2)}</pre></details>
     </div>}
     <h2>Consultas recientes</h2>
-    <div className="table-wrap" role="region" aria-label="Consultas recientes" tabIndex={0}><table><thead><tr><th scope="col">Consulta</th><th scope="col">Estado</th><th scope="col">Traza</th></tr></thead><tbody>{runs.map(run => <tr key={run.id}><td>{run.query}</td><td>{run.error || run.status}</td><td><button disabled={busy} onClick={async () => {
+    <div className="table-wrap" role="region" aria-label="Consultas recientes" tabIndex={0}><table><thead><tr><th scope="col">Consulta</th><th scope="col">Estado</th><th scope="col">Traza</th></tr></thead><tbody>{runs.map(run => <tr key={run.id}><td>{run.query}</td><td>{run.error ? <span className="badge b-fail">{run.error}</span> : <span className={statusTone(run.status)}>{run.status}</span>}</td><td><button disabled={busy} onClick={async () => {
       try { const data = await adminRequest(`retrieval/runs/${run.id}`, csrf); if (data.status === 'completed') setResult(data.result); else setError(data.result.error); }
       catch (e) { setError(e instanceof Error ? e.message : 'Error'); }
     }}>Ver traza</button></td></tr>)}</tbody></table></div>

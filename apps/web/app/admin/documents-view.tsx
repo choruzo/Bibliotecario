@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Upload, Search, Save, Check, Download, RotateCcw, Trash2, X, Eye, FileText, ListTree, ArchiveX, Files } from 'lucide-react';
-import { adminRequest, diagnosticNames, statusNames } from './api';
+import { adminRequest, diagnosticNames, statusNames, statusTone } from './api';
 import Modal from './modal';
 
 type Metadata = { title: string; author: string; date: string; category: string; tags: string[]; language: string; version: string; visibility: string };
@@ -130,7 +130,7 @@ export default function DocumentsView({ csrf, documentId }: { csrf: string; docu
       <section className="document-list" aria-label="Lista de documentos">
         {documents.length ? <div className="table-wrap" role="region" aria-label="Lista de documentos" tabIndex={0}><table><thead><tr><th scope="col">Documento</th><th scope="col">Estado</th>{!doc && <><th scope="col">Formato</th><th scope="col">Version</th></>}</tr></thead><tbody>
           {documents.map(item => <tr key={item.id} className={selected === item.id ? 'selected-row' : ''}><td><button className="row-button" onClick={() => changeSelection(item.id)}>{item.title}</button></td>
-            <td><span className={`status ${item.versions[0]?.status === 'error' ? 'bad' : ''}`}>{item.deletion_requested ? 'Eliminando' : statusNames[item.versions[0]?.status]}</span></td>
+            <td><span className={statusTone(item.deletion_requested ? 'eliminando' : item.versions[0]?.status)}>{item.deletion_requested ? 'Eliminando' : statusNames[item.versions[0]?.status]}</span></td>
             {!doc && <><td>{item.versions[0]?.format.toUpperCase()}</td><td>{item.versions[0]?.number}</td></>}</tr>)}
         </tbody></table></div> : <div className="empty-state"><Files size={36} strokeWidth={1.4}/><h2>No hay documentos</h2></div>}
         <div className="pagination"><button disabled={offset === 0 || busy} onClick={() => setOffset(Math.max(0, offset - 50))}>Anterior</button><span>{documents.length ? `${offset + 1} - ${offset + documents.length}` : '0 documentos'}</span><button disabled={!more || busy} onClick={() => setOffset(offset + 50)}>Siguiente</button></div>
@@ -145,7 +145,7 @@ export default function DocumentsView({ csrf, documentId }: { csrf: string; docu
           <button className="icon-button" title="Retirar version publicada" aria-label="Retirar version publicada" disabled={busy || !doc.active_version_id} onClick={() => action(() => adminRequest(`documents/${doc.id}/withdraw`, csrf, 'POST'))}><ArchiveX size={18}/></button>
           <button className="icon-button danger-button" title="Eliminar documento" aria-label="Eliminar documento" disabled={busy || !canDelete} onClick={() => { setConfirmation(''); setDeleting(true); }}><Trash2 size={18}/></button></div>
         {version.status === 'publicado' && <form className="retrieval-card" onSubmit={e => { e.preventDefault(); action(async () => { await adminRequest(`versions/${version.id}/classification`, csrf, 'PATCH', { expected_revision_id: version.revision_id, expected_metadata: version.metadata, category: classification.category, tags: classification.tags.split(',').map(t => t.trim()).filter(Boolean), visibility: classification.visibility }); setNotice('Clasificacion actualizada.'); }); }}><h3>Clasificacion publicada</h3><div className="metadata-fields"><label>Categoria publicada<input maxLength={100} value={classification.category} onChange={e => setClassification({ ...classification, category: e.target.value })}/></label><label>Etiquetas publicadas<input value={classification.tags} onChange={e => setClassification({ ...classification, tags: e.target.value })}/></label><label>Visibilidad publicada<select value={classification.visibility} onChange={e => setClassification({ ...classification, visibility: e.target.value })}><option value="usuarios">Usuarios</option><option value="admin">Administradores</option></select></label></div><button disabled={busy}>Guardar clasificacion</button></form>}
-        <div className="review-status"><span>{statusNames[version.status]}</span><span className={version.reviewed_at ? 'ok' : 'muted'}>{version.reviewed_at ? 'Revisado' : 'Sin aprobar'}</span>{dirty && <span className="unsaved">Cambios sin guardar</span>}</div>
+        <div className="review-status"><span className={`${statusTone(version.status)}${version.status === 'requiere_revision' && !version.reviewed_at ? ' halo' : ''}`}>{statusNames[version.status]}</span><span className={version.reviewed_at ? 'badge b-pass' : 'badge b-dim'}>{version.reviewed_at ? 'Revisado' : 'Sin aprobar'}</span>{dirty && <span className="unsaved">Cambios sin guardar</span>}</div>
         {version.diagnostics.length > 0 && <ul className="diagnostics-list">{version.diagnostics.map(code => <li key={code}>{diagnosticNames[code] || (code.startsWith('possible_ocr_page_') ? `Posible necesidad de OCR en pagina ${code.split('_').pop()}` : code)}</li>)}</ul>}
         {metadata && <fieldset className="metadata-fields" disabled={!editable || busy}>
           <label className="wide-field">Titulo<input value={metadata.title} maxLength={300} onChange={e => field('title', e.target.value)}/></label>
@@ -167,7 +167,7 @@ export default function DocumentsView({ csrf, documentId }: { csrf: string; docu
             await adminRequest(`versions/${version.id}`, csrf, 'PATCH', { expected_revision_id: revisionId, markdown, metadata }); clearDirty(); setNotice('Revision guardada.');
           })}><Save size={17}/>Guardar revision</button>
             <button disabled={busy || !editable || dirty || !markdown.trim() || !!version.reviewed_at} onClick={() => action(async () => { await adminRequest(`versions/${version.id}/review`, csrf, 'POST', { expected_revision_id: revisionId }); setNotice('Revision aprobada.'); })}><Check size={17}/>Marcar revisado</button>
-            <button disabled={busy || dirty || !version.reviewed_at || !['requiere_revision', 'publicado', 'error'].includes(version.status)} onClick={() => action(async () => { if (version.status === 'publicado' && !window.confirm('Reindexar esta version publicada?')) return; await adminRequest(`versions/${version.id}/publish`, csrf, 'POST', { expected_revision_id: revisionId }); setNotice('Indexacion en cola; la publicacion se completa al terminar.'); })}>{version.status === 'publicado' ? 'Reindexar' : 'Publicar'}</button></div>
+            <button disabled={busy || dirty || !version.reviewed_at || !['requiere_revision', 'publicado', 'error'].includes(version.status)} className="primario" onClick={() => action(async () => { if (version.status === 'publicado' && !window.confirm('Reindexar esta version publicada?')) return; await adminRequest(`versions/${version.id}/publish`, csrf, 'POST', { expected_revision_id: revisionId }); setNotice('Indexacion en cola; la publicacion se completa al terminar.'); })}>{version.status === 'publicado' ? 'Reindexar' : 'Publicar'}</button></div>
         </>}
       </section>}
     </div>

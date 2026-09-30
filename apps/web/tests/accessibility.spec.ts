@@ -27,53 +27,45 @@ async function fixtures(page: Page, role = 'admin') {
   });
 }
 
-test('theme follows system, persists between pages and skip link works with keyboard', async ({ page }) => {
+test('dark theme is fixed regardless of system preference and skip link works with keyboard', async ({ page }) => {
   await fixtures(page);
-  await page.emulateMedia({ colorScheme: 'dark' });
-  await page.goto('/login');
-  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
-  await page.emulateMedia({ colorScheme: 'light' });
-  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
-  await page.getByRole('button', { name: 'Activar modo oscuro' }).click();
+  for (const colorScheme of ['light', 'dark'] as const) {
+    await page.emulateMedia({ colorScheme });
+    await page.goto('/login');
+    expect(await page.evaluate(() => getComputedStyle(document.documentElement).colorScheme)).toBe('dark');
+    expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe('rgb(10, 18, 20)');
+  }
+  await expect(page.getByRole('button', { name: /Activar modo/ })).toHaveCount(0);
   await page.goto('/admin');
-  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
-  await expect(page.getByRole('button', { name: 'Activar modo claro' })).toBeVisible();
   await page.keyboard.press('Tab');
   await expect(page.getByRole('link', { name: 'Saltar al contenido' })).toBeFocused();
   await page.keyboard.press('Enter');
   await expect(page.locator('#main-content')).toBeFocused();
-  await page.reload();
-  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
 });
 
-for (const theme of ['light', 'dark']) {
-  test(`all administrative views reflow at 320px in ${theme} mode`, async ({ page }, info) => {
-    await fixtures(page);
-    await page.setViewportSize({ width: 320, height: 800 });
-    await page.goto('/login');
-    await expect(page.getByRole('button', { name: /Activar modo/ })).toBeVisible();
-    if (await page.locator('html').getAttribute('data-theme') !== theme) await page.getByRole('button', { name: /Activar modo/ }).click();
-    for (const path of ['/admin', '/admin/documents/doc-audit', '/admin/jobs', '/admin/retrieval/runs/run-audit', '/admin/operations']) {
-      await page.goto(path);
-      await expect(page.locator('.content h1')).toBeVisible();
-      if (path.includes('documents')) {
-        await expect(page.getByLabel('Markdown')).toBeVisible();
-        await page.getByRole('button', { name: 'Vista previa', exact: true }).click();
-        await expect(page.locator('.markdown-preview table')).toBeVisible();
-      }
-      if (path.includes('retrieval')) await expect(page.locator('.retrieval-card')).toBeVisible();
-      if (path.includes('operations')) {
-        await expect(page.getByRole('checkbox')).toBeVisible();
-        const box = await page.getByRole('checkbox').boundingBox();
-        expect(box?.width).toBe(24);
-        await page.getByRole('button', { name: 'Configuracion', exact: true }).click();
-        await expect(page.getByLabel('Timeout de modelos (segundos)', { exact: false })).toBeVisible();
-      }
-      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), path).toBe(true);
-      await page.screenshot({ path: info.outputPath(`${theme}-${path.replaceAll('/', '-')}.png`), fullPage: true });
+test('all administrative views reflow at 320px', async ({ page }, info) => {
+  await fixtures(page);
+  await page.setViewportSize({ width: 320, height: 800 });
+  for (const path of ['/admin', '/admin/documents/doc-audit', '/admin/jobs', '/admin/retrieval/runs/run-audit', '/admin/operations']) {
+    await page.goto(path);
+    await expect(page.locator('.content h1')).toBeVisible();
+    if (path.includes('documents')) {
+      await expect(page.getByLabel('Markdown')).toBeVisible();
+      await page.getByRole('button', { name: 'Vista previa', exact: true }).click();
+      await expect(page.locator('.markdown-preview table')).toBeVisible();
     }
-  });
-}
+    if (path.includes('retrieval')) await expect(page.locator('.retrieval-card')).toBeVisible();
+    if (path.includes('operations')) {
+      await expect(page.getByRole('checkbox')).toBeVisible();
+      const box = await page.getByRole('checkbox').boundingBox();
+      expect(box?.width).toBe(24);
+      await page.getByRole('button', { name: 'Configuracion', exact: true }).click();
+      await expect(page.getByLabel('Timeout de modelos (segundos)', { exact: false })).toBeVisible();
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), path).toBe(true);
+    await page.screenshot({ path: info.outputPath(`${path.replaceAll('/', '-')}.png`), fullPage: true });
+  }
+});
 
 test('user markdown, long citations and source focus work on narrow screens', async ({ page }) => {
   await fixtures(page, 'usuario');

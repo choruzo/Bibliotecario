@@ -6,8 +6,9 @@ Se revisaron el acceso, el chat de usuarios y las vistas administrativas de serv
 
 ## Correcciones
 
-- Botón de sol/luna en la parte superior izquierda. Alterna entre claro y oscuro, guarda la elección en el navegador y anuncia la acción con una etiqueta accesible. Antes de elegir, respeta el tema del sistema. El tema se aplica antes de hidratar la interfaz.
-- Paleta común para fondos, texto, campos, avisos, errores, selección, enlaces y foco en ambos modos.
+- Tema oscuro fijo según `sistema-diseno-estilos.md`: paleta de doce variables semánticas en `:root` (verde éxito/acción principal, rojo error, ámbar revisión o espera, azul información o proceso en curso). Se retiró el alternador claro/oscuro porque el sistema de diseño no contempla tema claro.
+- Insignias de estado en documentos, trabajos, lotes y trazas; tarjetas de resumen en servicios y operación; barra de progreso con degradado y animación solo mientras el trabajo está en curso; animaciones de estado desactivadas con `prefers-reduced-motion`.
+- Paleta común para fondos, texto, campos, avisos, errores, selección, enlaces y foco.
 - Distribución adaptable a 320 píxeles, títulos y citas largos, controles que se pueden repartir en varias líneas y metadatos en una columna en móvil.
 - Casillas de selección con dimensiones propias, independientes de los campos de texto.
 - Tablas anchas contenidas en regiones desplazables con acceso por teclado, encabezados de columna identificados y tablas Markdown con desplazamiento local.

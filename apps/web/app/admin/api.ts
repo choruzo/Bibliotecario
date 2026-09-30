@@ -20,6 +20,14 @@ export const statusNames: Record<string, string> = {
   pendiente: 'Pendiente', en_ejecucion: 'En ejecucion', completado: 'Completado', reintentable: 'Esperando reintento',
   fallido: 'Fallido', cancelando: 'Cancelando', cancelado: 'Cancelado'
 };
+// Color semántico de cada estado: verde éxito, rojo fallo, ámbar revisión/espera, azul en curso.
+const tones: Record<string, string> = {
+  publicado: 'b-pass', completado: 'b-pass', completed: 'b-pass',
+  error: 'b-fail', fallido: 'b-fail', failed: 'b-fail',
+  requiere_revision: 'b-inc', pendiente: 'b-inc', reintentable: 'b-inc', eliminando: 'b-inc', cancelando: 'b-inc', pending: 'b-inc',
+  procesando: 'b-info b-live', indexando: 'b-info b-live', en_ejecucion: 'b-info b-live', running: 'b-info b-live'
+};
+export const statusTone = (status?: string) => `badge ${status && tones[status] || 'b-dim'}`;
 export const diagnosticNames: Record<string, string> = {
   empty_document: 'Documento vacio', edited_provenance: 'Contenido editado con procedencia manual',
   docx_images_omitted: 'Imagenes DOCX omitidas', pdf_images_omitted: 'Imagenes PDF omitidas',

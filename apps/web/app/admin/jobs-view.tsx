@@ -1,7 +1,7 @@
 'use client';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { RotateCcw, CircleStop, List, X } from 'lucide-react';
-import { adminRequest, statusNames } from './api';
+import { adminRequest, statusNames, statusTone } from './api';
 import Modal from './modal';
 
 type Job = { id: string; document_id: string; document_title: string; kind: string; status: string; progress: number; attempts: number; error_code: string | null };
@@ -39,7 +39,7 @@ export default function JobsView({ csrf }: { csrf: string }) {
   return <section className="jobs-section">{error && <p className="error" role="alert">{error}</p>}
     <div className="document-filters"><label>Estado del trabajo<select value={status} onChange={e => { setStatus(e.target.value); setOffset(0); }}><option value="">Todos</option>{['pendiente', 'en_ejecucion', 'reintentable', 'fallido', 'cancelado', 'completado'].map(s => <option key={s} value={s}>{statusNames[s]}</option>)}</select></label><label>Tipo de trabajo<select value={kind} onChange={e => { setKind(e.target.value); setOffset(0); }}><option value="">Todos</option><option value="convert">Conversion</option><option value="index">Indexacion</option><option value="delete">Eliminacion</option></select></label><label>ID de documento<input value={documentId} onChange={e => { setDocumentId(e.target.value); setOffset(0); }}/></label></div>
     <div className="table-wrap" role="region" aria-label="Lista de trabajos" tabIndex={0}><table><thead><tr><th scope="col">Documento</th><th scope="col">Operacion</th><th scope="col">Estado</th><th scope="col">Progreso</th><th scope="col">Intentos</th><th scope="col">Diagnostico</th><th scope="col">Acciones</th></tr></thead><tbody>
-      {jobs.map(job => <tr key={job.id}><th scope="row">{job.document_title}</th><td>{job.kind === 'convert' ? 'Conversion' : job.kind === 'index' ? 'Indexacion' : 'Eliminacion'}</td><td>{statusNames[job.status]}</td><td><progress value={job.progress} max={100} aria-label="Progreso"/><span className="progress-label">{job.progress}%</span></td><td>{job.attempts}</td><td>{job.error_code || '-'}</td><td><div className="job-actions">
+      {jobs.map(job => <tr key={job.id}><th scope="row">{job.document_title}</th><td>{job.kind === 'convert' ? 'Conversion' : job.kind === 'index' ? 'Indexacion' : 'Eliminacion'}</td><td><span className={statusTone(job.status)}>{statusNames[job.status]}</span></td><td><progress className={job.status === 'en_ejecucion' ? 'active' : undefined} value={job.progress} max={100} aria-label="Progreso"/><span className="progress-label">{job.progress}%</span></td><td>{job.attempts}</td><td className="diagnostic">{job.error_code || '-'}</td><td><div className="job-actions">
         <button className="icon-button" title="Ver eventos" aria-label="Ver eventos" disabled={busy} onClick={() => action(job, 'events')}><List size={17}/></button>
         <button className="icon-button" title="Cancelar trabajo" aria-label="Cancelar trabajo" disabled={busy || !['convert', 'index'].includes(job.kind) || !['pendiente', 'en_ejecucion', 'reintentable'].includes(job.status)} onClick={() => action(job, 'cancel')}><CircleStop size={17}/></button>
         <button className="icon-button" title="Reintentar trabajo" aria-label="Reintentar trabajo" disabled={busy || !['fallido', 'cancelado'].includes(job.status)} onClick={() => action(job, 'retry')}><RotateCcw size={17}/></button>
