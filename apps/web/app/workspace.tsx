@@ -6,6 +6,7 @@ import { BookOpen, LogOut, MessageSquare, Activity, RefreshCw, Library, Files, L
 import DocumentsView from './admin/documents-view';
 import JobsView from './admin/jobs-view';
 import RetrievalView from './admin/retrieval-view';
+import ChatView from './chat/chat-view';
 
 type User = { username: string; role: string; csrf_token: string };
 type Check = { status: string; error?: string; latency_ms?: number };
@@ -72,6 +73,7 @@ export default function Workspace({ admin = false, view = 'services' }: { admin?
         {Object.entries(names).map(([key, label]) => { const result = health?.checks[key]; return <tr key={key}><th scope="row">{label}</th>
           <td><span className={`status ${result?.status === 'available' ? 'ok' : result ? 'bad' : ''}`}><span className="dot"/>{result ? result.status === 'available' ? 'Disponible' : 'No disponible' : 'Sin comprobar'}</span></td>
           <td>{result?.latency_ms !== undefined ? `${result.latency_ms} ms` : '-'}</td><td className="diagnostic">{result?.error || '-'}</td></tr>; })}
-      </tbody></table></div></> : <section className="empty-state"><Library size={46} strokeWidth={1.3} aria-hidden="true"/><h2>Biblioteca sin documentos publicados</h2></section>}
+      </tbody></table></div></> : null}
+    {!admin && <ChatView csrf={user.csrf_token}/>}
   </main></div>;
 }

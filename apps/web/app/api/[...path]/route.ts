@@ -2,12 +2,13 @@ import { NextRequest } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 const allowed = new Set(['auth/login', 'auth/logout', 'auth/me', 'health/dependencies']);
+const chatRoutes = /^chat\/(?:conversations(?:\/[a-f0-9-]{36}(?:\/messages)?)?|messages\/[a-f0-9-]{36}\/sources\/C[1-9][0-9]*\/original)$/;
 const adminRoutes = /^(admin\/documents(?:\/[a-f0-9-]{36}(?:\/versions|\/withdraw)?)?|admin\/versions\/[a-f0-9-]{36}(?:\/original|\/normalized|\/revisions|\/review|\/convert|\/publish)?|admin\/jobs(?:\/[a-f0-9-]{36}\/(?:events|cancel|retry))?|admin\/retrieval\/(?:search|policy|calibrate|runs(?:\/[a-f0-9-]{36})?))$/;
 
 async function proxy(request: NextRequest, context: { params: Promise<{ path: string[] }> }) {
   const { path } = await context.params;
   const route = path.join('/');
-  if (!allowed.has(route) && !adminRoutes.test(route)) return Response.json({ detail: 'Ruta no encontrada' }, { status: 404 });
+  if (!allowed.has(route) && !adminRoutes.test(route) && !chatRoutes.test(route)) return Response.json({ detail: 'Ruta no encontrada' }, { status: 404 });
   const headers = new Headers();
   for (const name of ['cookie', 'content-type', 'origin', 'x-csrf-token', 'x-request-id', 'idempotency-key']) {
     const value = request.headers.get(name); if (value) headers.set(name, value);
@@ -17,7 +18,7 @@ async function proxy(request: NextRequest, context: { params: Promise<{ path: st
       method: request.method, headers,
       body: request.method === 'GET' ? undefined : request.body,
       duplex: 'half',
-      cache: 'no-store', redirect: 'manual', signal: AbortSignal.timeout(130000)
+      cache: 'no-store', redirect: 'manual', signal: AbortSignal.any([request.signal, AbortSignal.timeout(130000)])
     };
     const upstream = await fetch(`${process.env.API_INTERNAL_URL || 'http://127.0.0.1:8000'}/${route}${request.nextUrl.search}`, options);
     const outgoing = new Headers({ 'Cache-Control': 'no-store' });

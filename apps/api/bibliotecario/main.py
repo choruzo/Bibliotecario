@@ -21,6 +21,7 @@ from .providers import ModelClients
 from .documents import router as documents_router
 from .body_limit import UploadBodyLimit
 from .retrieval import router as retrieval_router
+from .chat import router as chat_router
 
 logger = logging.getLogger("bibliotecario")
 
@@ -37,7 +38,7 @@ def database_check(engine):
             if engine.dialect.name == "postgresql":
                 version = connection.scalar(text("SELECT extversion FROM pg_extension WHERE extname='vector'"))
                 revision = connection.scalar(text("SELECT version_num FROM alembic_version"))
-                if not version or revision != "0004_h3":
+                if not version or revision != "0005_h4":
                     return {"status": "unavailable", "error": "schema_or_pgvector_missing"}
         return {"status": "available"}
     except Exception:
@@ -67,6 +68,7 @@ def create_app(settings: Settings | None = None, engine=None, sessions=None, cli
     app.state.clients = clients
     app.include_router(documents_router)
     app.include_router(retrieval_router)
+    app.include_router(chat_router)
     app.add_middleware(UploadBodyLimit, max_bytes=settings.upload_max_bytes + 1024 * 1024)
 
     @app.exception_handler(RequestValidationError)

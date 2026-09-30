@@ -175,3 +175,32 @@ class EvidencePolicy(Base):
     corpus_signature: Mapped[str] = mapped_column(String(64))
     report: Mapped[dict] = mapped_column(JSON)
     created_at: Mapped[int] = mapped_column(Integer)
+    scope: Mapped[str] = mapped_column(String(16), default="admin")
+
+
+class Conversation(Base):
+    __tablename__ = "conversations"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    title: Mapped[str] = mapped_column(String(200))
+    preferences: Mapped[str] = mapped_column(String(500), default="")
+    summary: Mapped[str] = mapped_column(Text, default="")
+    summary_through: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[int] = mapped_column(Integer)
+    updated_at: Mapped[int] = mapped_column(Integer)
+    turn_token: Mapped[str | None] = mapped_column(String(36))
+    busy_until: Mapped[int] = mapped_column(Integer, default=0)
+
+
+class Message(Base):
+    __tablename__ = "messages"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    conversation_id: Mapped[str] = mapped_column(ForeignKey("conversations.id"), index=True)
+    number: Mapped[int] = mapped_column(Integer)
+    role: Mapped[str] = mapped_column(String(16))
+    content: Mapped[str] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(String(16))
+    sources: Mapped[list] = mapped_column(JSON, default=list)
+    retrieval_run_id: Mapped[str | None] = mapped_column(ForeignKey("retrieval_runs.id"))
+    created_at: Mapped[int] = mapped_column(Integer)
+    __table_args__ = (UniqueConstraint("conversation_id", "number"),)

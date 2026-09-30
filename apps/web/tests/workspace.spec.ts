@@ -35,5 +35,5 @@ test('regular users are redirected from administration', async ({ page }) => {
   await page.goto('/admin');
   await expect(page).toHaveURL(/\/chat$/);
   await expect(page.getByRole('link', { name: 'Administracion' })).toHaveCount(0);
-  await expect(page.getByRole('heading', { name: 'Biblioteca sin documentos publicados' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Conversa con tu biblioteca' })).toBeVisible();
 });

@@ -10,7 +10,8 @@ La arquitectura, alcance y secuencia de entrega están en [PLAN_PROYECTO.md](PLA
 - H1: implementado y validado en Docker Compose; ver [instalacion y comprobaciones](docs/h1/README.md) y [resultados del ensayo](docs/h1/validation.md).
 - H2: pipeline documental y administracion operativos; pendiente revisar fidelidad estructural de los PDF seleccionados. Ver [alcance y pruebas](docs/h2/README.md) y [diferencias de extraccion](docs/h2/validation.md).
 - H3: indexacion, recuperacion hibrida e inspeccion implementadas; banco ejecutado y umbral de suficiencia rechazado en validacion. Se mantiene la abstencion. Ver [operacion](docs/h3/README.md) y [resultados](docs/h3/validation.md).
-- H4-H7: no iniciados.
+- H4: chat persistente con memoria, streaming, citas y abstencion implementado. La biblioteca mantiene la abstencion hasta superar la calibracion de H3 para su ambito. Ver [operacion y pruebas](docs/h4/README.md).
+- H5-H7: no iniciados.
 
 ## Validación de H0
 

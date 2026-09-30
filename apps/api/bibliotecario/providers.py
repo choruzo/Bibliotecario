@@ -1,5 +1,6 @@
 import asyncio
 import math
+import json
 from time import perf_counter
 
 import httpx
@@ -44,6 +45,44 @@ class ModelClients:
             return content
         except (KeyError, TypeError, IndexError, ValueError) as exc:
             raise ProviderError("invalid_generation") from exc
+
+    async def stream_generate(self, messages, max_tokens=1800):
+        s = self.settings
+        async with self.http.stream("POST", s.llm_base_url.rstrip("/") + "/chat/completions",
+                headers=headers(s.llm_api_key), json={"model": s.llm_model, "messages": messages,
+                "max_tokens": max_tokens, "stream": True}) as response:
+            response.raise_for_status()
+            total = 0
+            finished = False
+            async for line in response.aiter_lines():
+                if not line.startswith("data:"):
+                    continue
+                payload = line[5:].strip()
+                if payload == "[DONE]":
+                    if not finished:
+                        raise ProviderError("incomplete_generation")
+                    return
+                try:
+                    row = json.loads(payload)
+                    choices = row["choices"]
+                    if not choices:  # optional usage event
+                        continue
+                    choice = choices[0]
+                    if choice.get("finish_reason"):
+                        if choice["finish_reason"] != "stop":
+                            raise ProviderError("incomplete_generation")
+                        finished = True
+                    part = choice.get("delta", {}).get("content") or ""
+                    if not isinstance(part, str):
+                        raise ValueError()
+                    total += len(part)
+                    if total > 24000:
+                        raise ProviderError("generation_too_large")
+                    if part:
+                        yield part
+                except (KeyError, TypeError, ValueError) as exc:
+                    raise ProviderError("invalid_stream") from exc
+            raise ProviderError("incomplete_generation")
 
     async def probe_generation(self):
         s = self.settings
