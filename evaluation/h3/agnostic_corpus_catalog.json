@@ -1,0 +1,159 @@
+{
+  "schema_version": 1,
+  "privacy": "No document text is stored in this catalog.",
+  "documents": [
+    {
+      "id": "AGN-001",
+      "file": "wiki-Apis_mellifera.pdf",
+      "title": "Abeja europea (Apis mellifera)",
+      "domain": "biología",
+      "licence": "Wikipedia (CC BY-SA)",
+      "sha256": "1f137cf2e55b8753303405b8a36ff142494120a1615330ebb0acde0fba955c64",
+      "bytes": 711208
+    },
+    {
+      "id": "AGN-002",
+      "file": "wiki-Sistema_solar.pdf",
+      "title": "Sistema solar",
+      "domain": "astronomía",
+      "licence": "Wikipedia (CC BY-SA)",
+      "sha256": "44ae6fdb521dd5576b0e1ef4bbad97db47618f4fee5dc3c7a8ac1a144c34a849",
+      "bytes": 1840585
+    },
+    {
+      "id": "AGN-003",
+      "file": "wiki-Diabetes_mellitus.pdf",
+      "title": "Diabetes mellitus",
+      "domain": "medicina",
+      "licence": "Wikipedia (CC BY-SA)",
+      "sha256": "e776590e21a9f4485c961e336579274e28f650a684f063d5eb0c1b0286afe25e",
+      "bytes": 1733783
+    },
+    {
+      "id": "AGN-004",
+      "file": "wiki-Tabla_periódica_de_los_elementos.pdf",
+      "title": "Tabla periódica de los elementos",
+      "domain": "química",
+      "licence": "Wikipedia (CC BY-SA)",
+      "sha256": "5f1c87e6ff37615ca320022267333db3d7a3077a7ebff8c795ad84c934ef6407",
+      "bytes": 2616252
+    },
+    {
+      "id": "AGN-005",
+      "file": "wiki-Copa_Mundial_de_Fútbol.pdf",
+      "title": "Copa Mundial de Fútbol",
+      "domain": "deporte",
+      "licence": "Wikipedia (CC BY-SA)",
+      "sha256": "90cfe9c11a32d4b030aa38876d2c622dc20b209655f459a1673b659882675077",
+      "bytes": 4818348
+    },
+    {
+      "id": "AGN-006",
+      "file": "wiki-Impuesto_sobre_la_renta_de_las_personas_físicas_España.pdf",
+      "title": "Impuesto sobre la renta de las personas físicas (España)",
+      "domain": "fiscalidad",
+      "licence": "Wikipedia (CC BY-SA)",
+      "sha256": "bdf37e3eba0a6d975cff2dcaf73ae5a46c69eadd7498e63d9e794a481ec9d988",
+      "bytes": 635185
+    },
+    {
+      "id": "AGN-007",
+      "file": "wiki-Revolución_francesa.pdf",
+      "title": "Revolución francesa",
+      "domain": "historia",
+      "licence": "Wikipedia (CC BY-SA)",
+      "sha256": "031318fed74cae76ae6cfbbe36cdab3e25cee9477d2ae5a0bfbd9b1003d74300",
+      "bytes": 2947823
+    },
+    {
+      "id": "AGN-008",
+      "file": "wiki-Fotosíntesis.pdf",
+      "title": "Fotosíntesis",
+      "domain": "biología vegetal",
+      "licence": "Wikipedia (CC BY-SA)",
+      "sha256": "0cac554280929e173763a2cd0b849beaf15d134c09d65c7a28c309391bb868d6",
+      "bytes": 1633461
+    },
+    {
+      "id": "AGN-009",
+      "file": "wiki-Dieta_mediterránea.pdf",
+      "title": "Dieta mediterránea",
+      "domain": "nutrición",
+      "licence": "Wikipedia (CC BY-SA)",
+      "sha256": "6805e8aa30850fafe09db75c94b053ee9b9588d4bf0270a49b7d2714b930111f",
+      "bytes": 410278
+    },
+    {
+      "id": "AGN-010",
+      "file": "wiki-Python.pdf",
+      "title": "Python",
+      "domain": "informática",
+      "licence": "Wikipedia (CC BY-SA)",
+      "sha256": "784887d8da5a02da833db3ecc2d0cfe4da8965839ecf6fc516cc1d62f044840e",
+      "bytes": 1688765
+    },
+    {
+      "id": "AGN-011",
+      "file": "wiki-Inflación.pdf",
+      "title": "Inflación",
+      "domain": "economía",
+      "licence": "Wikipedia (CC BY-SA)",
+      "sha256": "2d15b1ca22e504d0f632041f2c3bd15121db2d1b16dc5544997b68bde7a94d09",
+      "bytes": 722073
+    },
+    {
+      "id": "AGN-012",
+      "file": "wiki-Volcán.pdf",
+      "title": "Volcán",
+      "domain": "geología",
+      "licence": "Wikipedia (CC BY-SA)",
+      "sha256": "d8ebffbd9eef8ffcca6e6952199fef29e44857fafabb6f59156173e9c2bb5467",
+      "bytes": 1196336
+    },
+    {
+      "id": "AGN-013",
+      "file": "wiki-Café.pdf",
+      "title": "Café",
+      "domain": "agroalimentación",
+      "licence": "Wikipedia (CC BY-SA)",
+      "sha256": "a5635694523e8048878ea0aa2a59403a87718f39fb0bb3b80b513ee243b03c79",
+      "bytes": 2792479
+    },
+    {
+      "id": "AGN-014",
+      "file": "boe-constitucion-1978.pdf",
+      "title": "Constitución Española de 1978",
+      "domain": "derecho",
+      "licence": "BOE (dominio público)",
+      "sha256": "1a6d7ae6ab092984eb9ba4d327b33184729e01f279b3fe785c523608168b2330",
+      "bytes": 330448
+    },
+    {
+      "id": "AGN-015",
+      "file": "boe-ley-propiedad-horizontal.pdf",
+      "title": "Ley de Propiedad Horizontal",
+      "domain": "derecho",
+      "licence": "BOE (dominio público)",
+      "sha256": "52b88ef5dd8eaededc5f3e2527656e8ca935df67101d7a017e944150f08cba46",
+      "bytes": 211598
+    },
+    {
+      "id": "AGN-016",
+      "file": "arxiv-attention-is-all-you-need-en.pdf",
+      "title": "Attention Is All You Need",
+      "domain": "inteligencia artificial",
+      "licence": "arXiv",
+      "sha256": "bdfaa68d8984f0dc02beaca527b76f207d99b666d31d1da728ee0728182df697",
+      "bytes": 2215244
+    },
+    {
+      "id": "AGN-017",
+      "file": "arxiv-bert-en.pdf",
+      "title": "BERT: Pre-training of Deep Bidirectional Transformers",
+      "domain": "inteligencia artificial",
+      "licence": "arXiv",
+      "sha256": "5692a5514787a8c6727b4ff3b726a3385798bc68e12138d1d4af83947e2acf6e",
+      "bytes": 775166
+    }
+  ]
+}
