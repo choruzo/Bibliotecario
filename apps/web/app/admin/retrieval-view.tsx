@@ -13,7 +13,7 @@ export default function RetrievalView({ csrf, runId }: { csrf: string; runId?: s
   const [error, setError] = useState('');
   const [result, setResult] = useState<Result | null>(null);
   const [runs, setRuns] = useState<Run[]>([]);
-  const [policy, setPolicy] = useState<{ approved: boolean; reason: string; threshold?: number | null } | null>(null);
+  const [policy, setPolicy] = useState<{ approved: boolean; reason: string; threshold?: number | null; inherited?: boolean } | null>(null);
   useEffect(() => {
     if (!runId) return;
     let active = true;
@@ -27,7 +27,7 @@ export default function RetrievalView({ csrf, runId }: { csrf: string; runId?: s
   async function refresh() { setRuns((await adminRequest('retrieval/runs', csrf)).items); }
   useEffect(() => {
     adminRequest('retrieval/runs', csrf).then(r => setRuns(r.items)).catch(e => setError(e.message));
-    adminRequest(`retrieval/policy?scope=${scope}`, csrf).then(r => setPolicy(r.report)).catch(e => setError(e.message));
+    adminRequest(`retrieval/policy?scope=${scope}`, csrf).then(r => setPolicy({ ...r.report, inherited: r.inherited })).catch(e => setError(e.message));
   }, [csrf, scope]);
   async function search() {
     setBusy(true); setError(''); setResult(null);
@@ -36,7 +36,7 @@ export default function RetrievalView({ csrf, runId }: { csrf: string; runId?: s
     finally { setBusy(false); refresh().catch(() => {}); }
   }
   return <section>
-    {policy && <p className="muted">{policy.approved ? `Calibracion validada para este corpus · Umbral ${policy.threshold}` : 'Sin calibracion validada para este corpus: se mantiene la abstencion.'}</p>}
+    {policy && <p className="muted">{policy.approved ? (policy.inherited ? `Calibracion heredada de un corpus anterior sin cambios en los documentos calibrados · Umbral ${policy.threshold} · Recalibre para incluir los nuevos documentos en la evaluacion` : `Calibracion validada para este corpus · Umbral ${policy.threshold}`) : 'Sin calibracion validada para este corpus: se mantiene la abstencion.'}</p>}
     <form className="document-toolbar" onSubmit={e => { e.preventDefault(); search(); }}>
       <label>Ámbito<select value={scope} disabled={busy} onChange={e => { setScope(e.target.value); setResult(null); }}><option value="admin">Administrador</option><option value="usuario">Usuario</option></select></label>
       <label className="search-field">Consulta<input value={query} maxLength={1000} onChange={e => setQuery(e.target.value)} required aria-label="Consulta de recuperacion"/></label>

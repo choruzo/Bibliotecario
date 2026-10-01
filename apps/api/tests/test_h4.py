@@ -88,14 +88,14 @@ def test_abstention_never_generates_and_followup_retrieves_again(application, mo
     generation = []
     async def reformulate(messages, max_tokens, **kwargs):
         generation.append(messages)
-        return 'consulta autónoma sobre el texto'
+        return 'cómo funciona el texto: consulta autónoma'
     monkeypatch.setattr(app.state.clients, 'generate', reformulate)
     result = turn(client, cid)
     assert result[-1]['message']['status'] == 'abstained' and not generation
     assert result[-1]['message']['sources'] == []
     result = turn(client, cid, '¿Y cómo funciona?')
     assert len(calls) == 2 and len(generation) == 1
-    assert calls[-1] == ('consulta autónoma sobre el texto', {'admin': False})
+    assert calls[-1] == ('cómo funciona el texto: consulta autónoma', {'admin': False})
     assert len(client.get(f'/chat/conversations/{cid}').json()['messages']) == 4
 
 

@@ -38,7 +38,10 @@ def ranking_metrics(case, candidates, document_map):
         relevance.append(int(doc in documents and (not sections or any(normalize(s) in headings for s in sections))))
     dcg = sum(gain / math.log2(rank + 1) for rank, gain in enumerate(relevance[:10], 1))
     ideal = sum(1 / math.log2(rank + 1) for rank in range(1, min(10, sum(relevance)) + 1))
-    return {"recall5": hits5 / len(targets) if targets else None,
+    found_documents = {document_map.get(c["document_id"]) for c in candidates[:10]}
+    return {"document_recall10": (sum(doc in found_documents for doc in documents) / len(documents)
+                                   if documents else None),
+            "recall5": hits5 / len(targets) if targets else None,
             "recall10": hits10 / len(targets) if targets else None,
             "mrr10": 1 / first if first else 0,
             "ndcg10": dcg / ideal if ideal else 0}
@@ -62,6 +65,14 @@ def decision_metrics(rows, threshold):
             "improper_answer_rate": fp / (fp + tn) if fp + tn else None}
 
 
+def wrong_source(row):
+    """Whether an accepted answer lacks an expected document (None if not applicable)."""
+    if row["expected_behavior"] != "answer":
+        return None
+    recall = row.get("document_recall10", row.get("recall10"))
+    return recall is None or recall < 1
+
+
 def calibrate(rows):
     explicit = any(r.get("split") for r in rows)
     if explicit and any(r.get("split") not in {"calibration", "validation"} for r in rows):
@@ -79,9 +90,13 @@ def calibrate(rows):
                 raise ValueError("conversation_split_leakage")
             (train if (group[0]["split"] == "calibration" if explicit else index % 2 == 0) else holdout).extend(group)
     candidates = sorted({row["score"] for row in train if row.get("answer_eligible", True) and row.get("score") is not None})
+    # Only improper answers and answers without their expected documents make a
+    # threshold unsafe. A correct answer that cites fewer expected sections is a
+    # locator-quality metric: letting it move the threshold made one noisy case
+    # discard every lower score (e.g. -1.29 -> 0.10 after an unrelated upload).
     safe = [threshold for threshold in candidates if decision_metrics(train, threshold)["fp"] == 0
             and decision_metrics(train, threshold)["tp"] > 0
-            and all(row.get("recall10") == 1 for row in train
+            and not any(wrong_source(row) for row in train
                     if row.get("answer_eligible", True) and row.get("score") is not None and row["score"] >= threshold)]
     threshold = min(safe) if safe else None
     train_metrics, test_metrics = decision_metrics(train, threshold), decision_metrics(holdout, threshold)
@@ -97,16 +112,21 @@ def calibrate(rows):
         reasons.append("validation_improper_answers")
     if not test_metrics["tp"]:
         reasons.append("validation_no_answerable_acceptances")
-    if threshold is not None and any(r.get("recall10") != 1 for r in holdout
+    if threshold is not None and any(wrong_source(r) for r in holdout
             if r.get("answer_eligible", True) and r.get("score") is not None and r["score"] >= threshold):
         reasons.append("validation_incomplete_locators")
     if any(r["kind"] == "ambiguous" and r.get("assessment_action") != "clarify"
            for r in holdout if "assessment_action" in r):
         reasons.append("validation_missing_clarifications")
     approved = not reasons
+    accepted = [r for r in rows if r["expected_behavior"] == "answer" and r.get("answer_eligible", True)
+                and threshold is not None and r.get("score") is not None and r["score"] >= threshold]
+    locator_recall = statistics.mean(r["recall10"] for r in accepted if r.get("recall10") is not None) if any(
+        r.get("recall10") is not None for r in accepted) else None
     return {"threshold": threshold, "approved": approved, "train_ids": [r["id"] for r in train],
             "holdout_ids": [r["id"] for r in holdout], "train": train_metrics, "holdout": test_metrics,
             "reason": "empirical_holdout_pass" if approved else reasons[0], "rejection_reasons": reasons,
+            "accepted_locator_recall10": locator_recall,
             "limitations": ["Small bank; no statistical guarantee", "Coverage assessment is model-dependent; exact excerpts do not prove semantics"],
             "clarification_accuracy": (sum(r.get("assessment_action") == "clarify" for r in rows if r["kind"] == "ambiguous")
                                        / sum(r["kind"] == "ambiguous" for r in rows))

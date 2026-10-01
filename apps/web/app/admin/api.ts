@@ -33,3 +33,13 @@ export const diagnosticNames: Record<string, string> = {
   docx_images_omitted: 'Imagenes DOCX omitidas', pdf_images_omitted: 'Imagenes PDF omitidas',
   docx_header_footer_omitted: 'Cabeceras o pies DOCX omitidos', numbering_normalized: 'Numeracion de listas normalizada'
 };
+const pageDiagnostics: Record<string, string> = {
+  possible_ocr_page_: 'Posible necesidad de OCR en pagina',
+  pdf_tables_recovered_page_: 'Tabla PDF reconstruida por coordenadas en pagina',
+  pdf_text_recovered_page_: 'Texto PDF omitido por la conversion y recuperado en pagina',
+  pdf_text_loss_page_: 'Posible perdida de texto PDF sin recuperar en pagina'
+};
+export const diagnosticLabel = (code: string) => {
+  const prefix = Object.keys(pageDiagnostics).find(key => code.startsWith(key));
+  return diagnosticNames[code] || (prefix ? `${pageDiagnostics[prefix]} ${code.slice(prefix.length)}` : code);
+};

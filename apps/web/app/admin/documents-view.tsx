@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Upload, Search, Save, Check, Download, RotateCcw, Trash2, X, Eye, FileText, ListTree, ArchiveX, Files } from 'lucide-react';
-import { adminRequest, diagnosticNames, statusNames, statusTone } from './api';
+import { adminRequest, diagnosticLabel, statusNames, statusTone } from './api';
 import Modal from './modal';
 
 type Metadata = { title: string; author: string; date: string; category: string; tags: string[]; language: string; version: string; visibility: string };
@@ -146,7 +146,7 @@ export default function DocumentsView({ csrf, documentId }: { csrf: string; docu
           <button className="icon-button danger-button" title="Eliminar documento" aria-label="Eliminar documento" disabled={busy || !canDelete} onClick={() => { setConfirmation(''); setDeleting(true); }}><Trash2 size={18}/></button></div>
         {version.status === 'publicado' && <form className="retrieval-card" onSubmit={e => { e.preventDefault(); action(async () => { await adminRequest(`versions/${version.id}/classification`, csrf, 'PATCH', { expected_revision_id: version.revision_id, expected_metadata: version.metadata, category: classification.category, tags: classification.tags.split(',').map(t => t.trim()).filter(Boolean), visibility: classification.visibility }); setNotice('Clasificacion actualizada.'); }); }}><h3>Clasificacion publicada</h3><div className="metadata-fields"><label>Categoria publicada<input maxLength={100} value={classification.category} onChange={e => setClassification({ ...classification, category: e.target.value })}/></label><label>Etiquetas publicadas<input value={classification.tags} onChange={e => setClassification({ ...classification, tags: e.target.value })}/></label><label>Visibilidad publicada<select value={classification.visibility} onChange={e => setClassification({ ...classification, visibility: e.target.value })}><option value="usuarios">Usuarios</option><option value="admin">Administradores</option></select></label></div><button disabled={busy}>Guardar clasificacion</button></form>}
         <div className="review-status"><span className={`${statusTone(version.status)}${version.status === 'requiere_revision' && !version.reviewed_at ? ' halo' : ''}`}>{statusNames[version.status]}</span><span className={version.reviewed_at ? 'badge b-pass' : 'badge b-dim'}>{version.reviewed_at ? 'Revisado' : 'Sin aprobar'}</span>{dirty && <span className="unsaved">Cambios sin guardar</span>}</div>
-        {version.diagnostics.length > 0 && <ul className="diagnostics-list">{version.diagnostics.map(code => <li key={code}>{diagnosticNames[code] || (code.startsWith('possible_ocr_page_') ? `Posible necesidad de OCR en pagina ${code.split('_').pop()}` : code)}</li>)}</ul>}
+        {version.diagnostics.length > 0 && <ul className="diagnostics-list">{version.diagnostics.map(code => <li key={code}>{diagnosticLabel(code)}</li>)}</ul>}
         {metadata && <fieldset className="metadata-fields" disabled={!editable || busy}>
           <label className="wide-field">Titulo<input value={metadata.title} maxLength={300} onChange={e => field('title', e.target.value)}/></label>
           <label>Autor<input value={metadata.author} maxLength={200} onChange={e => field('author', e.target.value)}/></label>

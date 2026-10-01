@@ -10,7 +10,7 @@ from .indexing import model_signature
 from .providers import ProviderError
 from .query import REWRITE_PROMPT, REWRITE_TOKENS, COURTESY, ACCENTS, CONTEXT_GUARD_VERSION, requires_specific_context
 
-VERSION = "h4-sufficiency-v3-library-context"
+VERSION = "h4-sufficiency-v4-direct-implication-subject"
 INTENT_MAX_TOKENS = 2000
 ASSESSMENT_MAX_TOKENS = 4000
 CLARIFICATION = "Para responder necesito concretar el contexto: ¿qué documento, sistema u objeto quieres consultar y qué operación necesitas realizar?"
@@ -59,6 +59,13 @@ con los pasos disponibles, indicando el alcance de esa guía y los pasos opciona
 modelo concreto del usuario cuando la pregunta es sobre la documentación y la guía lo identifica.
 No marques clarify únicamente porque el usuario emplee un nombre coloquial reconocido en las fuentes.
 No declares cobertura completa usando solo títulos: los pasos requieren instrucciones en los pasajes.
+Una pregunta de sí/no o coloquial está cubierta si un pasaje afirma un hecho que la resuelve de forma
+inmediata aunque use otras palabras: carecer de lo necesario para una acción responde si puede realizarla
+(p. ej., 'no poseen aguijón' responde si pican; 'no es compatible con X' responde si funciona con X).
+No encadenes varias inferencias ni uses conocimiento externo para llegar a la respuesta.
+Si la pregunta pide un dato de un sujeto concreto (casta, variante, modelo, versión, sistema), el pasaje
+debe atribuir ese dato a ese sujeto: un dato del caso general o de otro sujeto NO lo cubre.
+Las tablas en Markdown asocian cada valor con su fila y su columna; úsalas solo con esa correspondencia.
 Para clarify/abstain usa coverage_complete=false y support=[]. Ante duda no uses answer."""
 
 
@@ -82,7 +89,7 @@ class Intent(BaseModel):
 
 def policy_signature(settings):
     # Index vectors retain their H3 signature; only evidence policies are invalidated.
-    contract = [VERSION, "colloquial-retrieval-v3:intent-question-first:lexical-or:context60-36000", CONTEXT_GUARD_VERSION, REWRITE_PROMPT, REWRITE_TOKENS, COURTESY, ACCENTS, "temperature=0", INTENT_MAX_TOKENS, ASSESSMENT_MAX_TOKENS, Intent.model_json_schema(), Assessment.model_json_schema(),
+    contract = [VERSION, "colloquial-retrieval-v3:intent-question-first:lexical-or:context60-36000", "followup-last-question-terms-v4-history-topic", CONTEXT_GUARD_VERSION, REWRITE_PROMPT, REWRITE_TOKENS, COURTESY, ACCENTS, "temperature=0", INTENT_MAX_TOKENS, ASSESSMENT_MAX_TOKENS, Intent.model_json_schema(), Assessment.model_json_schema(),
                 INTENT_PROMPT, PROMPT, model_signature(settings), settings.llm_base_url, settings.llm_model,
                 settings.model_timeout_seconds, settings.sufficiency_reasoning_effort]
     return hashlib.sha256(json.dumps(contract).encode()).hexdigest()

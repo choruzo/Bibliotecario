@@ -1,7 +1,33 @@
 """Structural blocks, bounded UTF-8 payloads and exact revision locators."""
+import re
+
 from .converters import provenance
 
 CHUNK_BYTES = 900
+# Markdown links (URLs may contain one level of parentheses) and bare URLs.
+LINKS = re.compile(r"\[[^\]]*\]\((?:[^()\s]|\([^()\s]*\))*\)|https?://[^\s)\]>]+")
+BREAKS = (re.compile(r"\n"), re.compile(r"(?<=[.!?;:])[ \t]+"), re.compile(r"[ \t]+"))
+
+
+def break_point(content, offset, stop, spans):
+    """Latest boundary within the budget that does not split a word or link.
+
+    Prefers line ends, then sentence ends, then spaces, searching the second half
+    of the budget first so chunks stay reasonably full. A hard cut remains only
+    for a single token (word or link) longer than the budget.
+    """
+    if stop >= len(content):
+        return stop
+    inside = lambda point: any(start < point < end for start, end in spans)
+    floor = offset + (stop - offset) // 2
+    attempts = [(pattern, floor, True) for pattern in BREAKS] + [(BREAKS[2], offset, True),
+                (BREAKS[0], offset, False), (BREAKS[2], offset, False)]
+    for pattern, start, avoid_links in attempts:
+        points = [m.end() for m in pattern.finditer(content, start, stop)
+                  if offset < m.end() <= stop and not (avoid_links and inside(m.end()))]
+        if points:
+            return points[-1]
+    return stop
 
 
 def split_blocks(markdown, source_map, budget=CHUNK_BYTES):
@@ -36,6 +62,7 @@ def split_blocks(markdown, source_map, budget=CHUNK_BYTES):
         prefix = heading + "\n" if heading else ""
         capacity = budget - len(prefix.encode("utf-8"))
         content = "".join(lines[start - 1:end])
+        spans = [m.span() for m in LINKS.finditer(content)]
         offset = 0
         while offset < len(content):
             stop, size = offset, 0
@@ -44,6 +71,7 @@ def split_blocks(markdown, source_map, budget=CHUNK_BYTES):
                 stop += 1
             if stop == offset:
                 raise ValueError("chunk_budget_too_small")
+            stop = break_point(content, offset, stop, spans)
             text = content[offset:stop]
             if text.strip():
                 line_start = start + content[:offset].count("\n")

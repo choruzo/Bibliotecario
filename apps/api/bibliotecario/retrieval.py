@@ -53,6 +53,39 @@ def corpus_signature(db):
     return hashlib.sha256(json.dumps(unique).encode()).hexdigest()
 
 
+def corpus_members(db):
+    """Active version and visibility per document, used to decide policy inheritance."""
+    rows = db.execute(select(Document.id, Document.active_version_id, DocumentVersion.metadata_json)
+                      .join(DocumentVersion, DocumentVersion.id == Document.active_version_id)
+                      .where(Document.deleted_at.is_(None), Document.deletion_requested.is_(False))).all()
+    return {doc: [version, (metadata or {}).get("visibility")] for doc, version, metadata in rows}
+
+
+def find_policy(db, settings, scope, corpus):
+    """Exact-corpus policy, else the latest approved one whose calibrated documents are unchanged.
+
+    Publishing or withdrawing other documents keeps the calibrated threshold (the
+    per-question coverage assessment still gates every answer), so the chat does not
+    stop answering until a slow recalibration finishes. Replacing a calibrated
+    document's version or visibility still requires recalibration.
+    """
+    signature = policy_signature(settings)
+    base = select(EvidencePolicy).where(EvidencePolicy.scope == scope, EvidencePolicy.signature == signature)
+    exact = db.scalar(base.where(EvidencePolicy.corpus_signature == corpus)
+                      .order_by(EvidencePolicy.created_at.desc()).limit(1))
+    if exact:
+        return exact, False
+    members = corpus_members(db)
+    for policy in db.scalars(base.order_by(EvidencePolicy.created_at.desc()).limit(20)):
+        calibrated = policy.report.get("corpus_members")
+        if not policy.report.get("approved") or not isinstance(calibrated, dict):
+            continue
+        if all(members[doc] == value for doc, value in calibrated.items() if doc in members):
+            return policy, True
+        return None, False  # Newer calibrated content changed; older policies are staler still.
+    return None, False
+
+
 def fuse(vector, lexical):
     scores, details = {}, {}
     for name, rows in (("vector", vector), ("text", lexical)):
@@ -133,14 +166,13 @@ def evidence_decision(db, settings, corpus, results, filtered=False, admin=True,
         return {"action": "abstain", "reason": "assessment_missing"}
     if assessment["action"] != "answer":
         return {"action": assessment["action"], "reason": assessment["reason"]}
-    policy = db.scalar(select(EvidencePolicy).where(EvidencePolicy.scope == ("admin" if admin else "usuario"), EvidencePolicy.signature == policy_signature(settings),
-                      EvidencePolicy.corpus_signature == corpus).order_by(EvidencePolicy.created_at.desc()).limit(1))
+    policy, inherited = find_policy(db, settings, "admin" if admin else "usuario", corpus)
     if not policy or not policy.report.get("approved"):
         return {"action": "abstain", "reason": "uncalibrated", "policy_id": policy.id if policy else None}
     threshold = policy.report.get("threshold")
     sufficient = bool(results) and threshold is not None and results[0]["rerank_score"] >= threshold
     return {"action": "answer" if sufficient else "abstain", "reason": "calibrated_score",
-            "policy_id": policy.id, "threshold": threshold}
+            "policy_id": policy.id, "threshold": threshold, "policy_inherited": inherited}
 
 
 async def retrieve(db, settings, clients, query, limit=10, document_id=None, admin=False):
@@ -264,11 +296,9 @@ class CalibrationBank(BaseModel):
 
 @router.get("/policy")
 def current_policy(request: Request, scope: Literal["admin", "usuario"] = "admin", db=Depends(database)):
-    signature = policy_signature(request.app.state.settings)
     corpus = corpus_signature(db)
-    policy = db.scalar(select(EvidencePolicy).where(EvidencePolicy.scope == scope, EvidencePolicy.signature == signature,
-                      EvidencePolicy.corpus_signature == corpus).order_by(EvidencePolicy.created_at.desc()).limit(1))
-    return {"id": policy.id if policy else None, "corpus_signature": corpus,
+    policy, inherited = find_policy(db, request.app.state.settings, scope, corpus)
+    return {"id": policy.id if policy else None, "corpus_signature": corpus, "inherited": inherited,
             "report": policy.report if policy else {"approved": False, "reason": "uncalibrated"}}
 
 
@@ -311,6 +341,7 @@ def calibrate_recorded_runs(body: CalibrationBank, request: Request, identity=De
         report = calibrate(rows) | {"metrics": summarize(rows), "cases": rows}
     except ValueError as exc:
         raise HTTPException(422, str(exc)) from exc
+    report["corpus_members"] = corpus_members(db)
     policy = EvidencePolicy(scope=body.scope, signature=signature, corpus_signature=corpus, report=report, created_at=int(time.time()))
     db.add(policy)
     from .models import AuditEvent
