@@ -8,6 +8,7 @@ x-app-env: &app-env
   BIB_COOKIE_SECURE: ${BIB_COOKIE_SECURE:-false}
   BIB_LLM_BASE_URL: http://litellm:4000/v1
   BIB_LLM_MODEL: ${BIB_LLM_MODEL:-bibliotecario-generation}
+  BIB_LLM_UPSTREAM_MODEL: ${LLAMA_GENERATION_MODEL:-openai/gemma-4-12b-it}
   BIB_LLM_API_KEY: ${LITELLM_MASTER_KEY:?Defina LITELLM_MASTER_KEY en .env}
   BIB_EMBEDDING_BASE_URL: ${BIB_EMBEDDING_BASE_URL:-http://host.docker.internal:8081}
   BIB_EMBEDDING_MODEL: ${BIB_EMBEDDING_MODEL:-nomic-embed-text-v1.5.f16.gguf}
@@ -43,7 +44,7 @@ services:
     restart: 'no'
 
   postgres:
-    image: pgvector/pgvector:0.8.2-pg17
+    image: pgvector/pgvector:0.8.2-pg17@sha256:feb68f4f15446397d8cac7f4fe48fe4586de83160d1fc48b46283312d1a33966
     environment:
       POSTGRES_DB: bibliotecario
       POSTGRES_USER: bibliotecario
@@ -98,12 +99,12 @@ services:
     restart: unless-stopped
 
   litellm:
-    image: ${LITELLM_IMAGE:-ghcr.io/berriai/litellm:main-stable}
+    image: ${LITELLM_IMAGE:-ghcr.io/berriai/litellm:v1.103.2@sha256:f63fb81b831b170ec16851e23c36ac5bf52ef106b271406429524a2ed730bbfd}
     command: [--config, /app/config.yaml, --port, '4000']
     environment:
       LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:?Defina LITELLM_MASTER_KEY}
       LLAMA_GENERATION_BASE_URL: ${LLAMA_GENERATION_BASE_URL:-http://host.docker.internal:8080/v1}
-      LLAMA_GENERATION_MODEL: ${LLAMA_GENERATION_MODEL:-openai/gpt-oss-20b-Q5_K_M.gguf}
+      LLAMA_GENERATION_MODEL: ${LLAMA_GENERATION_MODEL:-openai/gemma-4-12b-it}
       LLAMA_GENERATION_API_KEY: ${LLAMA_GENERATION_API_KEY:-local-no-key}
     volumes:
       - ./config/h1/litellm.yaml:/app/config.yaml:ro

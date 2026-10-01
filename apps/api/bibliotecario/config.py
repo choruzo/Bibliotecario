@@ -17,6 +17,8 @@ class Settings(BaseSettings):
     session_hours: int = Field(default=12, ge=1, le=168)
     llm_base_url: str = "http://litellm:4000/v1"
     llm_model: str = "bibliotecario-generation"
+    # Modelo real detras del alias de litellm; forma parte de la firma de politica.
+    llm_upstream_model: str = ""
     llm_api_key: SecretStr
     embedding_base_url: str = "http://host.docker.internal:8081"
     embedding_model: str = "nomic-embed-text-v1.5.f16.gguf"

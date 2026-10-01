@@ -129,7 +129,7 @@ async def _contextual_query(clients, question, summary, recent):
         {"role": "user", "content": json.dumps({"summary": summary, "recent": turns, "last_user_question": last,
                                                 "question": question}, ensure_ascii=False)}]
     for attempt in range(3):
-        result = (await clients.generate(messages, max_tokens=REWRITE_TOKENS, reasoning_effort="low")).strip()
+        result = (await clients.generate(messages, max_tokens=REWRITE_TOKENS, reasoning_effort="low" if clients.settings.sufficiency_reasoning_effort != "disabled" else "disabled")).strip()
         if re.search(r"(?i)lo siento|no puedo (?:ayudar|proporcionar)|no (?:puedo|debo) responder", result):
             return question
         if not result or len(result) > 1000:

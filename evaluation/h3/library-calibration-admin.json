@@ -2,7 +2,7 @@
   "questions_sha256": "87da2f3a4c2f0c986957934feb25eca009b36807744deec26231a1327076bfb3",
   "validation_sha256": "61b17f9e7c5de0bb53786f0c9cfdae8721ca510af15cfc5733ead2a3278f24c6",
   "scope": "admin",
-  "model_signature": "8a95e557ea304a316568961a28d7087c85f34649f8ce784fcf1c8968d436bc36",
+  "model_signature": "8623bb9b86c3efca4bcb20b66a3b9a51a5de47d356f25cdc5e08c15523f3263c",
   "corpus_signature": "875bbe13d8f4e3dc7fb7426618c676bfa2e1d7506d39b0702b8a503844728b14",
   "assessment_version": "h4-sufficiency-v4-direct-implication-subject",
   "query_mode": "h4_contextual_user_history",
@@ -11,7 +11,7 @@
   ],
   "date": "2026-10-01",
   "calibration": {
-    "threshold": -1.835386037826538,
+    "threshold": -1.2931849956512451,
     "approved": true,
     "train_ids": [
       "COL-calibration-A001",
@@ -81,14 +81,14 @@
       "VAL2-C002-T3"
     ],
     "train": {
-      "tp": 22,
+      "tp": 21,
       "fp": 0,
-      "fn": 2,
+      "fn": 3,
       "tn": 8,
       "precision": 1.0,
-      "recall": 0.9166666666666666,
-      "f1": 0.9565217391304348,
-      "accuracy": 0.9375,
+      "recall": 0.875,
+      "f1": 0.9333333333333333,
+      "accuracy": 0.90625,
       "improper_answer_rate": 0.0
     },
     "holdout": {
@@ -104,7 +104,7 @@
     },
     "reason": "empirical_holdout_pass",
     "rejection_reasons": [],
-    "accepted_locator_recall10": 0.9888888888888889,
+    "accepted_locator_recall10": 0.9772727272727273,
     "limitations": [
       "Small bank; no statistical guarantee",
       "Coverage assessment is model-dependent; exact excerpts do not prove semantics"
@@ -123,10 +123,10 @@
         "answerable": {
           "count": 35,
           "errors": 0,
-          "recall5": 0.9571428571428572,
-          "recall10": 0.9828571428571429,
+          "recall5": 0.9476190476190476,
+          "recall10": 0.9685714285714285,
           "mrr10": 0.975,
-          "ndcg10": 0.947418404624198
+          "ndcg10": 0.939944032822989
         },
         "conversation": {
           "count": 12,
@@ -134,7 +134,7 @@
           "recall5": 0.875,
           "recall10": 0.875,
           "mrr10": 0.9166666666666666,
-          "ndcg10": 0.8134464117885658
+          "ndcg10": 0.8319076734963906
         },
         "unanswerable": {
           "count": 10,
@@ -147,29 +147,29 @@
       },
       "latency": {
         "embedding_ms": {
-          "p50": 46.62,
-          "p95": 87.19,
-          "max": 1493.84
+          "p50": 45.63,
+          "p95": 343.84,
+          "max": 1962.88
         },
         "search_ms": {
-          "p50": 50.87,
-          "p95": 113.74,
-          "max": 143.1
+          "p50": 45.82,
+          "p95": 103.31,
+          "max": 980.21
         },
         "fusion_ms": {
-          "p50": 110.24,
-          "p95": 208.15,
-          "max": 256.26
+          "p50": 102.76,
+          "p95": 544.88,
+          "max": 1078.53
         },
         "reranking_ms": {
-          "p50": 313.93,
-          "p95": 397.32,
-          "max": 1641.38
+          "p50": 298.31,
+          "p95": 862.9,
+          "max": 1879.26
         },
         "sufficiency_ms": {
-          "p50": 3498.43,
-          "p95": 8963.21,
-          "max": 21656.56
+          "p50": 4091.9,
+          "p95": 12119.28,
+          "max": 14983.27
         }
       }
     },
@@ -241,7 +241,7 @@
       "recall5": 1.0,
       "recall10": 1.0,
       "mrr10": 1.0,
-      "ndcg10": 0.9838048780283076,
+      "ndcg10": 1.0,
       "answer_eligible": true,
       "assessment_action": "answer",
       "error": null
@@ -290,10 +290,10 @@
       "kind": "answerable",
       "split": "calibration",
       "score": -0.012973371893167496,
-      "recall5": 1.0,
-      "recall10": 1.0,
+      "recall5": 0.5,
+      "recall10": 0.5,
       "mrr10": 1.0,
-      "ndcg10": 1.0,
+      "ndcg10": 0,
       "answer_eligible": true,
       "assessment_action": "answer",
       "error": null
@@ -303,10 +303,10 @@
       "kind": "answerable",
       "split": "calibration",
       "score": 1.3900349140167236,
-      "recall5": 0.5,
+      "recall5": 1.0,
       "recall10": 1.0,
       "mrr10": 1.0,
-      "ndcg10": 0.3333333333333333,
+      "ndcg10": 1.0,
       "answer_eligible": true,
       "assessment_action": "answer",
       "error": null
@@ -333,8 +333,8 @@
       "recall10": 1.0,
       "mrr10": 1.0,
       "ndcg10": 0.7760784709829229,
-      "answer_eligible": true,
-      "assessment_action": "answer",
+      "answer_eligible": false,
+      "assessment_action": "abstain",
       "error": null
     },
     {
@@ -355,10 +355,10 @@
       "kind": "answerable",
       "split": "calibration",
       "score": 0.20319640636444092,
-      "recall5": 1.0,
+      "recall5": 0.6666666666666666,
       "recall10": 1.0,
       "mrr10": 1.0,
-      "ndcg10": 1.0,
+      "ndcg10": 0.8328978515038054,
       "answer_eligible": true,
       "assessment_action": "answer",
       "error": null
@@ -399,7 +399,7 @@
       "mrr10": 0,
       "ndcg10": 0,
       "answer_eligible": false,
-      "assessment_action": "abstain",
+      "assessment_action": "clarify",
       "error": null
     },
     {
@@ -484,11 +484,11 @@
       "id": "EVAL-C001-T2",
       "kind": "conversation",
       "split": "calibration",
-      "score": 3.4682729244232178,
+      "score": 0.900153636932373,
       "recall5": 1.0,
       "recall10": 1.0,
       "mrr10": 1.0,
-      "ndcg10": 0.7613569414627896,
+      "ndcg10": 1.0,
       "answer_eligible": true,
       "assessment_action": "answer",
       "error": null
@@ -497,7 +497,7 @@
       "id": "EVAL-C001-T3",
       "kind": "conversation",
       "split": "calibration",
-      "score": 0.09710334241390228,
+      "score": 1.3535650968551636,
       "recall5": 0.5,
       "recall10": 0.5,
       "mrr10": 1.0,
@@ -523,7 +523,7 @@
       "id": "EVAL-C002-T2",
       "kind": "conversation",
       "split": "calibration",
-      "score": -1.835386037826538,
+      "score": 0.5204520225524902,
       "recall5": 1.0,
       "recall10": 1.0,
       "mrr10": 1.0,
@@ -553,7 +553,7 @@
       "recall5": 1.0,
       "recall10": 1.0,
       "mrr10": 1.0,
-      "ndcg10": 0.9068250379649666,
+      "ndcg10": 1.0,
       "answer_eligible": true,
       "assessment_action": "answer",
       "error": null
@@ -566,7 +566,7 @@
       "recall5": 1.0,
       "recall10": 1.0,
       "mrr10": 1.0,
-      "ndcg10": 0.9933222998814618,
+      "ndcg10": 1.0,
       "answer_eligible": true,
       "assessment_action": "answer",
       "error": null
@@ -761,7 +761,7 @@
       "recall5": 1.0,
       "recall10": 1.0,
       "mrr10": 1.0,
-      "ndcg10": 0.8772153153380493,
+      "ndcg10": 1.0,
       "answer_eligible": true,
       "assessment_action": "answer",
       "error": null
@@ -802,7 +802,7 @@
       "mrr10": 0,
       "ndcg10": 0,
       "answer_eligible": false,
-      "assessment_action": "clarify",
+      "assessment_action": "abstain",
       "error": null
     },
     {
@@ -815,7 +815,7 @@
       "mrr10": 0,
       "ndcg10": 0,
       "answer_eligible": false,
-      "assessment_action": "abstain",
+      "assessment_action": "clarify",
       "error": null
     },
     {
@@ -828,7 +828,7 @@
       "mrr10": 0,
       "ndcg10": 0,
       "answer_eligible": false,
-      "assessment_action": "clarify",
+      "assessment_action": "abstain",
       "error": null
     },
     {
@@ -841,7 +841,7 @@
       "mrr10": 0,
       "ndcg10": 0,
       "answer_eligible": false,
-      "assessment_action": "clarify",
+      "assessment_action": "abstain",
       "error": null
     },
     {
@@ -913,11 +913,11 @@
       "id": "VAL2-C001-T3",
       "kind": "conversation",
       "split": "validation",
-      "score": 5.9240288734436035,
+      "score": 6.531013488769531,
       "recall5": 1.0,
       "recall10": 1.0,
       "mrr10": 1.0,
-      "ndcg10": 1.0,
+      "ndcg10": 0.9828920819566879,
       "answer_eligible": true,
       "assessment_action": "answer",
       "error": null
@@ -926,7 +926,7 @@
       "id": "VAL2-C002-T1",
       "kind": "conversation",
       "split": "validation",
-      "score": 4.893989086151123,
+      "score": 4.89508581161499,
       "recall5": 1.0,
       "recall10": 1.0,
       "mrr10": 1.0,
@@ -952,7 +952,7 @@
       "id": "VAL2-C002-T3",
       "kind": "conversation",
       "split": "validation",
-      "score": 3.550325632095337,
+      "score": 5.5324811935424805,
       "recall5": 1.0,
       "recall10": 1.0,
       "mrr10": 1.0,

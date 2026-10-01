@@ -90,7 +90,7 @@ class Intent(BaseModel):
 def policy_signature(settings):
     # Index vectors retain their H3 signature; only evidence policies are invalidated.
     contract = [VERSION, "colloquial-retrieval-v3:intent-question-first:lexical-or:context60-36000", "followup-last-question-terms-v4-history-topic", CONTEXT_GUARD_VERSION, REWRITE_PROMPT, REWRITE_TOKENS, COURTESY, ACCENTS, "temperature=0", INTENT_MAX_TOKENS, ASSESSMENT_MAX_TOKENS, Intent.model_json_schema(), Assessment.model_json_schema(),
-                INTENT_PROMPT, PROMPT, model_signature(settings), settings.llm_base_url, settings.llm_model,
+                INTENT_PROMPT, PROMPT, model_signature(settings), settings.llm_base_url, settings.llm_model, settings.llm_upstream_model,
                 settings.model_timeout_seconds, settings.sufficiency_reasoning_effort]
     return hashlib.sha256(json.dumps(contract).encode()).hexdigest()
 

@@ -2,6 +2,7 @@
 import asyncio
 import json
 import re
+from types import SimpleNamespace
 
 import pytest
 
@@ -180,6 +181,8 @@ def test_new_documents_inherit_the_approved_policy_but_changed_ones_do_not(appli
 
 def test_follow_up_rewrites_keep_the_new_subject_and_use_the_last_question():
     class Clients:
+        settings = SimpleNamespace(sufficiency_reasoning_effort="low")
+
         def __init__(self, answers):
             self.answers, self.calls = list(answers), []
 

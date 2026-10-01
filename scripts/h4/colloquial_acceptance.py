@@ -76,6 +76,9 @@ def main():
                 response.raise_for_status()
                 events = [json.loads(line) for line in response.text.splitlines()]
                 message = events[-1].get('message', {})
+                if not isinstance(message, dict):
+                    # A stream error event carries its text here; the case fails instead of aborting the run.
+                    message = {'status': 'error', 'error': message, 'sources': []}
                 if message.get('retrieval_run_id'):
                     trace_response = inspector.get('/admin/retrieval/runs/' + message['retrieval_run_id'])
                     trace_response.raise_for_status()
@@ -98,7 +101,8 @@ def main():
                     passed &= hashlib.sha256(download.content).hexdigest() == source['source_sha256']
                 row = {'id': name, 'question': question, 'expected': expected, 'conversation_id': cid,
                        'message': message, 'trace': trace, 'passed': passed}
-                print(f"{name}: {'PASS' if passed else 'FAIL'}, {trace.get('chat_outcome')}", flush=True)
+                print(f"{name}: {'PASS' if passed else 'FAIL'}, {trace.get('chat_outcome')}"
+                      + (f", error={message['error']}" if message.get('error') else ''), flush=True)
             rows.append(row)
             (output / f'{args.scope}.json').write_text(json.dumps(rows, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
         client.post('/auth/logout', headers=headers).raise_for_status()

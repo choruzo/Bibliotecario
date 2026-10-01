@@ -1,4 +1,5 @@
 import asyncio
+from types import SimpleNamespace
 
 from sqlalchemy import select
 
@@ -19,6 +20,8 @@ def test_lexical_query_discards_courtesy_and_never_uses_user_boolean_operators()
 
 def test_truncated_reformulation_preserves_the_original_question():
     class Clients:
+        settings = SimpleNamespace(sufficiency_reasoning_effort='low')
+
         async def generate(self, *args, **kwargs):
             raise ProviderError('incomplete_generation')
     question = '¿Y qué rama debo borrar?'
@@ -27,6 +30,8 @@ def test_truncated_reformulation_preserves_the_original_question():
 
 def test_reformulation_refusal_cannot_replace_a_question_about_missing_facts():
     class Clients:
+        settings = SimpleNamespace(sufficiency_reasoning_effort='low')
+
         async def generate(self, *args, **kwargs):
             return 'Lo siento, no puedo ayudar con eso.'
     question = '¿Cuál es la contraseña actual del administrador?'
@@ -65,3 +70,18 @@ def test_context_expansion_keeps_exact_passages_in_the_same_revision(application
             chunk = db.get(Chunk, candidate['chunk_id'])
             assert candidate['content'] == chunk.content
             assert candidate['revision_id'] == chunk.revision_id == original.revision_id
+
+
+def test_disabled_reasoning_also_applies_to_follow_up_reformulation():
+    class Clients:
+        settings = SimpleNamespace(sufficiency_reasoning_effort='disabled')
+
+        def __init__(self):
+            self.efforts = []
+
+        async def generate(self, *args, **kwargs):
+            self.efforts.append(kwargs.get('reasoning_effort'))
+            return '¿Qué rama de Git debo borrar?'
+    clients = Clients()
+    asyncio.run(contextual_query(clients, '¿Y qué rama debo borrar?', '', [{'role': 'user', 'content': 'Git'}]))
+    assert clients.efforts and set(clients.efforts) == {'disabled'}

@@ -125,6 +125,14 @@ def test_generation_model_change_invalidates_policy_without_invalidating_vectors
     assert model_signature(s) == old_index and policy_signature(s) != old_policy
 
 
+def test_upstream_model_change_behind_alias_invalidates_policy(tmp_path):
+    s = settings(tmp_path)
+    s.llm_upstream_model = 'openai/gpt-oss-20b-Q5_K_M.gguf'
+    old_index, old_policy = model_signature(s), policy_signature(s)
+    s.llm_upstream_model = 'openai/gemma-4-12b-it'
+    assert model_signature(s) == old_index and policy_signature(s) != old_policy
+
+
 def test_truncated_nonstream_generation_cannot_approve_assessment(tmp_path):
     async def run():
         s = settings(tmp_path)
