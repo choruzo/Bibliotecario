@@ -57,10 +57,10 @@ def test_library_titles_do_not_choose_a_configuration_or_resource_estimation_sco
 def test_context_expansion_keeps_exact_passages_in_the_same_revision(application):
     app, client, sessions = application
     login(client)
-    seed = indexed(application)
+    seed = indexed(application, b"# Titulo\n\nTexto original.\n\n## Anexo\n\nTexto del anexo.\n")
     with sessions() as db:
         original = db.get(Chunk, seed['chunk_id'])
-        # The real index contains a separate heading and body.
+        # Each section is a separate fragment of the same revision.
         candidates = [seed | {'search_content': original.search_content, 'rrf_score': .03, 'channels': {}}]
         expanded = expand_context(db, candidates)
         expected = db.scalars(select(Chunk).where(Chunk.version_id == seed['version_id'])).all()

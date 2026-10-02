@@ -98,6 +98,33 @@ def test_chunks_break_at_words_and_never_inside_links():
         assert text.count("[") == text.count("](") == text.count("_(alimento))"), text
 
 
+def test_small_blocks_of_one_section_are_grouped_with_all_locators():
+    rows = "".join(f"Artículo {i}. Texto breve del artículo número {i}.\n\n" for i in range(1, 41))
+    markdown = "# Título\n\n" + rows + "## Otra sección\n\nFinal.\n"
+    pages = [provenance(markdown, "pdf", page=1)[0]] + [
+        item | {"page": 1 + i // 20, "kind": "page"} for i, item in enumerate(provenance(markdown, "pdf", page=1)[1:])]
+    chunks = split_blocks(markdown, pages)
+    assert ''.join(''.join(c['content'] for c in chunks).split()) == ''.join(markdown.split())
+    assert all(len(c["search_content"].encode()) <= 900 for c in chunks)
+    assert len(chunks) < 10
+    body = [c for c in chunks if "Artículo" in c["content"]]
+    assert all(c["content"].rstrip().endswith(".") for c in body)
+    assert sum(len(c["provenance"]) for c in body) >= 40
+    assert {p["page"] for c in body for p in c["provenance"]} == {1, 2}
+    # A new section never shares a fragment with the previous one.
+    assert chunks[-1]["content"].startswith("## Otra sección")
+    assert all("Artículo" not in c["content"] for c in chunks if "Otra sección" in c["content"])
+
+
+def test_table_of_contents_links_are_not_grouped_into_one_fragment():
+    toc = "".join(f"[Apartado {i} {i + 1}](#_Toc{i})\n\n" for i in range(8))
+    markdown = "Guía\n\nContenido\n\n" + toc + "# Apartado 0\n\nTexto.\n"
+    chunks = split_blocks(markdown, provenance(markdown, "md"))
+    assert ''.join(''.join(c['content'] for c in chunks).split()) == ''.join(markdown.split())
+    assert all(c["content"].count("](#") <= 1 for c in chunks)
+    assert chunks[0]["content"].startswith("Guía") and "Contenido" in chunks[0]["content"]
+
+
 def test_numbers_are_recognised_as_digits_words_and_fractions():
     assert numbers("veintiún días, 5½ días y treinta y dos") >= {21, 5.5, 32}
     assert numbers("de dos a cuatro años") == {2, 4}

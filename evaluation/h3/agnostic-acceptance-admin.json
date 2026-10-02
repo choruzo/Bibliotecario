@@ -1,21 +1,21 @@
 {
-  "date": "2026-10-01",
+  "date": "2026-10-02",
   "scope": "admin",
   "banks": {
     "evaluation/h3/agnostic-calibration-v1.jsonl": "2d11639437eedb370d28d003582cf31a306bf59f4e98d26b9980e75bf771676b",
     "evaluation/h3/agnostic-validation-v1.jsonl": "101cd66cda1d7097e0e7fffd81280522669ca158ea779b4d3e6d026fcb538e18"
   },
-  "passed": 61,
+  "passed": 62,
   "total": 64,
   "improper_answers": 0,
   "unsupported_numbers": 0,
   "outcomes": {
-    "grounded": 35,
-    "grounded_extract": 10
+    "grounded": 34,
+    "grounded_extract": 12
   },
   "by_kind": {
     "answerable": {
-      "passed": 31,
+      "passed": 32,
       "total": 32
     },
     "unanswerable": {
@@ -33,7 +33,7 @@
   },
   "by_domain": {
     "biología": {
-      "passed": 2,
+      "passed": 3,
       "total": 3
     },
     "astronomía": {
@@ -98,7 +98,6 @@
     }
   },
   "failures": {
-    "expected_answer": 1,
     "expected_abstain": 2
   },
   "cases": [
@@ -114,9 +113,9 @@
       },
       "decision": "calibrated_score",
       "assessment": "answer",
-      "score": 2.599092483520508,
+      "score": 2.6021809577941895,
       "policy_inherited": false,
-      "seconds": 9.7,
+      "seconds": 15.1,
       "failures": [],
       "passed": true
     },
@@ -132,9 +131,9 @@
       },
       "decision": "calibrated_score",
       "assessment": "answer",
-      "score": 0.621096670627594,
+      "score": 0.6306202411651611,
       "policy_inherited": false,
-      "seconds": 19.8,
+      "seconds": 21.3,
       "failures": [],
       "passed": true
     },
@@ -150,9 +149,9 @@
       },
       "decision": "calibrated_score",
       "assessment": "answer",
-      "score": 4.504466533660889,
+      "score": 4.643367767333984,
       "policy_inherited": false,
-      "seconds": 10.0,
+      "seconds": 14.6,
       "failures": [],
       "passed": true
     },
@@ -168,9 +167,9 @@
       },
       "decision": "calibrated_score",
       "assessment": "answer",
-      "score": 5.555515766143799,
+      "score": 6.437019348144531,
       "policy_inherited": false,
-      "seconds": 10.8,
+      "seconds": 13.2,
       "failures": [],
       "passed": true
     },
@@ -186,9 +185,9 @@
       },
       "decision": "calibrated_score",
       "assessment": "answer",
-      "score": 3.789743661880493,
+      "score": 2.886467933654785,
       "policy_inherited": false,
-      "seconds": 24.2,
+      "seconds": 17.0,
       "failures": [],
       "passed": true
     },
@@ -204,9 +203,9 @@
       },
       "decision": "calibrated_score",
       "assessment": "answer",
-      "score": 4.29879093170166,
+      "score": 4.299419403076172,
       "policy_inherited": false,
-      "seconds": 11.5,
+      "seconds": 12.7,
       "failures": [],
       "passed": true
     },
@@ -222,9 +221,9 @@
       },
       "decision": "calibrated_score",
       "assessment": "answer",
-      "score": 2.719217300415039,
+      "score": 2.716578960418701,
       "policy_inherited": false,
-      "seconds": 13.9,
+      "seconds": 13.1,
       "failures": [],
       "passed": true
     },
@@ -240,9 +239,9 @@
       },
       "decision": "calibrated_score",
       "assessment": "answer",
-      "score": 2.924546957015991,
+      "score": 2.9332115650177,
       "policy_inherited": false,
-      "seconds": 14.1,
+      "seconds": 14.3,
       "failures": [],
       "passed": true
     },
@@ -258,9 +257,9 @@
       },
       "decision": "calibrated_score",
       "assessment": "answer",
-      "score": 7.8640642166137695,
+      "score": 7.863250255584717,
       "policy_inherited": false,
-      "seconds": 13.1,
+      "seconds": 28.3,
       "failures": [],
       "passed": true
     },
@@ -276,9 +275,9 @@
       },
       "decision": "calibrated_score",
       "assessment": "answer",
-      "score": 6.059393882751465,
+      "score": 5.734837055206299,
       "policy_inherited": false,
-      "seconds": 9.6,
+      "seconds": 15.4,
       "failures": [],
       "passed": true
     },
@@ -290,13 +289,13 @@
       "status": "completed",
       "chat_outcome": {
         "status": "completed",
-        "reason": "grounded"
+        "reason": "grounded_extract"
       },
       "decision": "calibrated_score",
       "assessment": "answer",
-      "score": 2.7163493633270264,
+      "score": 2.6115102767944336,
       "policy_inherited": false,
-      "seconds": 12.2,
+      "seconds": 13.4,
       "failures": [],
       "passed": true
     },
@@ -312,9 +311,9 @@
       },
       "decision": "calibrated_score",
       "assessment": "answer",
-      "score": 1.6352466344833374,
+      "score": 4.0375237464904785,
       "policy_inherited": false,
-      "seconds": 13.6,
+      "seconds": 17.1,
       "failures": [],
       "passed": true
     },
@@ -326,13 +325,13 @@
       "status": "completed",
       "chat_outcome": {
         "status": "completed",
-        "reason": "grounded_extract"
+        "reason": "grounded"
       },
       "decision": "calibrated_score",
       "assessment": "answer",
-      "score": 4.8482513427734375,
+      "score": 3.2857112884521484,
       "policy_inherited": false,
-      "seconds": 6.6,
+      "seconds": 12.0,
       "failures": [],
       "passed": true
     },
@@ -348,9 +347,9 @@
       },
       "decision": "calibrated_score",
       "assessment": "answer",
-      "score": 4.49089241027832,
+      "score": 4.498261451721191,
       "policy_inherited": false,
-      "seconds": 21.3,
+      "seconds": 21.4,
       "failures": [],
       "passed": true
     },
@@ -362,13 +361,13 @@
       "status": "completed",
       "chat_outcome": {
         "status": "completed",
-        "reason": "grounded_extract"
+        "reason": "grounded"
       },
       "decision": "calibrated_score",
       "assessment": "answer",
-      "score": 6.583835601806641,
+      "score": 6.5873613357543945,
       "policy_inherited": false,
-      "seconds": 14.2,
+      "seconds": 24.7,
       "failures": [],
       "passed": true
     },
@@ -384,9 +383,9 @@
       },
       "decision": "calibrated_score",
       "assessment": "answer",
-      "score": 0.7450848817825317,
+      "score": 2.9425206184387207,
       "policy_inherited": false,
-      "seconds": 7.7,
+      "seconds": 13.0,
       "failures": [],
       "passed": true
     },
@@ -402,7 +401,7 @@
       },
       "decision": "evidence_assessed",
       "assessment": "abstain",
-      "score": -4.0036301612854,
+      "score": -3.958765983581543,
       "policy_inherited": null,
       "seconds": 4.5,
       "failures": [],
@@ -420,9 +419,9 @@
       },
       "decision": "evidence_assessed",
       "assessment": "abstain",
-      "score": -2.617765426635742,
+      "score": -2.196274995803833,
       "policy_inherited": null,
-      "seconds": 4.7,
+      "seconds": 5.2,
       "failures": [],
       "passed": true
     },
@@ -438,9 +437,9 @@
       },
       "decision": "evidence_assessed",
       "assessment": "abstain",
-      "score": -5.830289840698242,
+      "score": -5.83418607711792,
       "policy_inherited": null,
-      "seconds": 5.1,
+      "seconds": 5.2,
       "failures": [],
       "passed": true
     },
@@ -456,9 +455,9 @@
       },
       "decision": "evidence_assessed",
       "assessment": "abstain",
-      "score": -0.18953177332878113,
+      "score": -0.18804988265037537,
       "policy_inherited": null,
-      "seconds": 5.9,
+      "seconds": 5.2,
       "failures": [],
       "passed": true
     },
@@ -474,9 +473,9 @@
       },
       "decision": "evidence_assessed",
       "assessment": "abstain",
-      "score": -0.3336724638938904,
+      "score": -0.3291934132575989,
       "policy_inherited": null,
-      "seconds": 4.4,
+      "seconds": 4.7,
       "failures": [],
       "passed": true
     },
@@ -492,9 +491,9 @@
       },
       "decision": "evidence_assessed",
       "assessment": "abstain",
-      "score": -5.022843837738037,
+      "score": -4.055063247680664,
       "policy_inherited": null,
-      "seconds": 4.0,
+      "seconds": 5.0,
       "failures": [],
       "passed": true
     },
@@ -510,7 +509,7 @@
       },
       "decision": "ambiguous_question",
       "assessment": "clarify",
-      "score": -3.4380240440368652,
+      "score": -4.403682708740234,
       "policy_inherited": null,
       "seconds": 1.7,
       "failures": [],
@@ -528,9 +527,9 @@
       },
       "decision": "ambiguous_question",
       "assessment": "clarify",
-      "score": -1.0500304698944092,
+      "score": -1.0506880283355713,
       "policy_inherited": null,
-      "seconds": 1.8,
+      "seconds": 1.5,
       "failures": [],
       "passed": true
     },
@@ -546,9 +545,9 @@
       },
       "decision": "ambiguous_question",
       "assessment": "clarify",
-      "score": -0.8184356689453125,
+      "score": -0.8214010000228882,
       "policy_inherited": null,
-      "seconds": 1.7,
+      "seconds": 1.5,
       "failures": [],
       "passed": true
     },
@@ -560,13 +559,13 @@
       "status": "completed",
       "chat_outcome": {
         "status": "completed",
-        "reason": "grounded"
+        "reason": "grounded_extract"
       },
       "decision": "calibrated_score",
       "assessment": "answer",
-      "score": 6.18367862701416,
+      "score": 6.0601091384887695,
       "policy_inherited": false,
-      "seconds": 13.2,
+      "seconds": 25.0,
       "failures": [],
       "passed": true
     },
@@ -582,9 +581,9 @@
       },
       "decision": "calibrated_score",
       "assessment": "answer",
-      "score": 7.382437229156494,
+      "score": 7.560023307800293,
       "policy_inherited": false,
-      "seconds": 15.3,
+      "seconds": 15.9,
       "failures": [],
       "passed": true
     },
@@ -596,13 +595,13 @@
       "status": "completed",
       "chat_outcome": {
         "status": "completed",
-        "reason": "grounded"
+        "reason": "grounded_extract"
       },
       "decision": "calibrated_score",
       "assessment": "answer",
-      "score": 3.5368800163269043,
+      "score": 3.5355329513549805,
       "policy_inherited": false,
-      "seconds": 15.1,
+      "seconds": 17.7,
       "failures": [],
       "passed": true
     },
@@ -618,9 +617,9 @@
       },
       "decision": "calibrated_score",
       "assessment": "answer",
-      "score": 1.5626800060272217,
+      "score": 1.5726470947265625,
       "policy_inherited": false,
-      "seconds": 14.8,
+      "seconds": 22.8,
       "failures": [],
       "passed": true
     },
@@ -632,13 +631,13 @@
       "status": "completed",
       "chat_outcome": {
         "status": "completed",
-        "reason": "grounded_extract"
+        "reason": "grounded"
       },
       "decision": "calibrated_score",
       "assessment": "answer",
-      "score": 3.740513324737549,
+      "score": 4.255953311920166,
       "policy_inherited": false,
-      "seconds": 22.4,
+      "seconds": 33.8,
       "failures": [],
       "passed": true
     },
@@ -654,9 +653,9 @@
       },
       "decision": "calibrated_score",
       "assessment": "answer",
-      "score": 2.705162286758423,
+      "score": 2.706442356109619,
       "policy_inherited": false,
-      "seconds": 11.1,
+      "seconds": 12.3,
       "failures": [],
       "passed": true
     },
@@ -672,9 +671,9 @@
       },
       "decision": "calibrated_score",
       "assessment": "answer",
-      "score": 2.6356756687164307,
+      "score": 2.441983222961426,
       "policy_inherited": false,
-      "seconds": 12.1,
+      "seconds": 13.2,
       "failures": [],
       "passed": true
     },
@@ -686,13 +685,13 @@
       "status": "completed",
       "chat_outcome": {
         "status": "completed",
-        "reason": "grounded"
+        "reason": "grounded_extract"
       },
       "decision": "calibrated_score",
       "assessment": "answer",
-      "score": 5.246370792388916,
+      "score": 5.685432434082031,
       "policy_inherited": false,
-      "seconds": 9.1,
+      "seconds": 12.2,
       "failures": [],
       "passed": true
     },
@@ -708,9 +707,9 @@
       },
       "decision": "calibrated_score",
       "assessment": "answer",
-      "score": -0.3480902314186096,
+      "score": -0.38631999492645264,
       "policy_inherited": false,
-      "seconds": 20.2,
+      "seconds": 21.2,
       "failures": [],
       "passed": true
     },
@@ -722,13 +721,13 @@
       "status": "completed",
       "chat_outcome": {
         "status": "completed",
-        "reason": "grounded"
+        "reason": "grounded_extract"
       },
       "decision": "calibrated_score",
       "assessment": "answer",
-      "score": 4.824105262756348,
+      "score": 4.704861640930176,
       "policy_inherited": false,
-      "seconds": 11.4,
+      "seconds": 20.6,
       "failures": [],
       "passed": true
     },
@@ -744,9 +743,9 @@
       },
       "decision": "calibrated_score",
       "assessment": "answer",
-      "score": 2.781310796737671,
+      "score": 3.1749799251556396,
       "policy_inherited": false,
-      "seconds": 17.6,
+      "seconds": 14.5,
       "failures": [],
       "passed": true
     },
@@ -758,13 +757,13 @@
       "status": "completed",
       "chat_outcome": {
         "status": "completed",
-        "reason": "grounded_extract"
+        "reason": "grounded"
       },
       "decision": "calibrated_score",
       "assessment": "answer",
-      "score": 4.301575660705566,
+      "score": 4.308906555175781,
       "policy_inherited": false,
-      "seconds": 14.2,
+      "seconds": 13.3,
       "failures": [],
       "passed": true
     },
@@ -780,9 +779,9 @@
       },
       "decision": "calibrated_score",
       "assessment": "answer",
-      "score": -0.8037635087966919,
+      "score": 1.759958267211914,
       "policy_inherited": false,
-      "seconds": 14.5,
+      "seconds": 19.9,
       "failures": [],
       "passed": true
     },
@@ -798,9 +797,9 @@
       },
       "decision": "calibrated_score",
       "assessment": "answer",
-      "score": 6.420444011688232,
+      "score": 6.414032936096191,
       "policy_inherited": false,
-      "seconds": 24.0,
+      "seconds": 23.9,
       "failures": [],
       "passed": true
     },
@@ -816,9 +815,9 @@
       },
       "decision": "calibrated_score",
       "assessment": "answer",
-      "score": 5.139346122741699,
+      "score": 5.102507591247559,
       "policy_inherited": false,
-      "seconds": 11.5,
+      "seconds": 12.2,
       "failures": [],
       "passed": true
     },
@@ -834,9 +833,9 @@
       },
       "decision": "calibrated_score",
       "assessment": "answer",
-      "score": 0.023729177191853523,
+      "score": 0.029485806822776794,
       "policy_inherited": false,
-      "seconds": 18.8,
+      "seconds": 19.2,
       "failures": [],
       "passed": true
     },
@@ -852,9 +851,9 @@
       },
       "decision": "calibrated_score",
       "assessment": "answer",
-      "score": 1.9530129432678223,
+      "score": 1.9498947858810425,
       "policy_inherited": false,
-      "seconds": 12.5,
+      "seconds": 12.4,
       "failures": [],
       "passed": true
     },
@@ -870,9 +869,9 @@
       },
       "decision": "calibrated_score",
       "assessment": "answer",
-      "score": 5.9190874099731445,
+      "score": 6.270615577697754,
       "policy_inherited": false,
-      "seconds": 13.6,
+      "seconds": 14.3,
       "failures": [],
       "passed": true
     },
@@ -888,9 +887,9 @@
       },
       "decision": "calibrated_score",
       "assessment": "answer",
-      "score": 7.779082298278809,
+      "score": 7.783975601196289,
       "policy_inherited": false,
-      "seconds": 23.3,
+      "seconds": 23.4,
       "failures": [],
       "passed": true
     },
@@ -906,9 +905,9 @@
       },
       "decision": "calibrated_score",
       "assessment": "answer",
-      "score": 2.7861971855163574,
+      "score": 6.511028289794922,
       "policy_inherited": false,
-      "seconds": 14.0,
+      "seconds": 19.5,
       "failures": [],
       "passed": true
     },
@@ -924,9 +923,9 @@
       },
       "decision": "calibrated_score",
       "assessment": "answer",
-      "score": 4.283883094787598,
+      "score": 4.284306049346924,
       "policy_inherited": false,
-      "seconds": 12.0,
+      "seconds": 12.7,
       "failures": [],
       "passed": true
     },
@@ -942,9 +941,9 @@
       },
       "decision": "calibrated_score",
       "assessment": "answer",
-      "score": 3.100832462310791,
+      "score": 3.301405191421509,
       "policy_inherited": false,
-      "seconds": 8.8,
+      "seconds": 13.9,
       "failures": [],
       "passed": true
     },
@@ -953,20 +952,18 @@
       "kind": "answerable",
       "language": "en",
       "domain": "biología",
-      "status": "abstained",
+      "status": "completed",
       "chat_outcome": {
-        "status": "abstained",
-        "reason": "calibrated_score"
+        "status": "completed",
+        "reason": "grounded"
       },
       "decision": "calibrated_score",
       "assessment": "answer",
-      "score": -2.652480363845825,
+      "score": -1.156191349029541,
       "policy_inherited": false,
-      "seconds": 4.5,
-      "failures": [
-        "expected_answer"
-      ],
-      "passed": false
+      "seconds": 12.8,
+      "failures": [],
+      "passed": true
     },
     {
       "id": "AGN-VAL-U001",
@@ -980,9 +977,9 @@
       },
       "decision": "evidence_assessed",
       "assessment": "abstain",
-      "score": -0.7712992429733276,
+      "score": -0.7790674567222595,
       "policy_inherited": null,
-      "seconds": 3.9,
+      "seconds": 4.3,
       "failures": [],
       "passed": true
     },
@@ -998,7 +995,7 @@
       },
       "decision": "ambiguous_question",
       "assessment": "clarify",
-      "score": -1.0758612155914307,
+      "score": -1.079140067100525,
       "policy_inherited": null,
       "seconds": 1.4,
       "failures": [
@@ -1018,9 +1015,9 @@
       },
       "decision": "ambiguous_question",
       "assessment": "clarify",
-      "score": -1.2363412380218506,
+      "score": -1.2391849756240845,
       "policy_inherited": null,
-      "seconds": 1.6,
+      "seconds": 1.4,
       "failures": [
         "expected_abstain"
       ],
@@ -1038,9 +1035,9 @@
       },
       "decision": "evidence_assessed",
       "assessment": "abstain",
-      "score": 3.393122673034668,
+      "score": 5.469916820526123,
       "policy_inherited": null,
-      "seconds": 3.9,
+      "seconds": 4.9,
       "failures": [],
       "passed": true
     },
@@ -1056,9 +1053,9 @@
       },
       "decision": "evidence_assessed",
       "assessment": "abstain",
-      "score": -0.1779576539993286,
+      "score": -0.18528404831886292,
       "policy_inherited": null,
-      "seconds": 3.4,
+      "seconds": 4.1,
       "failures": [],
       "passed": true
     },
@@ -1074,9 +1071,9 @@
       },
       "decision": "evidence_assessed",
       "assessment": "abstain",
-      "score": 0.4701545238494873,
+      "score": 0.31019842624664307,
       "policy_inherited": null,
-      "seconds": 5.0,
+      "seconds": 4.8,
       "failures": [],
       "passed": true
     },
@@ -1092,9 +1089,9 @@
       },
       "decision": "ambiguous_question",
       "assessment": "clarify",
-      "score": -1.4375605583190918,
+      "score": -1.445585012435913,
       "policy_inherited": null,
-      "seconds": 1.7,
+      "seconds": 1.5,
       "failures": [],
       "passed": true
     },
@@ -1110,9 +1107,9 @@
       },
       "decision": "ambiguous_question",
       "assessment": "clarify",
-      "score": -2.1619677543640137,
+      "score": -2.307664155960083,
       "policy_inherited": null,
-      "seconds": 1.8,
+      "seconds": 1.5,
       "failures": [],
       "passed": true
     },
@@ -1128,7 +1125,7 @@
       },
       "decision": "ambiguous_question",
       "assessment": "clarify",
-      "score": -1.5277037620544434,
+      "score": -1.463454246520996,
       "policy_inherited": null,
       "seconds": 1.5,
       "failures": [],
@@ -1146,9 +1143,9 @@
       },
       "decision": "calibrated_score",
       "assessment": "answer",
-      "score": 2.4617977142333984,
+      "score": 2.4577717781066895,
       "policy_inherited": false,
-      "seconds": 14.1,
+      "seconds": 15.1,
       "failures": [],
       "passed": true
     },
@@ -1164,9 +1161,9 @@
       },
       "decision": "calibrated_score",
       "assessment": "answer",
-      "score": 3.5053763389587402,
+      "score": 3.505018949508667,
       "policy_inherited": false,
-      "seconds": 28.9,
+      "seconds": 31.7,
       "failures": [],
       "passed": true
     },
@@ -1182,9 +1179,9 @@
       },
       "decision": "calibrated_score",
       "assessment": "answer",
-      "score": 5.50705623626709,
+      "score": 5.5068559646606445,
       "policy_inherited": false,
-      "seconds": 14.3,
+      "seconds": 14.9,
       "failures": [],
       "passed": true
     },
@@ -1200,7 +1197,7 @@
       },
       "decision": "calibrated_score",
       "assessment": "answer",
-      "score": 4.1453657150268555,
+      "score": 5.470599174499512,
       "policy_inherited": false,
       "seconds": 15.4,
       "failures": [],
@@ -1218,9 +1215,9 @@
       },
       "decision": "calibrated_score",
       "assessment": "answer",
-      "score": 3.4542007446289062,
+      "score": 3.4533441066741943,
       "policy_inherited": false,
-      "seconds": 12.7,
+      "seconds": 39.1,
       "failures": [],
       "passed": true
     },
@@ -1232,13 +1229,13 @@
       "status": "completed",
       "chat_outcome": {
         "status": "completed",
-        "reason": "grounded"
+        "reason": "grounded_extract"
       },
       "decision": "calibrated_score",
       "assessment": "answer",
-      "score": 3.9500768184661865,
+      "score": 3.8890130519866943,
       "policy_inherited": false,
-      "seconds": 12.3,
+      "seconds": 21.3,
       "failures": [],
       "passed": true
     },
@@ -1254,9 +1251,9 @@
       },
       "decision": "calibrated_score",
       "assessment": "answer",
-      "score": 6.997406005859375,
+      "score": 6.351189613342285,
       "policy_inherited": false,
-      "seconds": 12.1,
+      "seconds": 21.0,
       "failures": [],
       "passed": true
     }

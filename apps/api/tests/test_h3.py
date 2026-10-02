@@ -50,8 +50,9 @@ def test_unmapped_html_is_preserved_as_inert_normalized_text():
     chunks = split_blocks(markdown, provenance(markdown, "md"))
     assert ''.join(''.join(c['content'] for c in chunks).split()) == ''.join(markdown.split())
     html = next(c for c in chunks if '<div>' in c['content'])
-    assert html['provenance'][0]['origin'] == 'normalized'
-    assert html['provenance'][0]['page'] is None
+    locator = next(p for p in html['provenance'] if p['line_start'] == 5)
+    assert locator['origin'] == 'normalized'
+    assert locator['page'] is None
 
 
 def test_publish_requires_review_and_admin(application):

@@ -29,10 +29,10 @@ Seguir mejorando el RAG para que funcione bien con documentos de **cualquier dom
 
   | Ámbito | Umbral | Validación |
   | --- | ---: | --- |
-  | admin | −1,2932 | 45/46 positivos, 0 indebidas, 17/17 negativos (técnico + agnóstico) |
-  | usuario | −1,2932 | 45/46 positivos, 0 indebidas, 17/17 negativos (técnico + agnóstico) |
+  | admin | −1,2895 | 46/46 positivos, 0 indebidas, 17/17 negativos (técnico + agnóstico) |
+  | usuario | −1,2895 | 46/46 positivos, 0 indebidas, 17/17 negativos (técnico + agnóstico) |
 
-  Aceptación de chat: `scripts/h4/colloquial_acceptance.py`, 13 de 13. Detalle completo en `docs/h3/domain-agnostic-pdf-fix.md`; los informes anteriores, en `docs/h3/calibration-fix.md` y `docs/h3/colloquial-retrieval-fix.md`.
+  Aceptación de chat: `scripts/h4/colloquial_acceptance.py`, 13 de 13; `scripts/h4/agnostic_acceptance.py`, 62 de 64. Último cambio: `docs/h3/chunk-grouping.md`. Detalle anterior en `docs/h3/domain-agnostic-pdf-fix.md`; los informes anteriores, en `docs/h3/calibration-fix.md` y `docs/h3/colloquial-retrieval-fix.md`.
 - **Biblioteca publicada**: 13 documentos técnicos internos (H0) y los 17 PDF del corpus agnóstico (catálogo `evaluation/h3/agnostic_corpus_catalog.json`; la abeja es `89f7cc5a-4436-4e3b-be85-f44d13c01886`, versión 2). Calibrar siempre con los cuatro bancos y los dos catálogos (comando en `docs/h3/agnostic-evaluation.md`).
 
 ## Corpus agnóstico descargado (no publicado todavía)
@@ -62,7 +62,7 @@ Está en `.artifacts/agnostic-corpus/`, carpeta ignorada por Git. Todos son de l
 `bee_chat_check.py`, en la misma carpeta, es el script de comprobación de la abeja. `republish` sube una nueva versión del PDF, la revisa y la publica; `chat` lanza 6 preguntas y comprueba el estado, las cifras citadas y el sujeto conservado. Sirve de plantilla para el arnés general (prioridad 2).
 
 **Hallazgos de esa conversión que aún no están corregidos:**
-- Los fragmentos son minúsculos: 130-170 bytes de media frente a un presupuesto de 900. Por ejemplo, la Constitución tiene 122 KB de Markdown repartidos en 725 fragmentos.
+- ~~Los fragmentos son minúsculos~~: corregido por la prioridad 3.
 - Los PDF de arXiv a dos columnas pierden texto y ecuaciones en muchas páginas.
 - La conversión es lenta: hasta 64 s para 37 páginas, en parte porque `recover_pdf_page` llama a `find_tables` en todas las páginas.
 
@@ -79,7 +79,7 @@ Cada punto incluye su criterio de aceptación. No pases al siguiente sin medir e
    - Extiende `calibrate_library.py` para combinar varios bancos, o crea un script nuevo. Hoy exige que las 13 fuentes H0 estén publicadas y mapea `expected_documents` desde `evaluation/h0/corpus_catalog.json`; hará falta un catálogo para el corpus agnóstico.
    - Convierte `bee_chat_check.py` en `scripts/h4/agnostic_acceptance.py`. Para cada respuesta debe comprobar: estado esperado, que cada cita coincida literalmente con su pasaje, que las cifras de la respuesta aparezcan en los pasajes (`bibliotecario.chat.numbers`), que se conserve el sujeto en los seguimientos y que el SHA-256 del original coincida.
    - *Aceptación*: calibración aprobada en los dos ámbitos con el banco técnico y el agnóstico, 0 respuestas indebidas y resultados por dominio en un informe.
-3. **Agrupar bloques pequeños al trocear** (`chunking.py`). Une bloques consecutivos del mismo `section_path` hasta el presupuesto y conserva todos los localizadores (`provenance`) de los bloques unidos. Mantén la comprobación de cobertura de `build_index` y la regla de cortes de `break_point`. Plantéate subir `CHUNK_BYTES` (el embedding admite hasta 1000 tokens con su prefijo; compruébalo con `embedding_tokens`).
+3. ~~**Agrupar bloques pequeños al trocear**~~ Hecho; ver `docs/h3/chunk-grouping.md`. 3852 fragmentos de 624 B de media (antes 7658 de 347), recall@10/nDCG técnico 0,879/0,750 (antes 0,838/0,744), agnóstico 62/64. Pendiente: `EVAL-A006` se abstiene ahora (falso negativo seguro). (`chunking.py`) Une bloques consecutivos del mismo `section_path` hasta el presupuesto y conserva todos los localizadores (`provenance`) de los bloques unidos. Mantén la comprobación de cobertura de `build_index` y la regla de cortes de `break_point`. Plantéate subir `CHUNK_BYTES` (el embedding admite hasta 1000 tokens con su prefijo; compruébalo con `embedding_tokens`).
    - *Aceptación*: tamaño medio de fragmento mayor de 500 bytes, ningún corte a mitad de palabra ni de enlace, y recall10/nDCG del banco técnico iguales o mejores. Requiere reindexar (`POST /admin/operations/reindex` con `confirmation: "REINDEXAR"`) y recalibrar.
 4. **Eliminar o restringir la «explicación general».** Es por donde más se cuela contenido no respaldado (p. ej., «la larva recibe alimento especializado»). Además, muchas respuestas acaban en `grounded_extract`, que es seguro pero muy literal (6 de 8 en la aceptación). Mide antes y después qué proporción de respuestas queda como `grounded` frente a `grounded_extract`, y por qué motivo.
    - *Aceptación*: más respuestas `grounded`, 0 cifras no respaldadas y 0 regresiones en la aceptación.
@@ -87,7 +87,7 @@ Cada punto incluye su criterio de aceptación. No pases al siguiente sin medir e
    - *Aceptación*: p50/p95 de latencia del chat medidos antes y después, y la misma calidad en los bancos.
 6. **Conversión PDF.** Compara `pymupdf_layout`, que la propia librería recomienda en sus avisos, o el modo no *legacy* de pymupdf4llm frente a la recuperación heurística actual. Usa el corpus agnóstico, sobre todo arXiv, el Mundial y la tabla periódica. Mide la cobertura de palabras por página, las tablas correctas y el tiempo de conversión. Limita `find_tables` a las páginas con pérdida detectada.
    - *Aceptación*: menos páginas con `pdf_text_loss`, tablas con correspondencia correcta entre fila y columna y conversión más rápida.
-7. **Primeras preguntas en otro idioma.** «How long does a queen bee live?» en primer turno se abstiene, porque no se traduce y la puntuación queda por debajo del umbral. Valora traducir o normalizar en el primer turno solo cuando el idioma no sea español, y añade estos casos a los bancos.
+7. **Primeras preguntas en otro idioma.** «How long does a queen bee live?» se abstenía en primer turno porque no se traduce; con la agrupación de fragmentos ya se responde, pero el comportamiento translingüe sigue dependiendo de la pregunta. Valora traducir o normalizar en el primer turno solo cuando el idioma no sea español, y añade estos casos a los bancos.
 8. **Política heredada.** Mide en la práctica si heredar el umbral al publicar documentos nuevos introduce respuestas indebidas: publica el corpus agnóstico con la política heredada y pasa el banco agnóstico antes de recalibrar.
 
 ## Validación obligatoria antes de commit y push
@@ -98,7 +98,7 @@ Cada punto incluye su criterio de aceptación. No pases al siguiente sin medir e
    cd apps/api && ../../.venv/Scripts/python.exe -m pytest -q --basetemp=<scratchpad>/pytest -p no:cacheprovider
    ```
 
-   Hoy pasan 118. El `--basetemp` hace falta porque el sandbox impide crear temporales en el directorio por defecto.
+   Hoy pasan 120. El `--basetemp` hace falta porque el sandbox impide crear temporales en el directorio por defecto.
 2. Pruebas de la raíz: `.venv/Scripts/python.exe -m pytest -q tests` (pasan 4).
 3. Web: `cd apps/web && npx tsc --noEmit` y Playwright. El navegador de Playwright no está instalado; usa el Chrome del sistema:
 

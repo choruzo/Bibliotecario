@@ -39,9 +39,9 @@ def mock_retrieval(monkeypatch, answer=False, candidate=None, app=None, sessions
     return calls
 
 
-def indexed(application):
+def indexed(application, content=b"# Titulo\n\nTexto original.\n"):
     app, client, sessions = application
-    did, version = reviewed(application)
+    did, version = reviewed(application, content)
     lease, result, _ = queue(application, version)
     finalize_index(sessions, app.state.settings, lease, result)
     from bibliotecario.models import Chunk
@@ -146,7 +146,8 @@ def test_rejected_paraphrase_can_publish_only_independently_verified_exact_passa
     monkeypatch.setattr(app.state.clients, 'generate', generate)
     message = turn(client, conversation(client))[-1]['message']
     assert len(checks) == 1 and message['status'] == 'completed'
-    assert '> ' + candidate['content'].strip() in message['content'] and '[C1]' in message['content']
+    quoted = '\n'.join('> ' + line for line in candidate['content'].strip().splitlines())
+    assert quoted in message['content'] and '[C1]' in message['content']
     assert 'Piensa en una biblioteca' not in message['content']
     with sessions() as db:
         assert db.get(RetrievalRun, message['retrieval_run_id']).result['chat_outcome']['reason'] == 'grounded_extract'
