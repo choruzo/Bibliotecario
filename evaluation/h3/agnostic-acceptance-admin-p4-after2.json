@@ -1,0 +1,1295 @@
+{
+  "date": "2026-10-02",
+  "scope": "admin",
+  "banks": {
+    "evaluation/h3/agnostic-calibration-v1.jsonl": "2d11639437eedb370d28d003582cf31a306bf59f4e98d26b9980e75bf771676b",
+    "evaluation/h3/agnostic-validation-v1.jsonl": "101cd66cda1d7097e0e7fffd81280522669ca158ea779b4d3e6d026fcb538e18"
+  },
+  "passed": 62,
+  "total": 64,
+  "improper_answers": 0,
+  "unsupported_numbers": 0,
+  "outcomes": {
+    "grounded": 43,
+    "grounded_extract": 3
+  },
+  "fallbacks": {
+    "unsupported_number:explanation": 1,
+    "grounding_rejected:claim": 2
+  },
+  "by_kind": {
+    "answerable": {
+      "passed": 32,
+      "total": 32
+    },
+    "unanswerable": {
+      "passed": 10,
+      "total": 12
+    },
+    "ambiguous": {
+      "passed": 6,
+      "total": 6
+    },
+    "conversation": {
+      "passed": 14,
+      "total": 14
+    }
+  },
+  "by_domain": {
+    "biología": {
+      "passed": 3,
+      "total": 3
+    },
+    "astronomía": {
+      "passed": 3,
+      "total": 3
+    },
+    "medicina": {
+      "passed": 4,
+      "total": 4
+    },
+    "química": {
+      "passed": 2,
+      "total": 2
+    },
+    "deporte": {
+      "passed": 5,
+      "total": 5
+    },
+    "fiscalidad": {
+      "passed": 4,
+      "total": 4
+    },
+    "historia": {
+      "passed": 2,
+      "total": 2
+    },
+    "biología vegetal": {
+      "passed": 3,
+      "total": 3
+    },
+    "nutrición": {
+      "passed": 1,
+      "total": 1
+    },
+    "informática": {
+      "passed": 2,
+      "total": 2
+    },
+    "geología": {
+      "passed": 2,
+      "total": 2
+    },
+    "agroalimentación": {
+      "passed": 2,
+      "total": 2
+    },
+    "derecho": {
+      "passed": 5,
+      "total": 5
+    },
+    "inteligencia artificial": {
+      "passed": 7,
+      "total": 7
+    },
+    "—": {
+      "passed": 16,
+      "total": 18
+    },
+    "economía": {
+      "passed": 1,
+      "total": 1
+    }
+  },
+  "failures": {
+    "expected_abstain": 2
+  },
+  "cases": [
+    {
+      "id": "AGN-CAL-A001",
+      "kind": "answerable",
+      "language": "es",
+      "domain": "biología",
+      "status": "completed",
+      "chat_outcome": {
+        "status": "completed",
+        "reason": "grounded"
+      },
+      "decision": "calibrated_score",
+      "assessment": "answer",
+      "score": 2.6021809577941895,
+      "policy_inherited": false,
+      "seconds": 13.9,
+      "failures": [],
+      "passed": true
+    },
+    {
+      "id": "AGN-CAL-A002",
+      "kind": "answerable",
+      "language": "es",
+      "domain": "astronomía",
+      "status": "completed",
+      "chat_outcome": {
+        "status": "completed",
+        "reason": "grounded_extract",
+        "fallback": {
+          "reason": "unsupported_number",
+          "detail": {
+            "where": "explanation",
+            "citation_id": "C1",
+            "added": [
+              4.0
+            ]
+          }
+        }
+      },
+      "decision": "calibrated_score",
+      "assessment": "answer",
+      "score": 0.6306202411651611,
+      "policy_inherited": false,
+      "seconds": 20.9,
+      "failures": [],
+      "passed": true
+    },
+    {
+      "id": "AGN-CAL-A003",
+      "kind": "answerable",
+      "language": "es",
+      "domain": "medicina",
+      "status": "completed",
+      "chat_outcome": {
+        "status": "completed",
+        "reason": "grounded"
+      },
+      "decision": "calibrated_score",
+      "assessment": "answer",
+      "score": 4.643367767333984,
+      "policy_inherited": false,
+      "seconds": 13.7,
+      "failures": [],
+      "passed": true
+    },
+    {
+      "id": "AGN-CAL-A004",
+      "kind": "answerable",
+      "language": "es",
+      "domain": "química",
+      "status": "completed",
+      "chat_outcome": {
+        "status": "completed",
+        "reason": "grounded"
+      },
+      "decision": "calibrated_score",
+      "assessment": "answer",
+      "score": 6.437019348144531,
+      "policy_inherited": false,
+      "seconds": 11.7,
+      "failures": [],
+      "passed": true
+    },
+    {
+      "id": "AGN-CAL-A005",
+      "kind": "answerable",
+      "language": "es",
+      "domain": "deporte",
+      "status": "completed",
+      "chat_outcome": {
+        "status": "completed",
+        "reason": "grounded_extract",
+        "fallback": {
+          "reason": "grounding_rejected",
+          "detail": {
+            "supported": false,
+            "claims": 1,
+            "rejected": [
+              1
+            ]
+          }
+        }
+      },
+      "decision": "calibrated_score",
+      "assessment": "answer",
+      "score": 2.886467933654785,
+      "policy_inherited": false,
+      "seconds": 15.9,
+      "failures": [],
+      "passed": true
+    },
+    {
+      "id": "AGN-CAL-A006",
+      "kind": "answerable",
+      "language": "es",
+      "domain": "fiscalidad",
+      "status": "completed",
+      "chat_outcome": {
+        "status": "completed",
+        "reason": "grounded"
+      },
+      "decision": "calibrated_score",
+      "assessment": "answer",
+      "score": 4.299419403076172,
+      "policy_inherited": false,
+      "seconds": 11.6,
+      "failures": [],
+      "passed": true
+    },
+    {
+      "id": "AGN-CAL-A007",
+      "kind": "answerable",
+      "language": "es",
+      "domain": "historia",
+      "status": "completed",
+      "chat_outcome": {
+        "status": "completed",
+        "reason": "grounded"
+      },
+      "decision": "calibrated_score",
+      "assessment": "answer",
+      "score": 2.716578960418701,
+      "policy_inherited": false,
+      "seconds": 12.4,
+      "failures": [],
+      "passed": true
+    },
+    {
+      "id": "AGN-CAL-A008",
+      "kind": "answerable",
+      "language": "es",
+      "domain": "biología vegetal",
+      "status": "completed",
+      "chat_outcome": {
+        "status": "completed",
+        "reason": "grounded"
+      },
+      "decision": "calibrated_score",
+      "assessment": "answer",
+      "score": 2.9332115650177,
+      "policy_inherited": false,
+      "seconds": 13.5,
+      "failures": [],
+      "passed": true
+    },
+    {
+      "id": "AGN-CAL-A009",
+      "kind": "answerable",
+      "language": "es",
+      "domain": "nutrición",
+      "status": "completed",
+      "chat_outcome": {
+        "status": "completed",
+        "reason": "grounded"
+      },
+      "decision": "calibrated_score",
+      "assessment": "answer",
+      "score": 7.863250255584717,
+      "policy_inherited": false,
+      "seconds": 29.5,
+      "failures": [],
+      "passed": true
+    },
+    {
+      "id": "AGN-CAL-A010",
+      "kind": "answerable",
+      "language": "es",
+      "domain": "informática",
+      "status": "completed",
+      "chat_outcome": {
+        "status": "completed",
+        "reason": "grounded"
+      },
+      "decision": "calibrated_score",
+      "assessment": "answer",
+      "score": 5.734837055206299,
+      "policy_inherited": false,
+      "seconds": 14.8,
+      "failures": [],
+      "passed": true
+    },
+    {
+      "id": "AGN-CAL-A011",
+      "kind": "answerable",
+      "language": "es",
+      "domain": "geología",
+      "status": "completed",
+      "chat_outcome": {
+        "status": "completed",
+        "reason": "grounded"
+      },
+      "decision": "calibrated_score",
+      "assessment": "answer",
+      "score": 2.6115102767944336,
+      "policy_inherited": false,
+      "seconds": 13.2,
+      "failures": [],
+      "passed": true
+    },
+    {
+      "id": "AGN-CAL-A012",
+      "kind": "answerable",
+      "language": "es",
+      "domain": "agroalimentación",
+      "status": "completed",
+      "chat_outcome": {
+        "status": "completed",
+        "reason": "grounded"
+      },
+      "decision": "calibrated_score",
+      "assessment": "answer",
+      "score": 4.0375237464904785,
+      "policy_inherited": false,
+      "seconds": 16.1,
+      "failures": [],
+      "passed": true
+    },
+    {
+      "id": "AGN-CAL-A013",
+      "kind": "answerable",
+      "language": "es",
+      "domain": "derecho",
+      "status": "completed",
+      "chat_outcome": {
+        "status": "completed",
+        "reason": "grounded"
+      },
+      "decision": "calibrated_score",
+      "assessment": "answer",
+      "score": 3.2857112884521484,
+      "policy_inherited": false,
+      "seconds": 11.2,
+      "failures": [],
+      "passed": true
+    },
+    {
+      "id": "AGN-CAL-A014",
+      "kind": "answerable",
+      "language": "es",
+      "domain": "derecho",
+      "status": "completed",
+      "chat_outcome": {
+        "status": "completed",
+        "reason": "grounded"
+      },
+      "decision": "calibrated_score",
+      "assessment": "answer",
+      "score": 4.498261451721191,
+      "policy_inherited": false,
+      "seconds": 20.2,
+      "failures": [],
+      "passed": true
+    },
+    {
+      "id": "AGN-CAL-A015",
+      "kind": "answerable",
+      "language": "en",
+      "domain": "inteligencia artificial",
+      "status": "completed",
+      "chat_outcome": {
+        "status": "completed",
+        "reason": "grounded"
+      },
+      "decision": "calibrated_score",
+      "assessment": "answer",
+      "score": 6.5873613357543945,
+      "policy_inherited": false,
+      "seconds": 23.5,
+      "failures": [],
+      "passed": true
+    },
+    {
+      "id": "AGN-CAL-A016",
+      "kind": "answerable",
+      "language": "en",
+      "domain": "derecho",
+      "status": "completed",
+      "chat_outcome": {
+        "status": "completed",
+        "reason": "grounded"
+      },
+      "decision": "calibrated_score",
+      "assessment": "answer",
+      "score": 2.9425206184387207,
+      "policy_inherited": false,
+      "seconds": 12.3,
+      "failures": [],
+      "passed": true
+    },
+    {
+      "id": "AGN-CAL-U001",
+      "kind": "unanswerable",
+      "language": "es",
+      "domain": "—",
+      "status": "abstained",
+      "chat_outcome": {
+        "status": "abstained",
+        "reason": "evidence_assessed"
+      },
+      "decision": "evidence_assessed",
+      "assessment": "abstain",
+      "score": -3.958765983581543,
+      "policy_inherited": null,
+      "seconds": 4.5,
+      "failures": [],
+      "passed": true
+    },
+    {
+      "id": "AGN-CAL-U002",
+      "kind": "unanswerable",
+      "language": "es",
+      "domain": "—",
+      "status": "abstained",
+      "chat_outcome": {
+        "status": "abstained",
+        "reason": "evidence_assessed"
+      },
+      "decision": "evidence_assessed",
+      "assessment": "abstain",
+      "score": -2.196274995803833,
+      "policy_inherited": null,
+      "seconds": 5.1,
+      "failures": [],
+      "passed": true
+    },
+    {
+      "id": "AGN-CAL-U003",
+      "kind": "unanswerable",
+      "language": "es",
+      "domain": "—",
+      "status": "abstained",
+      "chat_outcome": {
+        "status": "abstained",
+        "reason": "evidence_assessed"
+      },
+      "decision": "evidence_assessed",
+      "assessment": "abstain",
+      "score": -5.83418607711792,
+      "policy_inherited": null,
+      "seconds": 5.4,
+      "failures": [],
+      "passed": true
+    },
+    {
+      "id": "AGN-CAL-U004",
+      "kind": "unanswerable",
+      "language": "es",
+      "domain": "—",
+      "status": "abstained",
+      "chat_outcome": {
+        "status": "abstained",
+        "reason": "evidence_assessed"
+      },
+      "decision": "evidence_assessed",
+      "assessment": "abstain",
+      "score": -0.18804988265037537,
+      "policy_inherited": null,
+      "seconds": 5.3,
+      "failures": [],
+      "passed": true
+    },
+    {
+      "id": "AGN-CAL-U005",
+      "kind": "unanswerable",
+      "language": "es",
+      "domain": "—",
+      "status": "abstained",
+      "chat_outcome": {
+        "status": "abstained",
+        "reason": "evidence_assessed"
+      },
+      "decision": "evidence_assessed",
+      "assessment": "abstain",
+      "score": -0.3291934132575989,
+      "policy_inherited": null,
+      "seconds": 4.6,
+      "failures": [],
+      "passed": true
+    },
+    {
+      "id": "AGN-CAL-U006",
+      "kind": "unanswerable",
+      "language": "es",
+      "domain": "—",
+      "status": "abstained",
+      "chat_outcome": {
+        "status": "abstained",
+        "reason": "evidence_assessed"
+      },
+      "decision": "evidence_assessed",
+      "assessment": "abstain",
+      "score": -4.055063247680664,
+      "policy_inherited": null,
+      "seconds": 5.1,
+      "failures": [],
+      "passed": true
+    },
+    {
+      "id": "AGN-CAL-M001",
+      "kind": "ambiguous",
+      "language": "es",
+      "domain": "—",
+      "status": "abstained",
+      "chat_outcome": {
+        "status": "abstained",
+        "reason": "clarification_required"
+      },
+      "decision": "ambiguous_question",
+      "assessment": "clarify",
+      "score": -4.403682708740234,
+      "policy_inherited": null,
+      "seconds": 1.6,
+      "failures": [],
+      "passed": true
+    },
+    {
+      "id": "AGN-CAL-M002",
+      "kind": "ambiguous",
+      "language": "es",
+      "domain": "—",
+      "status": "abstained",
+      "chat_outcome": {
+        "status": "abstained",
+        "reason": "clarification_required"
+      },
+      "decision": "ambiguous_question",
+      "assessment": "clarify",
+      "score": -1.0506880283355713,
+      "policy_inherited": null,
+      "seconds": 1.4,
+      "failures": [],
+      "passed": true
+    },
+    {
+      "id": "AGN-CAL-M003",
+      "kind": "ambiguous",
+      "language": "es",
+      "domain": "—",
+      "status": "abstained",
+      "chat_outcome": {
+        "status": "abstained",
+        "reason": "clarification_required"
+      },
+      "decision": "ambiguous_question",
+      "assessment": "clarify",
+      "score": -0.8214010000228882,
+      "policy_inherited": null,
+      "seconds": 1.6,
+      "failures": [],
+      "passed": true
+    },
+    {
+      "id": "AGN-CAL-C001-T1",
+      "kind": "conversation",
+      "language": "es",
+      "domain": "medicina",
+      "status": "completed",
+      "chat_outcome": {
+        "status": "completed",
+        "reason": "grounded_extract",
+        "fallback": {
+          "reason": "grounding_rejected",
+          "detail": {
+            "supported": false,
+            "claims": 3,
+            "rejected": [
+              3
+            ]
+          }
+        }
+      },
+      "decision": "calibrated_score",
+      "assessment": "answer",
+      "score": 6.0601091384887695,
+      "policy_inherited": false,
+      "seconds": 26.2,
+      "failures": [],
+      "passed": true
+    },
+    {
+      "id": "AGN-CAL-C001-T2",
+      "kind": "conversation",
+      "language": "es",
+      "domain": "medicina",
+      "status": "completed",
+      "chat_outcome": {
+        "status": "completed",
+        "reason": "grounded"
+      },
+      "decision": "calibrated_score",
+      "assessment": "answer",
+      "score": 7.560023307800293,
+      "policy_inherited": false,
+      "seconds": 22.9,
+      "failures": [],
+      "passed": true
+    },
+    {
+      "id": "AGN-CAL-C002-T1",
+      "kind": "conversation",
+      "language": "es",
+      "domain": "deporte",
+      "status": "completed",
+      "chat_outcome": {
+        "status": "completed",
+        "reason": "grounded"
+      },
+      "decision": "calibrated_score",
+      "assessment": "answer",
+      "score": 3.5355329513549805,
+      "policy_inherited": false,
+      "seconds": 35.8,
+      "failures": [],
+      "passed": true
+    },
+    {
+      "id": "AGN-CAL-C002-T2",
+      "kind": "conversation",
+      "language": "es",
+      "domain": "deporte",
+      "status": "completed",
+      "chat_outcome": {
+        "status": "completed",
+        "reason": "grounded"
+      },
+      "decision": "calibrated_score",
+      "assessment": "answer",
+      "score": 1.5726470947265625,
+      "policy_inherited": false,
+      "seconds": 23.0,
+      "failures": [],
+      "passed": true
+    },
+    {
+      "id": "AGN-CAL-C002-T3",
+      "kind": "conversation",
+      "language": "es",
+      "domain": "deporte",
+      "status": "completed",
+      "chat_outcome": {
+        "status": "completed",
+        "reason": "grounded"
+      },
+      "decision": "calibrated_score",
+      "assessment": "answer",
+      "score": 4.255953311920166,
+      "policy_inherited": false,
+      "seconds": 33.7,
+      "failures": [],
+      "passed": true
+    },
+    {
+      "id": "AGN-CAL-C003-T1",
+      "kind": "conversation",
+      "language": "es",
+      "domain": "inteligencia artificial",
+      "status": "completed",
+      "chat_outcome": {
+        "status": "completed",
+        "reason": "grounded"
+      },
+      "decision": "calibrated_score",
+      "assessment": "answer",
+      "score": 2.706442356109619,
+      "policy_inherited": false,
+      "seconds": 11.5,
+      "failures": [],
+      "passed": true
+    },
+    {
+      "id": "AGN-CAL-C003-T2",
+      "kind": "conversation",
+      "language": "es",
+      "domain": "inteligencia artificial",
+      "status": "completed",
+      "chat_outcome": {
+        "status": "completed",
+        "reason": "grounded"
+      },
+      "decision": "calibrated_score",
+      "assessment": "answer",
+      "score": 2.441983222961426,
+      "policy_inherited": false,
+      "seconds": 12.2,
+      "failures": [],
+      "passed": true
+    },
+    {
+      "id": "AGN-VAL-A001",
+      "kind": "answerable",
+      "language": "es",
+      "domain": "biología",
+      "status": "completed",
+      "chat_outcome": {
+        "status": "completed",
+        "reason": "grounded"
+      },
+      "decision": "calibrated_score",
+      "assessment": "answer",
+      "score": 5.685432434082031,
+      "policy_inherited": false,
+      "seconds": 11.6,
+      "failures": [],
+      "passed": true
+    },
+    {
+      "id": "AGN-VAL-A002",
+      "kind": "answerable",
+      "language": "es",
+      "domain": "astronomía",
+      "status": "completed",
+      "chat_outcome": {
+        "status": "completed",
+        "reason": "grounded"
+      },
+      "decision": "calibrated_score",
+      "assessment": "answer",
+      "score": -0.38631999492645264,
+      "policy_inherited": false,
+      "seconds": 20.5,
+      "failures": [],
+      "passed": true
+    },
+    {
+      "id": "AGN-VAL-A003",
+      "kind": "answerable",
+      "language": "es",
+      "domain": "astronomía",
+      "status": "completed",
+      "chat_outcome": {
+        "status": "completed",
+        "reason": "grounded"
+      },
+      "decision": "calibrated_score",
+      "assessment": "answer",
+      "score": 4.704861640930176,
+      "policy_inherited": false,
+      "seconds": 18.2,
+      "failures": [],
+      "passed": true
+    },
+    {
+      "id": "AGN-VAL-A004",
+      "kind": "answerable",
+      "language": "es",
+      "domain": "medicina",
+      "status": "completed",
+      "chat_outcome": {
+        "status": "completed",
+        "reason": "grounded"
+      },
+      "decision": "calibrated_score",
+      "assessment": "answer",
+      "score": 3.1749799251556396,
+      "policy_inherited": false,
+      "seconds": 13.3,
+      "failures": [],
+      "passed": true
+    },
+    {
+      "id": "AGN-VAL-A005",
+      "kind": "answerable",
+      "language": "es",
+      "domain": "química",
+      "status": "completed",
+      "chat_outcome": {
+        "status": "completed",
+        "reason": "grounded"
+      },
+      "decision": "calibrated_score",
+      "assessment": "answer",
+      "score": 4.308906555175781,
+      "policy_inherited": false,
+      "seconds": 12.4,
+      "failures": [],
+      "passed": true
+    },
+    {
+      "id": "AGN-VAL-A006",
+      "kind": "answerable",
+      "language": "es",
+      "domain": "deporte",
+      "status": "completed",
+      "chat_outcome": {
+        "status": "completed",
+        "reason": "grounded"
+      },
+      "decision": "calibrated_score",
+      "assessment": "answer",
+      "score": 1.759958267211914,
+      "policy_inherited": false,
+      "seconds": 18.9,
+      "failures": [],
+      "passed": true
+    },
+    {
+      "id": "AGN-VAL-A007",
+      "kind": "answerable",
+      "language": "es",
+      "domain": "fiscalidad",
+      "status": "completed",
+      "chat_outcome": {
+        "status": "completed",
+        "reason": "grounded"
+      },
+      "decision": "calibrated_score",
+      "assessment": "answer",
+      "score": 6.414032936096191,
+      "policy_inherited": false,
+      "seconds": 22.9,
+      "failures": [],
+      "passed": true
+    },
+    {
+      "id": "AGN-VAL-A008",
+      "kind": "answerable",
+      "language": "es",
+      "domain": "historia",
+      "status": "completed",
+      "chat_outcome": {
+        "status": "completed",
+        "reason": "grounded"
+      },
+      "decision": "calibrated_score",
+      "assessment": "answer",
+      "score": 5.102507591247559,
+      "policy_inherited": false,
+      "seconds": 11.5,
+      "failures": [],
+      "passed": true
+    },
+    {
+      "id": "AGN-VAL-A009",
+      "kind": "answerable",
+      "language": "es",
+      "domain": "informática",
+      "status": "completed",
+      "chat_outcome": {
+        "status": "completed",
+        "reason": "grounded"
+      },
+      "decision": "calibrated_score",
+      "assessment": "answer",
+      "score": 0.029485806822776794,
+      "policy_inherited": false,
+      "seconds": 18.1,
+      "failures": [],
+      "passed": true
+    },
+    {
+      "id": "AGN-VAL-A010",
+      "kind": "answerable",
+      "language": "es",
+      "domain": "economía",
+      "status": "completed",
+      "chat_outcome": {
+        "status": "completed",
+        "reason": "grounded"
+      },
+      "decision": "calibrated_score",
+      "assessment": "answer",
+      "score": 1.9498947858810425,
+      "policy_inherited": false,
+      "seconds": 11.2,
+      "failures": [],
+      "passed": true
+    },
+    {
+      "id": "AGN-VAL-A011",
+      "kind": "answerable",
+      "language": "es",
+      "domain": "geología",
+      "status": "completed",
+      "chat_outcome": {
+        "status": "completed",
+        "reason": "grounded"
+      },
+      "decision": "calibrated_score",
+      "assessment": "answer",
+      "score": 6.270615577697754,
+      "policy_inherited": false,
+      "seconds": 13.3,
+      "failures": [],
+      "passed": true
+    },
+    {
+      "id": "AGN-VAL-A012",
+      "kind": "answerable",
+      "language": "es",
+      "domain": "agroalimentación",
+      "status": "completed",
+      "chat_outcome": {
+        "status": "completed",
+        "reason": "grounded"
+      },
+      "decision": "calibrated_score",
+      "assessment": "answer",
+      "score": 7.783975601196289,
+      "policy_inherited": false,
+      "seconds": 23.0,
+      "failures": [],
+      "passed": true
+    },
+    {
+      "id": "AGN-VAL-A013",
+      "kind": "answerable",
+      "language": "es",
+      "domain": "derecho",
+      "status": "completed",
+      "chat_outcome": {
+        "status": "completed",
+        "reason": "grounded"
+      },
+      "decision": "calibrated_score",
+      "assessment": "answer",
+      "score": 6.511028289794922,
+      "policy_inherited": false,
+      "seconds": 20.0,
+      "failures": [],
+      "passed": true
+    },
+    {
+      "id": "AGN-VAL-A014",
+      "kind": "answerable",
+      "language": "es",
+      "domain": "derecho",
+      "status": "completed",
+      "chat_outcome": {
+        "status": "completed",
+        "reason": "grounded"
+      },
+      "decision": "calibrated_score",
+      "assessment": "answer",
+      "score": 4.284306049346924,
+      "policy_inherited": false,
+      "seconds": 12.0,
+      "failures": [],
+      "passed": true
+    },
+    {
+      "id": "AGN-VAL-A015",
+      "kind": "answerable",
+      "language": "en",
+      "domain": "inteligencia artificial",
+      "status": "completed",
+      "chat_outcome": {
+        "status": "completed",
+        "reason": "grounded"
+      },
+      "decision": "calibrated_score",
+      "assessment": "answer",
+      "score": 3.301405191421509,
+      "policy_inherited": false,
+      "seconds": 13.1,
+      "failures": [],
+      "passed": true
+    },
+    {
+      "id": "AGN-VAL-A016",
+      "kind": "answerable",
+      "language": "en",
+      "domain": "biología",
+      "status": "completed",
+      "chat_outcome": {
+        "status": "completed",
+        "reason": "grounded"
+      },
+      "decision": "calibrated_score",
+      "assessment": "answer",
+      "score": -1.156191349029541,
+      "policy_inherited": false,
+      "seconds": 11.7,
+      "failures": [],
+      "passed": true
+    },
+    {
+      "id": "AGN-VAL-U001",
+      "kind": "unanswerable",
+      "language": "es",
+      "domain": "—",
+      "status": "abstained",
+      "chat_outcome": {
+        "status": "abstained",
+        "reason": "evidence_assessed"
+      },
+      "decision": "evidence_assessed",
+      "assessment": "abstain",
+      "score": -0.7790674567222595,
+      "policy_inherited": null,
+      "seconds": 4.2,
+      "failures": [],
+      "passed": true
+    },
+    {
+      "id": "AGN-VAL-U002",
+      "kind": "unanswerable",
+      "language": "es",
+      "domain": "—",
+      "status": "abstained",
+      "chat_outcome": {
+        "status": "abstained",
+        "reason": "clarification_required"
+      },
+      "decision": "ambiguous_question",
+      "assessment": "clarify",
+      "score": -1.079140067100525,
+      "policy_inherited": null,
+      "seconds": 1.3,
+      "failures": [
+        "expected_abstain"
+      ],
+      "passed": false
+    },
+    {
+      "id": "AGN-VAL-U003",
+      "kind": "unanswerable",
+      "language": "es",
+      "domain": "—",
+      "status": "abstained",
+      "chat_outcome": {
+        "status": "abstained",
+        "reason": "clarification_required"
+      },
+      "decision": "ambiguous_question",
+      "assessment": "clarify",
+      "score": -1.2391849756240845,
+      "policy_inherited": null,
+      "seconds": 1.5,
+      "failures": [
+        "expected_abstain"
+      ],
+      "passed": false
+    },
+    {
+      "id": "AGN-VAL-U004",
+      "kind": "unanswerable",
+      "language": "es",
+      "domain": "—",
+      "status": "abstained",
+      "chat_outcome": {
+        "status": "abstained",
+        "reason": "evidence_assessed"
+      },
+      "decision": "evidence_assessed",
+      "assessment": "abstain",
+      "score": 5.469916820526123,
+      "policy_inherited": null,
+      "seconds": 4.9,
+      "failures": [],
+      "passed": true
+    },
+    {
+      "id": "AGN-VAL-U005",
+      "kind": "unanswerable",
+      "language": "es",
+      "domain": "—",
+      "status": "abstained",
+      "chat_outcome": {
+        "status": "abstained",
+        "reason": "evidence_assessed"
+      },
+      "decision": "evidence_assessed",
+      "assessment": "abstain",
+      "score": -0.18528404831886292,
+      "policy_inherited": null,
+      "seconds": 4.2,
+      "failures": [],
+      "passed": true
+    },
+    {
+      "id": "AGN-VAL-U006",
+      "kind": "unanswerable",
+      "language": "es",
+      "domain": "—",
+      "status": "abstained",
+      "chat_outcome": {
+        "status": "abstained",
+        "reason": "evidence_assessed"
+      },
+      "decision": "evidence_assessed",
+      "assessment": "abstain",
+      "score": 0.31019842624664307,
+      "policy_inherited": null,
+      "seconds": 4.8,
+      "failures": [],
+      "passed": true
+    },
+    {
+      "id": "AGN-VAL-M001",
+      "kind": "ambiguous",
+      "language": "es",
+      "domain": "—",
+      "status": "abstained",
+      "chat_outcome": {
+        "status": "abstained",
+        "reason": "clarification_required"
+      },
+      "decision": "ambiguous_question",
+      "assessment": "clarify",
+      "score": -1.445585012435913,
+      "policy_inherited": null,
+      "seconds": 1.5,
+      "failures": [],
+      "passed": true
+    },
+    {
+      "id": "AGN-VAL-M002",
+      "kind": "ambiguous",
+      "language": "es",
+      "domain": "—",
+      "status": "abstained",
+      "chat_outcome": {
+        "status": "abstained",
+        "reason": "clarification_required"
+      },
+      "decision": "ambiguous_question",
+      "assessment": "clarify",
+      "score": -2.307664155960083,
+      "policy_inherited": null,
+      "seconds": 1.5,
+      "failures": [],
+      "passed": true
+    },
+    {
+      "id": "AGN-VAL-M003",
+      "kind": "ambiguous",
+      "language": "es",
+      "domain": "—",
+      "status": "abstained",
+      "chat_outcome": {
+        "status": "abstained",
+        "reason": "clarification_required"
+      },
+      "decision": "ambiguous_question",
+      "assessment": "clarify",
+      "score": -1.463454246520996,
+      "policy_inherited": null,
+      "seconds": 1.4,
+      "failures": [],
+      "passed": true
+    },
+    {
+      "id": "AGN-VAL-C001-T1",
+      "kind": "conversation",
+      "language": "es",
+      "domain": "biología vegetal",
+      "status": "completed",
+      "chat_outcome": {
+        "status": "completed",
+        "reason": "grounded"
+      },
+      "decision": "calibrated_score",
+      "assessment": "answer",
+      "score": 2.4577717781066895,
+      "policy_inherited": false,
+      "seconds": 13.9,
+      "failures": [],
+      "passed": true
+    },
+    {
+      "id": "AGN-VAL-C001-T2",
+      "kind": "conversation",
+      "language": "es",
+      "domain": "biología vegetal",
+      "status": "completed",
+      "chat_outcome": {
+        "status": "completed",
+        "reason": "grounded"
+      },
+      "decision": "calibrated_score",
+      "assessment": "answer",
+      "score": 3.505018949508667,
+      "policy_inherited": false,
+      "seconds": 30.4,
+      "failures": [],
+      "passed": true
+    },
+    {
+      "id": "AGN-VAL-C002-T1",
+      "kind": "conversation",
+      "language": "es",
+      "domain": "fiscalidad",
+      "status": "completed",
+      "chat_outcome": {
+        "status": "completed",
+        "reason": "grounded"
+      },
+      "decision": "calibrated_score",
+      "assessment": "answer",
+      "score": 5.5068559646606445,
+      "policy_inherited": false,
+      "seconds": 13.7,
+      "failures": [],
+      "passed": true
+    },
+    {
+      "id": "AGN-VAL-C002-T2",
+      "kind": "conversation",
+      "language": "es",
+      "domain": "fiscalidad",
+      "status": "completed",
+      "chat_outcome": {
+        "status": "completed",
+        "reason": "grounded"
+      },
+      "decision": "calibrated_score",
+      "assessment": "answer",
+      "score": 4.565485000610352,
+      "policy_inherited": false,
+      "seconds": 14.5,
+      "failures": [],
+      "passed": true
+    },
+    {
+      "id": "AGN-VAL-C003-T1",
+      "kind": "conversation",
+      "language": "es",
+      "domain": "inteligencia artificial",
+      "status": "completed",
+      "chat_outcome": {
+        "status": "completed",
+        "reason": "grounded"
+      },
+      "decision": "calibrated_score",
+      "assessment": "answer",
+      "score": 3.4605751037597656,
+      "policy_inherited": false,
+      "seconds": 27.4,
+      "failures": [],
+      "passed": true
+    },
+    {
+      "id": "AGN-VAL-C003-T2",
+      "kind": "conversation",
+      "language": "es",
+      "domain": "inteligencia artificial",
+      "status": "completed",
+      "chat_outcome": {
+        "status": "completed",
+        "reason": "grounded"
+      },
+      "decision": "calibrated_score",
+      "assessment": "answer",
+      "score": 3.8890130519866943,
+      "policy_inherited": false,
+      "seconds": 20.8,
+      "failures": [],
+      "passed": true
+    },
+    {
+      "id": "AGN-VAL-C003-T3",
+      "kind": "conversation",
+      "language": "es",
+      "domain": "inteligencia artificial",
+      "status": "completed",
+      "chat_outcome": {
+        "status": "completed",
+        "reason": "grounded"
+      },
+      "decision": "calibrated_score",
+      "assessment": "answer",
+      "score": 6.435146331787109,
+      "policy_inherited": false,
+      "seconds": 20.3,
+      "failures": [],
+      "passed": true
+    }
+  ]
+}

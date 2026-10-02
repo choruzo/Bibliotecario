@@ -10,7 +10,7 @@ from sqlalchemy import select
 from test_h1 import application, login, settings  # noqa: F401
 from test_h2 import headers
 from test_h3 import reviewed, queue
-from bibliotecario.chat import validate_answer, summarize_history
+from bibliotecario.chat import answer_schema, validate_answer, summarize_history, verify_grounding
 from bibliotecario.indexing import finalize_index, model_signature
 from bibliotecario.models import Conversation, Message, EvidencePolicy, RetrievalRun
 from bibliotecario.providers import ModelClients, ProviderError
@@ -56,9 +56,9 @@ def mock_generation(monkeypatch, app, candidate, invalid=False, reject=False, wi
         if withdraw:
             withdraw()
         yield json.dumps({'evidence': [{'citation_id': 'C9' if invalid else 'C1', 'quote': candidate['content'],
-                                      'explanation': 'Texto original.'}], 'general': 'Piensa en una biblioteca organizada.'})
+                                      'explanation': 'Texto original explicado.'}]})
     async def generate(messages, max_tokens=128, **kwargs):
-        return json.dumps({'supported': not reject, 'general_safe': True})
+        return json.dumps({'supported': not reject})
     monkeypatch.setattr(app.state.clients, 'stream_generate', stream)
     monkeypatch.setattr(app.state.clients, 'generate', generate)
 
@@ -119,11 +119,12 @@ def test_grounded_response_citations_and_semantic_rejection(application, monkeyp
     elif reject:
         assert message['status'] == 'completed'
         assert 'Extractos literales' in message['content']
-        assert 'Piensa en una biblioteca' not in message['content']
+        assert 'Texto original explicado.' not in message['content']
         assert message['sources'][0]['quote'] == candidate['content']
     else:
         assert message['status'] == 'completed' and '[C1]' in message['content']
-        assert 'Explicación general' in message['content']
+        assert 'Texto original explicado. [C1]' in message['content']
+        assert 'Explicación general' not in message['content']
         assert message['sources'][0]['quote'] == candidate['content']
         assert client.get(f"/chat/messages/{message['id']}/sources/C1/original").status_code == 200
         assert client.get(f"/chat/messages/{message['id']}/sources/C2/original").status_code == 404
@@ -141,16 +142,38 @@ def test_rejected_paraphrase_can_publish_only_independently_verified_exact_passa
     async def generate(messages, **kwargs):
         validation = json.loads(messages[1]['content'])
         checks.append(validation)
-        supported = all(c['claim'] == c['source'].strip() for c in validation['claims']) and not validation['general']
-        return json.dumps({'supported': supported, 'general_safe': supported})
+        supported = all(c['claim'] == c['source'].strip() for c in validation['claims'])
+        return json.dumps({'supported': supported})
     monkeypatch.setattr(app.state.clients, 'generate', generate)
     message = turn(client, conversation(client))[-1]['message']
     assert len(checks) == 1 and message['status'] == 'completed'
     quoted = '\n'.join('> ' + line for line in candidate['content'].strip().splitlines())
     assert quoted in message['content'] and '[C1]' in message['content']
-    assert 'Piensa en una biblioteca' not in message['content']
+    assert 'Texto original explicado.' not in message['content']
     with sessions() as db:
-        assert db.get(RetrievalRun, message['retrieval_run_id']).result['chat_outcome']['reason'] == 'grounded_extract'
+        outcome = db.get(RetrievalRun, message['retrieval_run_id']).result['chat_outcome']
+    assert outcome == {'status': 'completed', 'reason': 'grounded_extract',
+                       'fallback': {'reason': 'grounding_rejected',
+                                    'detail': {'supported': False, 'claims': 1, 'rejected': [1]}}}
+
+
+def test_grounding_is_audited_claim_by_claim():
+    claims = [{'claim': 'Primer paso.', 'source': 'Primer paso.'}, {'claim': 'Paso inventado.', 'source': 'Segundo paso.'}]
+    audited = []
+
+    class Clients:
+        settings = type('S', (), {'sufficiency_reasoning_effort': 'disabled'})()
+
+        async def generate(self, messages, **kwargs):
+            claim = json.loads(messages[1]['content'])['claims']
+            audited.append(claim)
+            return json.dumps({'supported': claim[0]['claim'] == claim[0]['source']})
+
+    with pytest.raises(ValueError) as rejected:
+        asyncio.run(verify_grounding(Clients(), {'claims': claims}))
+    assert rejected.value.args == ('grounding_rejected', {'supported': False, 'claims': 2, 'rejected': [2]})
+    assert sorted(c[0]['claim'] for c in audited) == ['Paso inventado.', 'Primer paso.']
+    asyncio.run(verify_grounding(Clients(), {'claims': claims[:1]}))
 
 
 def test_generation_cannot_omit_part_of_the_assessed_procedure():
@@ -158,7 +181,23 @@ def test_generation_cannot_omit_part_of_the_assessed_procedure():
                {'citation_id': 'C2', 'quote': 'Paso obligatorio posterior.'}]
     with pytest.raises(ValueError, match='incomplete_answer'):
         validate_answer(json.dumps({'evidence': [{'citation_id': 'C1', 'quote': 'Primer paso.',
-                       'explanation': 'Primer paso.'}], 'general': ''}), sources)
+                       'explanation': 'Primer paso.'}]}), sources)
+
+
+def test_answer_schema_requires_every_assessed_passage_once_in_order():
+    sources = [{'citation_id': 'C1', 'quote': 'Primer paso.'}, {'citation_id': 'C2', 'quote': 'Segundo paso.'}]
+    schema = answer_schema(sources)
+    evidence = schema['properties']['evidence']
+    assert [i['properties']['citation_id']['const'] for i in evidence['prefixItems']] == ['C1', 'C2']
+    assert evidence['items'] is False and evidence['minItems'] == evidence['maxItems'] == 2
+    assert schema['required'] == ['evidence'] and schema['additionalProperties'] is False
+
+
+def test_answers_cannot_add_text_outside_the_cited_explanations():
+    sources = [{'citation_id': 'C1', 'quote': 'Primer paso.'}]
+    with pytest.raises(ValueError, match='invalid_answer'):
+        validate_answer(json.dumps({'evidence': [{'citation_id': 'C1', 'quote': 'Primer paso.',
+                       'explanation': 'Primer paso.'}], 'general': 'Como una estantería.'}), sources)
 
 
 def test_withdrawal_during_generation_abstains(application, monkeypatch):

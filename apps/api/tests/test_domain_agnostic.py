@@ -136,15 +136,14 @@ def source(quote, marker="C1"):
             "locator": {"section_path": ["Ciclo"]}}
 
 
-@pytest.mark.parametrize("explanation,general", [
-    ("La reina vive de dos a cuatro años.", ""),
-    ("La pupa dura una semana (casi 7 días).", ""),
-    ("La reina vive unos tres años.", "Las reinas suelen vivir de dos a cuatro años."),
+@pytest.mark.parametrize("explanation", [
+    "La reina vive de dos a cuatro años.",
+    "La pupa dura una semana (casi 7 días).",
+    "La reina vive unos tres años; las reinas suelen vivir de dos a cuatro.",
 ])
-def test_explanations_cannot_add_figures_absent_from_the_passages(explanation, general):
+def test_explanations_cannot_add_figures_absent_from_the_passages(explanation):
     sources = [source("La reina vive tres años; la pupa dura aproximadamente una semana.")]
-    raw = json.dumps({"evidence": [{"citation_id": "C1", "quote": sources[0]["quote"], "explanation": explanation}],
-                      "general": general})
+    raw = json.dumps({"evidence": [{"citation_id": "C1", "quote": sources[0]["quote"], "explanation": explanation}]})
     with pytest.raises(ValueError, match="unsupported_number"):
         validate_answer(raw, sources)
     text, used, _ = extractive_answer(sources)
@@ -154,7 +153,7 @@ def test_explanations_cannot_add_figures_absent_from_the_passages(explanation, g
 def test_faithful_explanations_with_restated_figures_are_accepted():
     sources = [source("El periodo de desarrollo es de veintiún días para las obreras.")]
     raw = json.dumps({"evidence": [{"citation_id": "C1", "quote": sources[0]["quote"],
-                                    "explanation": "Las obreras tardan 21 días en desarrollarse."}], "general": ""})
+                                    "explanation": "Las obreras tardan 21 días en desarrollarse."}]})
     assert validate_answer(raw, sources)[0].startswith("Las obreras tardan 21 días")
 
 

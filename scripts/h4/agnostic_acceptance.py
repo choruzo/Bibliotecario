@@ -91,6 +91,17 @@ def check(case, message, trace, catalog, mapping, client):
     return sorted(set(failures))
 
 
+def fallback_key(fallback):
+    detail = fallback.get('detail') or {}
+    if fallback['reason'] == 'grounding_rejected':
+        if 'rejected' in detail:
+            return 'grounding_rejected:claim'
+        return 'grounding_rejected:' + ','.join(k for k in ('supported', 'general_safe') if detail.get(k) is False)
+    if fallback['reason'] == 'unsupported_number':
+        return 'unsupported_number:' + detail.get('where', '?')
+    return fallback['reason']
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--bank', type=Path, nargs='+', default=[ROOT / 'evaluation/h3/agnostic-validation-v1.jsonl'])
@@ -171,6 +182,9 @@ def main():
                'unsupported_numbers': sum('unsupported_number' in r['failures'] for r in rows),
                'outcomes': dict(collections.Counter(((r['chat_outcome'] or {}).get('reason') or r['status'] or 'none')
                                                     for r in rows if r['status'] == 'completed')),
+               # Why a paraphrase fell back to the literal extract (only recorded since priority 4).
+               'fallbacks': dict(collections.Counter(fallback_key((r['chat_outcome'] or {}).get('fallback'))
+                                                     for r in rows if (r['chat_outcome'] or {}).get('fallback'))),
                'by_kind': {}, 'by_domain': {}, 'failures': {}, 'cases': [{k: v for k, v in r.items()} for r in
                    [{key: row[key] for key in ('id', 'kind', 'language', 'domain', 'status', 'chat_outcome', 'decision',
                      'assessment', 'score', 'policy_inherited', 'seconds', 'failures', 'passed')} for row in rows]]}

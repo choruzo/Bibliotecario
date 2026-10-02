@@ -32,7 +32,7 @@ Seguir mejorando el RAG para que funcione bien con documentos de **cualquier dom
   | admin | −1,2895 | 46/46 positivos, 0 indebidas, 17/17 negativos (técnico + agnóstico) |
   | usuario | −1,2895 | 46/46 positivos, 0 indebidas, 17/17 negativos (técnico + agnóstico) |
 
-  Aceptación de chat: `scripts/h4/colloquial_acceptance.py`, 13 de 13; `scripts/h4/agnostic_acceptance.py`, 62 de 64. Último cambio: `docs/h3/chunk-grouping.md`. Detalle anterior en `docs/h3/domain-agnostic-pdf-fix.md`; los informes anteriores, en `docs/h3/calibration-fix.md` y `docs/h3/colloquial-retrieval-fix.md`.
+  Aceptación de chat: `scripts/h4/colloquial_acceptance.py`, 13 de 13; `scripts/h4/agnostic_acceptance.py`, 62 de 64. Último cambio: `docs/h3/general-explanation.md` (antes, `docs/h3/chunk-grouping.md`). Detalle anterior en `docs/h3/domain-agnostic-pdf-fix.md`; los informes anteriores, en `docs/h3/calibration-fix.md` y `docs/h3/colloquial-retrieval-fix.md`.
 - **Biblioteca publicada**: 13 documentos técnicos internos (H0) y los 17 PDF del corpus agnóstico (catálogo `evaluation/h3/agnostic_corpus_catalog.json`; la abeja es `89f7cc5a-4436-4e3b-be85-f44d13c01886`, versión 2). Calibrar siempre con los cuatro bancos y los dos catálogos (comando en `docs/h3/agnostic-evaluation.md`).
 
 ## Corpus agnóstico descargado (no publicado todavía)
@@ -81,7 +81,7 @@ Cada punto incluye su criterio de aceptación. No pases al siguiente sin medir e
    - *Aceptación*: calibración aprobada en los dos ámbitos con el banco técnico y el agnóstico, 0 respuestas indebidas y resultados por dominio en un informe.
 3. ~~**Agrupar bloques pequeños al trocear**~~ Hecho; ver `docs/h3/chunk-grouping.md`. 3852 fragmentos de 624 B de media (antes 7658 de 347), recall@10/nDCG técnico 0,879/0,750 (antes 0,838/0,744), agnóstico 62/64. Pendiente: `EVAL-A006` se abstiene ahora (falso negativo seguro). (`chunking.py`) Une bloques consecutivos del mismo `section_path` hasta el presupuesto y conserva todos los localizadores (`provenance`) de los bloques unidos. Mantén la comprobación de cobertura de `build_index` y la regla de cortes de `break_point`. Plantéate subir `CHUNK_BYTES` (el embedding admite hasta 1000 tokens con su prefijo; compruébalo con `embedding_tokens`).
    - *Aceptación*: tamaño medio de fragmento mayor de 500 bytes, ningún corte a mitad de palabra ni de enlace, y recall10/nDCG del banco técnico iguales o mejores. Requiere reindexar (`POST /admin/operations/reindex` con `confirmation: "REINDEXAR"`) y recalibrar.
-4. **Eliminar o restringir la «explicación general».** Es por donde más se cuela contenido no respaldado (p. ej., «la larva recibe alimento especializado»). Además, muchas respuestas acaban en `grounded_extract`, que es seguro pero muy literal (6 de 8 en la aceptación). Mide antes y después qué proporción de respuestas queda como `grounded` frente a `grounded_extract`, y por qué motivo.
+4. ~~**Eliminar o restringir la «explicación general».**~~ Hecho; ver `docs/h3/general-explanation.md`. Sin explicación general, todos los pasajes seleccionados explicados en orden (`prefixItems`) y verificación por afirmación en paralelo: agnóstico 43 `grounded` / 3 `grounded_extract` (antes 31/15), 62/64 y 0 indebidas; coloquial 13/13 (6/2). El motivo de cada recurso al extracto queda en `chat_outcome.fallback`. Ojo para la prioridad 5: ahora hay una llamada de verificación por afirmación. Es por donde más se cuela contenido no respaldado (p. ej., «la larva recibe alimento especializado»). Además, muchas respuestas acaban en `grounded_extract`, que es seguro pero muy literal (6 de 8 en la aceptación). Mide antes y después qué proporción de respuestas queda como `grounded` frente a `grounded_extract`, y por qué motivo.
    - *Aceptación*: más respuestas `grounded`, 0 cifras no respaldadas y 0 regresiones en la aceptación.
 5. **Reducir llamadas al LLM.** Fusiona la intención y la suficiencia en una sola llamada estructurada, y no reformules cuando `needs_context` sea falso y no haya historial relevante. Las latencias por fase están en `result.latency` de cada `RetrievalRun`.
    - *Aceptación*: p50/p95 de latencia del chat medidos antes y después, y la misma calidad en los bancos.
@@ -98,8 +98,8 @@ Cada punto incluye su criterio de aceptación. No pases al siguiente sin medir e
    cd apps/api && ../../.venv/Scripts/python.exe -m pytest -q --basetemp=<scratchpad>/pytest -p no:cacheprovider
    ```
 
-   Hoy pasan 120. El `--basetemp` hace falta porque el sandbox impide crear temporales en el directorio por defecto.
-2. Pruebas de la raíz: `.venv/Scripts/python.exe -m pytest -q tests` (pasan 4).
+   Hoy pasan 123. El `--basetemp` hace falta porque el sandbox impide crear temporales en el directorio por defecto.
+2. Pruebas de la raíz: `.venv/Scripts/python.exe -m pytest -q tests` (pasan 8).
 3. Web: `cd apps/web && npx tsc --noEmit` y Playwright. El navegador de Playwright no está instalado; usa el Chrome del sistema:
 
    ```bash
