@@ -14,7 +14,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from .auth import administrator, database, require_csrf
 from .indexing import model_signature
 from .models import Chunk, Document, DocumentVersion, EvidencePolicy, RetrievalRun
-from .providers import ProviderError
+from .providers import LLM_TRACE, ProviderError, summarize_calls
 from .sufficiency import assess, policy_signature, VERSION
 from .evaluation import calibrate, ranking_metrics, summarize
 
@@ -237,6 +237,8 @@ async def retrieve(db, settings, clients, query, limit=10, document_id=None, adm
 
 @router.post("/search")
 async def inspect(body: Search, request: Request, identity=Depends(require_csrf), db=Depends(database)):
+    calls = []
+    LLM_TRACE.set(calls)
     try:
         query = body.query
         if body.previous_questions:
@@ -251,6 +253,7 @@ async def inspect(body: Search, request: Request, identity=Depends(require_csrf)
                                 query, body.limit, body.document_id, admin=body.scope == "admin")
         result["question"] = body.query
         result["previous_questions"] = body.previous_questions
+        result["llm"] = summarize_calls(calls) | {"trace": calls}
         run = RetrievalRun(actor_id=identity.user.id, query=query, status="completed", result=result, created_at=int(time.time()))
         db.add(run)
         db.commit()

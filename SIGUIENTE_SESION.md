@@ -29,10 +29,12 @@ Seguir mejorando el RAG para que funcione bien con documentos de **cualquier dom
 
   | Ámbito | Umbral | Validación |
   | --- | ---: | --- |
-  | admin | −1,2895 | 46/46 positivos, 0 indebidas, 17/17 negativos (técnico + agnóstico) |
-  | usuario | −1,2895 | 46/46 positivos, 0 indebidas, 17/17 negativos (técnico + agnóstico) |
+  | admin | −1,2895 | 45/46 positivos, 0 indebidas, 17/17 negativos (técnico + agnóstico) |
+  | usuario | −1,2895 | 45/46 positivos, 0 indebidas, 17/17 negativos (técnico + agnóstico) |
 
-  Aceptación de chat: `scripts/h4/colloquial_acceptance.py`, 13 de 13; `scripts/h4/agnostic_acceptance.py`, 62 de 64. Último cambio: `docs/h3/general-explanation.md` (antes, `docs/h3/chunk-grouping.md`). Detalle anterior en `docs/h3/domain-agnostic-pdf-fix.md`; los informes anteriores, en `docs/h3/calibration-fix.md` y `docs/h3/colloquial-retrieval-fix.md`.
+  Aceptación de chat: `scripts/h4/colloquial_acceptance.py`, 13 de 13; `scripts/h4/agnostic_acceptance.py`, 62 de 64 (respuestas p50/p95 de 8,0/13,1 s). Último cambio: `docs/h3/llm-calls.md` (antes, `docs/h3/general-explanation.md`).
+  Cada `RetrievalRun` guarda `llm` (llamadas, latencia y tokens por fase) y `chat_latency`; los arneses imprimen la latencia p50/p95.
+  El reranker debe ir en GPU (`start_rerank.ps1 -Gpu`): en CPU tarda unas 40 veces más y sus puntuaciones cambian decisiones límite. Calibra con la misma configuración que usa el chat. Detalle anterior en `docs/h3/domain-agnostic-pdf-fix.md`; los informes anteriores, en `docs/h3/calibration-fix.md` y `docs/h3/colloquial-retrieval-fix.md`.
 - **Biblioteca publicada**: 13 documentos técnicos internos (H0) y los 17 PDF del corpus agnóstico (catálogo `evaluation/h3/agnostic_corpus_catalog.json`; la abeja es `89f7cc5a-4436-4e3b-be85-f44d13c01886`, versión 2). Calibrar siempre con los cuatro bancos y los dos catálogos (comando en `docs/h3/agnostic-evaluation.md`).
 
 ## Corpus agnóstico descargado (no publicado todavía)
@@ -83,7 +85,7 @@ Cada punto incluye su criterio de aceptación. No pases al siguiente sin medir e
    - *Aceptación*: tamaño medio de fragmento mayor de 500 bytes, ningún corte a mitad de palabra ni de enlace, y recall10/nDCG del banco técnico iguales o mejores. Requiere reindexar (`POST /admin/operations/reindex` con `confirmation: "REINDEXAR"`) y recalibrar.
 4. ~~**Eliminar o restringir la «explicación general».**~~ Hecho; ver `docs/h3/general-explanation.md`. Sin explicación general, todos los pasajes seleccionados explicados en orden (`prefixItems`) y verificación por afirmación en paralelo: agnóstico 43 `grounded` / 3 `grounded_extract` (antes 31/15), 62/64 y 0 indebidas; coloquial 13/13 (6/2). El motivo de cada recurso al extracto queda en `chat_outcome.fallback`. Ojo para la prioridad 5: ahora hay una llamada de verificación por afirmación. Es por donde más se cuela contenido no respaldado (p. ej., «la larva recibe alimento especializado»). Además, muchas respuestas acaban en `grounded_extract`, que es seguro pero muy literal (6 de 8 en la aceptación). Mide antes y después qué proporción de respuestas queda como `grounded` frente a `grounded_extract`, y por qué motivo.
    - *Aceptación*: más respuestas `grounded`, 0 cifras no respaldadas y 0 regresiones en la aceptación.
-5. **Reducir llamadas al LLM.** Fusiona la intención y la suficiencia en una sola llamada estructurada, y no reformules cuando `needs_context` sea falso y no haya historial relevante. Las latencias por fase están en `result.latency` de cada `RetrievalRun`.
+5. ~~**Reducir llamadas al LLM.**~~ Hecho; ver `docs/h3/llm-calls.md`. El cuello de botella eran los tokens decodificados, no el número de llamadas. No se fusionó intención y suficiencia, porque la intención no debe ver los pasajes; se hacen en paralelo. La generación ya no copia los pasajes, y los seguimientos autónomos no se reformulan. Respuestas p50/p95 de 14,5/30,8 s a 8,0/13,1 s; agnóstico 62/64 con 45 `grounded` / 1 `grounded_extract`; validación 45/46 (`VAL2-A008` se abstiene). Los identificadores cortos en la evaluación se descartaron porque cambiaban decisiones. Fusiona la intención y la suficiencia en una sola llamada estructurada, y no reformules cuando `needs_context` sea falso y no haya historial relevante. Las latencias por fase están en `result.latency` de cada `RetrievalRun`.
    - *Aceptación*: p50/p95 de latencia del chat medidos antes y después, y la misma calidad en los bancos.
 6. **Conversión PDF.** Compara `pymupdf_layout`, que la propia librería recomienda en sus avisos, o el modo no *legacy* de pymupdf4llm frente a la recuperación heurística actual. Usa el corpus agnóstico, sobre todo arXiv, el Mundial y la tabla periódica. Mide la cobertura de palabras por página, las tablas correctas y el tiempo de conversión. Limita `find_tables` a las páginas con pérdida detectada.
    - *Aceptación*: menos páginas con `pdf_text_loss`, tablas con correspondencia correcta entre fila y columna y conversión más rápida.
@@ -98,7 +100,7 @@ Cada punto incluye su criterio de aceptación. No pases al siguiente sin medir e
    cd apps/api && ../../.venv/Scripts/python.exe -m pytest -q --basetemp=<scratchpad>/pytest -p no:cacheprovider
    ```
 
-   Hoy pasan 123. El `--basetemp` hace falta porque el sandbox impide crear temporales en el directorio por defecto.
+   Hoy pasan 125. El `--basetemp` hace falta porque el sandbox impide crear temporales en el directorio por defecto.
 2. Pruebas de la raíz: `.venv/Scripts/python.exe -m pytest -q tests` (pasan 8).
 3. Web: `cd apps/web && npx tsc --noEmit` y Playwright. El navegador de Playwright no está instalado; usa el Chrome del sistema:
 

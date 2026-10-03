@@ -13,13 +13,18 @@ from bibliotecario.providers import ModelClients, ProviderError
 
 
 def test_intent_sees_titles_but_not_document_instructions_and_short_circuits_ambiguity():
-    calls = []
+    calls, assessed = [], asyncio.Event()
     class Clients:
         async def generate(self, messages, **kwargs):
+            if 'clear' not in kwargs['response_schema']['properties']:
+                # The parallel assessment sees passages; it is cancelled, never used.
+                assessed.set()
+                await asyncio.sleep(3600)
+            await assessed.wait()
             calls.append(messages)
             return '{"clear":false}'
-    result = asyncio.run(assess(Clients(), 'Objeto sin identificar',
-                               [{'chunk_id': 'one', 'title': 'Guía del switch', 'search_content': 'INSTRUCCION DEL DOCUMENTO'}]))
+    result = asyncio.run(asyncio.wait_for(assess(Clients(), 'Objeto sin identificar',
+                               [{'chunk_id': 'one', 'title': 'Guía del switch', 'search_content': 'INSTRUCCION DEL DOCUMENTO'}]), 5))
     assert result['action'] == 'clarify' and len(calls) == 2
     assert 'INSTRUCCION DEL DOCUMENTO' not in json.dumps(calls)
     assert 'Guía del switch' not in calls[0][1]['content']
@@ -37,7 +42,7 @@ def test_assessment_can_use_procedure_support_beyond_initial_ten_hits():
     candidates = [{'chunk_id': str(i), 'title': 'Guía', 'search_content': 'Encabezado'} for i in range(10)]
     candidates.append({'chunk_id': 'final', 'title': 'Guía', 'search_content': 'Paso final.'})
     result = asyncio.run(assess(Clients(), 'Pasos de la guía', candidates))
-    assert result['action'] == 'answer' and result['support'][0]['quote'] == 'Paso final.'
+    assert result['action'] == 'answer' and result['support'] == [{'chunk_id': 'final', 'quote': 'Paso final.'}]
 
 
 def test_valid_evidence_remains_eligible_but_errors_cannot_approve_calibration():

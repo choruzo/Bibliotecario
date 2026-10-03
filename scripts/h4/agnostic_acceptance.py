@@ -13,6 +13,7 @@ import argparse
 import collections
 import hashlib
 import json
+import math
 import re
 import sys
 import time
@@ -102,6 +103,31 @@ def fallback_key(fallback):
     return fallback['reason']
 
 
+def percentile(values, fraction):
+    """Nearest-rank percentile, so the reported value is an observed turn."""
+    values = sorted(values)
+    return values[max(0, math.ceil(len(values) * fraction) - 1)] if values else None
+
+
+def latency_summary(rows):
+    groups = {'all': rows, 'answers': [r for r in rows if r['status'] == 'completed'],
+              'abstentions': [r for r in rows if r['status'] == 'abstained']}
+    summary = {name: {'n': len(group), 'p50': percentile([r['seconds'] for r in group], .5),
+                      'p95': percentile([r['seconds'] for r in group], .95)} for name, group in groups.items()}
+    traced = [r for r in rows if r.get('llm')]
+    phases = {}
+    for row in traced:
+        for phase, entry in row['llm']['phases'].items():
+            total = phases.setdefault(phase, {'calls': 0, 'ms': 0})
+            total['calls'] += entry['calls']
+            total['ms'] += entry['ms']
+    summary['llm'] = {'turns': len(traced), 'calls': sum(r['llm']['calls'] for r in traced),
+                      'calls_per_turn': round(sum(r['llm']['calls'] for r in traced) / len(traced), 2) if traced else None,
+                      'phases': {k: {'calls': v['calls'], 'mean_ms': round(v['ms'] / v['calls'])}
+                                 for k, v in sorted(phases.items())}}
+    return summary
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--bank', type=Path, nargs='+', default=[ROOT / 'evaluation/h3/agnostic-validation-v1.jsonl'])
@@ -166,7 +192,10 @@ def main():
                    'assessment': trace.get('assessment', {}).get('action'),
                    'score': (trace.get('candidates') or [{}])[0].get('rerank_score'),
                    'policy_inherited': trace.get('decision', {}).get('policy_inherited'),
-                   'seconds': round(elapsed, 1), 'failures': failures, 'passed': not failures}
+                   'seconds': round(elapsed, 1), 'chat_latency': trace.get('chat_latency'),
+                   'retrieval_latency': trace.get('latency'),
+                   'llm': {k: v for k, v in (trace.get('llm') or {}).items() if k != 'trace'} or None,
+                   'failures': failures, 'passed': not failures}
             rows.append(row | {'question': case['query'], 'query': trace.get('query'), 'content': message.get('content'),
                                'sources': message.get('sources')})
             private.write_text(json.dumps(rows, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
@@ -187,7 +216,9 @@ def main():
                                                      for r in rows if (r['chat_outcome'] or {}).get('fallback'))),
                'by_kind': {}, 'by_domain': {}, 'failures': {}, 'cases': [{k: v for k, v in r.items()} for r in
                    [{key: row[key] for key in ('id', 'kind', 'language', 'domain', 'status', 'chat_outcome', 'decision',
-                     'assessment', 'score', 'policy_inherited', 'seconds', 'failures', 'passed')} for row in rows]]}
+                     'assessment', 'score', 'policy_inherited', 'seconds', 'chat_latency', 'retrieval_latency', 'llm',
+                     'failures', 'passed')} for row in rows]]}
+    summary['latency'] = latency_summary(rows)
     for key, field in (('by_kind', 'kind'), ('by_domain', 'domain')):
         for row in rows:
             entry = summary[key].setdefault(row[field], {'passed': 0, 'total': 0})
@@ -198,6 +229,7 @@ def main():
     public.write_text(json.dumps(summary, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
     print(f"{summary['passed']}/{summary['total']} correctas, {summary['improper_answers']} indebidas, "
           f"{summary['unsupported_numbers']} cifras sin respaldo; fallos={summary['failures']}")
+    print('latencia:', json.dumps(summary['latency'], ensure_ascii=False))
     sys.exit(0 if summary['passed'] == summary['total'] else 1)
 
 

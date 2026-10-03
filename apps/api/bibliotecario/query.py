@@ -113,3 +113,24 @@ def content_words(text):
 def adds_context(question, rewrite, history):
     """Whether a rewrite of a dependent follow-up brings in a topic word from the history."""
     return bool((content_words(rewrite) - content_words(question)) & content_words(history))
+
+
+CONNECTORS = {'y', 'e', 'o', 'u', 'pero', 'and', 'or', 'but'}
+PRONOUNS = {'ella', 'ellas', 'ellos', 'it', 'its', 'they', 'them', 'their', 'this', 'that', 'these',
+            'those', 'he', 'she', 'his', 'her', 'him'}
+
+
+def standalone(question, history):
+    """A follow-up that needs no rewrite: a complete question on a new topic.
+
+    Conservative by design; any sign of dependence keeps the LLM rewrite: ellipsis
+    or references (needs_context), connectors and pronouns (also English), nominal
+    ellipsis ('el de Wikipedia'), resolvable words ('ese documento', 'después') or
+    any content word shared with the history (the same topic may need its subject).
+    """
+    words = re.findall(r'[^\W_]+', _plain(question))
+    return bool(words) and not (
+        needs_context(question) or words[0] in CONNECTORS or set(words) & (PRONOUNS | REPLACEABLE)
+        or re.search(r'\bél\b', question.lower())
+        or re.search(r'\b(?:el|la|los|las|lo)\s+(?:de|del|que)\b', _plain(question))
+        or content_words(question) & content_words(history))

@@ -10,7 +10,7 @@ from sqlalchemy import select
 from test_h1 import application, login, settings  # noqa: F401
 from test_h2 import headers
 from test_h3 import reviewed, queue
-from bibliotecario.chat import answer_schema, validate_answer, summarize_history, verify_grounding
+from bibliotecario.chat import answer_schema, attach_quotes, validate_answer, summarize_history, verify_grounding
 from bibliotecario.indexing import finalize_index, model_signature
 from bibliotecario.models import Conversation, Message, EvidencePolicy, RetrievalRun
 from bibliotecario.providers import ModelClients, ProviderError
@@ -191,6 +191,22 @@ def test_answer_schema_requires_every_assessed_passage_once_in_order():
     assert [i['properties']['citation_id']['const'] for i in evidence['prefixItems']] == ['C1', 'C2']
     assert evidence['items'] is False and evidence['minItems'] == evidence['maxItems'] == 2
     assert schema['required'] == ['evidence'] and schema['additionalProperties'] is False
+
+
+def test_generation_does_not_copy_passages_but_answers_carry_the_exact_quote():
+    sources = [{'citation_id': 'C1', 'quote': 'Primer paso.'}, {'citation_id': 'C2', 'quote': 'Segundo paso.'}]
+    # Copying each passage was most of the decoded tokens; the server attaches it instead.
+    assert all('quote' not in item['properties'] for item in answer_schema(sources)['properties']['evidence']['prefixItems'])
+    raw = json.dumps({'evidence': [{'citation_id': 'C1', 'explanation': 'Se empieza por el primer paso.'},
+                                   {'citation_id': 'C2', 'explanation': 'Después viene el segundo.'}]})
+    content, used, validation = validate_answer(attach_quotes(raw, sources), sources)
+    assert [c['source'] for c in validation['claims']] == ['Primer paso.', 'Segundo paso.'] and len(used) == 2
+    # A marker without a passage or a quote written by the model is still checked.
+    with pytest.raises(ValueError, match='unsupported_claim'):
+        validate_answer(attach_quotes(json.dumps({'evidence': [{'citation_id': 'C3', 'explanation': 'x'}]}), sources), sources)
+    with pytest.raises(ValueError, match='unsupported_claim'):
+        validate_answer(attach_quotes(json.dumps({'evidence': [{'citation_id': 'C1', 'quote': 'Paso inventado.',
+                                                                'explanation': 'x'}]}), sources), sources)
 
 
 def test_answers_cannot_add_text_outside_the_cited_explanations():

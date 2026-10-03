@@ -258,3 +258,29 @@ def test_library_titles_cannot_supply_a_missing_referent():
 def test_resolved_references_are_not_reported_as_missing_terms(question, rewrite):
     assert missing_terms(question, rewrite) == []
     assert missing_terms("¿Y la reina?", "¿Quién clasificó a la abeja europea?") == ["reina"]
+
+
+def test_complete_follow_ups_on_a_new_topic_skip_the_rewrite():
+    from bibliotecario.query import standalone
+    class Clients:
+        settings = SimpleNamespace(sufficiency_reasoning_effort="disabled")
+
+        def __init__(self):
+            self.calls = 0
+
+        async def generate(self, messages, **kwargs):
+            self.calls += 1
+            return "¿Cuántas palabras tiene el corpus Wikipedia usado por BERT?"
+    recent = [{"role": "user", "content": "¿Qué corpus usa BERT para preentrenar?", "references": [{"title": "BERT"}]},
+              {"role": "assistant", "content": "BooksCorpus y Wikipedia.", "references": []}]
+    clients = Clients()
+    assert asyncio.run(contextual_query(clients, "por favor, ¿cuántos mundiales ha ganado Italia?", "", recent))         == "¿cuántos mundiales ha ganado Italia?" and clients.calls == 0
+    history = "¿Qué corpus usa BERT para preentrenar? BooksCorpus y Wikipedia. BERT"
+    # Any sign of dependence on the conversation keeps the rewrite.
+    for question in ["¿Cuántas palabras tiene el de Wikipedia?", "¿Y Argentina?", "¿En qué años?",
+                     "En ese artículo, ¿qué capas tiene?", "¿Cuántos parámetros tiene BERT?", "And the queen?",
+                     "¿Qué viene después?", "¿Cuándo murió él?", "¿Lo puedo usar en Linux?", "¿Qué ventajas tiene?"]:
+        assert not standalone(question, history), question
+    assert standalone("How long does a queen bee live?", history)
+    asyncio.run(contextual_query(clients, "¿Cuántas palabras tiene el de Wikipedia?", "", recent))
+    assert clients.calls == 1

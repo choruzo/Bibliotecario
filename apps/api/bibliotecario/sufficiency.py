@@ -1,4 +1,5 @@
 """Fail-closed evidence assessment shared by search, chat and calibration."""
+import asyncio
 import hashlib
 import json
 from typing import Literal
@@ -7,10 +8,10 @@ import httpx
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from .indexing import model_signature
-from .providers import ProviderError
+from .providers import LLM_PHASE, ProviderError
 from .query import REWRITE_PROMPT, REWRITE_TOKENS, COURTESY, ACCENTS, CONTEXT_GUARD_VERSION, requires_specific_context
 
-VERSION = "h4-sufficiency-v4-direct-implication-subject"
+VERSION = "h4-sufficiency-v5-parallel-intent"
 INTENT_MAX_TOKENS = 2000
 ASSESSMENT_MAX_TOKENS = 4000
 CLARIFICATION = "Para responder necesito concretar el contexto: ¿qué documento, sistema u objeto quieres consultar y qué operación necesitas realizar?"
@@ -89,47 +90,58 @@ class Intent(BaseModel):
 
 def policy_signature(settings):
     # Index vectors retain their H3 signature; only evidence policies are invalidated.
-    contract = [VERSION, "colloquial-retrieval-v3:intent-question-first:lexical-or:context60-36000", "followup-last-question-terms-v4-history-topic", CONTEXT_GUARD_VERSION, REWRITE_PROMPT, REWRITE_TOKENS, COURTESY, ACCENTS, "temperature=0", INTENT_MAX_TOKENS, ASSESSMENT_MAX_TOKENS, Intent.model_json_schema(), Assessment.model_json_schema(),
+    contract = [VERSION, "colloquial-retrieval-v3:intent-question-first:lexical-or:context60-36000", "followup-last-question-terms-v5-standalone-skip", CONTEXT_GUARD_VERSION, REWRITE_PROMPT, REWRITE_TOKENS, COURTESY, ACCENTS, "temperature=0", INTENT_MAX_TOKENS, ASSESSMENT_MAX_TOKENS, Intent.model_json_schema(), Assessment.model_json_schema(),
                 INTENT_PROMPT, PROMPT, model_signature(settings), settings.llm_base_url, settings.llm_model, settings.llm_upstream_model,
                 settings.model_timeout_seconds, settings.sufficiency_reasoning_effort]
     return hashlib.sha256(json.dumps(contract).encode()).hexdigest()
 
 
+async def classify(clients, payload):
+    LLM_PHASE.set("intent")
+    return Intent.model_validate_json(await clients.generate([
+        {"role": "system", "content": INTENT_PROMPT},
+        {"role": "user", "content": json.dumps(payload, ensure_ascii=False)}
+    ], max_tokens=INTENT_MAX_TOKENS, response_schema=Intent.model_json_schema()))
+
+
+async def evaluate(clients, query, sources):
+    LLM_PHASE.set("assessment")
+    schema = Assessment.model_json_schema()
+    schema['$defs']['Support']['properties']['chunk_id']['enum'] = [s['chunk_id'] for s in sources]
+    return await clients.generate([
+        {"role": "system", "content": PROMPT},
+        {"role": "user", "content": json.dumps({"question": query, "sources": sources}, ensure_ascii=False)}
+    ], max_tokens=ASSESSMENT_MAX_TOKENS, response_schema=schema)
+
+
 async def assess(clients, query, candidates):
-    sources = [{"chunk_id": c["chunk_id"], "text": c["search_content"]} for c in candidates[:60]]
+    # Full chunk UUIDs: shorter labels saved ~1 s of decoding but shifted borderline
+    # coverage decisions of the model (priority 5 calibration), so they were dropped.
+    chunks = {c["chunk_id"]: c for c in candidates[:60]}
+    sources = [{"chunk_id": cid, "text": c["search_content"]} for cid, c in chunks.items()]
     if requires_specific_context(query):
         return {"action": "clarify", "coverage_complete": False, "contradiction": False,
                 "support": [], "version": VERSION, "reason": "ambiguous_question"}
+    # The assessment runs while intent is classified, hiding the intent latency. Intent
+    # still never sees passage text, and an ambiguous question cancels the assessment.
+    assessment = asyncio.create_task(evaluate(clients, query, sources)) if sources else None
     try:
-        intent = Intent.model_validate_json(await clients.generate([
-            {"role": "system", "content": INTENT_PROMPT},
-            {"role": "user", "content": json.dumps({"question": query}, ensure_ascii=False)}
-        ], max_tokens=INTENT_MAX_TOKENS, response_schema=Intent.model_json_schema()))
+        intent = await classify(clients, {"question": query})
         # Document availability must not make an explicit but uncovered question
         # ambiguous. Library context only gets a chance to resolve an unclear topic.
         if not intent.clear and sources:
-            intent = Intent.model_validate_json(await clients.generate([
-            {"role": "system", "content": INTENT_PROMPT},
-            {"role": "user", "content": json.dumps({"question": query,
+            intent = await classify(clients, {"question": query,
                 "document_titles": list(dict.fromkeys(c.get("title", "") for c in candidates[:10])),
                 "sections": list(dict.fromkeys(section for c in candidates[:10]
-                    for locator in c.get("provenance", []) for section in locator.get("section_path", [])))}, ensure_ascii=False)}
-        ], max_tokens=INTENT_MAX_TOKENS, response_schema=Intent.model_json_schema()))
+                    for locator in c.get("provenance", []) for section in locator.get("section_path", [])))})
         if not intent.clear:
             return {"action": "clarify", "coverage_complete": False, "contradiction": False,
                     "support": [], "version": VERSION, "reason": "ambiguous_question"}
         if not sources:
             return {"action": "abstain", "coverage_complete": False, "contradiction": False,
                     "support": [], "version": VERSION, "reason": "no_evidence"}
-        schema = Assessment.model_json_schema()
-        schema['$defs']['Support']['properties']['chunk_id']['enum'] = [s['chunk_id'] for s in sources]
-        raw = await clients.generate([
-            {"role": "system", "content": PROMPT},
-            {"role": "user", "content": json.dumps({"question": query, "sources": sources}, ensure_ascii=False)}
-        ], max_tokens=ASSESSMENT_MAX_TOKENS, response_schema=schema)
-        value = Assessment.model_validate_json(raw)
-        allowed = {s["chunk_id"]: s["text"] for s in sources}
-        if any(s.chunk_id not in allowed for s in value.support):
+        value = Assessment.model_validate_json(await assessment)
+        if any(s.chunk_id not in chunks for s in value.support):
             raise ValueError("unsupported_assessment")
         if value.action == "answer" and (not value.coverage_complete or value.contradiction):
             # Explicit negative coverage/contradiction flags always dominate an
@@ -142,7 +154,7 @@ async def assess(clients, query, candidates):
         if value.action != "answer" and (value.coverage_complete or value.support):
             raise ValueError("inconsistent_assessment")
         return value.model_dump() | {"version": VERSION, "reason": "evidence_assessed",
-                                    "support": [{"chunk_id": s.chunk_id, "quote": allowed[s.chunk_id]}
+                                    "support": [{"chunk_id": s.chunk_id, "quote": chunks[s.chunk_id]["search_content"]}
                                                 for s in value.support]}
     except (httpx.HTTPError, ProviderError, ValidationError, ValueError, TypeError) as exc:
         error = ("provider_timeout" if isinstance(exc, httpx.TimeoutException) else
@@ -151,3 +163,8 @@ async def assess(clients, query, candidates):
                  else "invalid_assessment" if isinstance(exc, (ValidationError, ValueError, TypeError)) else "provider_error")
         return {"action": "abstain", "coverage_complete": False, "contradiction": False,
                 "support": [], "version": VERSION, "reason": "assessment_failed", "error": error}
+    finally:
+        if assessment and not assessment.done():
+            assessment.cancel()
+        elif assessment and not assessment.cancelled():
+            assessment.exception()  # Retrieved: an unused failure is not an unhandled one.

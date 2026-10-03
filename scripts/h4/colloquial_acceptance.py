@@ -5,6 +5,8 @@ Reports containing internal document passages remain in ignored .artifacts.
 import argparse
 import hashlib
 import json
+import sys
+import time
 from pathlib import Path
 
 import httpx
@@ -72,8 +74,10 @@ def main():
                     response.raise_for_status()
                     cid = response.json()['id']
                     conversations[name] = cid
+                started = time.monotonic()
                 response = client.post(f'/chat/conversations/{cid}/messages', json={'content': question}, headers=headers)
                 response.raise_for_status()
+                elapsed = round(time.monotonic() - started, 1)
                 events = [json.loads(line) for line in response.text.splitlines()]
                 message = events[-1].get('message', {})
                 if not isinstance(message, dict):
@@ -100,14 +104,19 @@ def main():
                     passed &= download.status_code == 200
                     passed &= hashlib.sha256(download.content).hexdigest() == source['source_sha256']
                 row = {'id': name, 'question': question, 'expected': expected, 'conversation_id': cid,
-                       'message': message, 'trace': trace, 'passed': passed}
-                print(f"{name}: {'PASS' if passed else 'FAIL'}, {trace.get('chat_outcome')}"
+                       'message': message, 'trace': trace, 'seconds': elapsed, 'status': message.get('status'),
+                       'llm': {k: v for k, v in (trace.get('llm') or {}).items() if k != 'trace'} or None, 'passed': passed}
+                print(f"{name}: {'PASS' if passed else 'FAIL'}, {trace.get('chat_outcome')}, {elapsed}s"
                       + (f", error={message['error']}" if message.get('error') else ''), flush=True)
             rows.append(row)
             (output / f'{args.scope}.json').write_text(json.dumps(rows, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
         client.post('/auth/logout', headers=headers).raise_for_status()
         inspector.post('/auth/logout', headers={'Origin': origin,
             'X-CSRF-Token': inspector.get('/auth/me').json()['csrf_token']}).raise_for_status()
+    if not args.search_only:
+        sys.path.insert(0, str(ROOT / 'scripts/h4'))
+        from agnostic_acceptance import latency_summary
+        print('latencia:', json.dumps(latency_summary(rows), ensure_ascii=False))
     if not args.search_only and not all(row['passed'] for row in rows):
         raise SystemExit(1)
 
