@@ -1,7 +1,7 @@
 # Traspaso para la siguiente sesión (RAG Bibliotecario)
 
 Redactado el 2026-10-01 para pegarlo como *prompt* inicial de una sesión limpia de Claude Code.
-Último commit de referencia: `f75b681 fix: pin images by digest and migrate generation to Gemma 4` (prioridad 1 hecha; ver `docs/h3/model-pinning-gemma.md`).
+Último commit de referencia: `f3dfeca integrate: choruzo/pdf-conv-layout-7000f0-2` (prioridades 1 a 6 hechas; ver `docs/h3/model-pinning-gemma.md`, `docs/h3/agnostic-evaluation.md`, `docs/h3/chunk-grouping.md`, `docs/h3/general-explanation.md`, `docs/h3/llm-calls.md` y `docs/h3/pdf-conversion.md`).
 
 ## Encargo
 
@@ -63,10 +63,10 @@ Está en `.artifacts/agnostic-corpus/`, carpeta ignorada por Git. Todos son de l
 
 `bee_chat_check.py`, en la misma carpeta, es el script de comprobación de la abeja. `republish` sube una nueva versión del PDF, la revisa y la publica; `chat` lanza 6 preguntas y comprueba el estado, las cifras citadas y el sujeto conservado. Sirve de plantilla para el arnés general (prioridad 2).
 
-**Hallazgos de esa conversión que aún no están corregidos:**
+**Hallazgos de esa conversión:**
 - ~~Los fragmentos son minúsculos~~: corregido por la prioridad 3.
-- Los PDF de arXiv a dos columnas pierden texto y ecuaciones en muchas páginas.
-- La conversión es lenta: hasta 64 s para 37 páginas, en parte porque `recover_pdf_page` llama a `find_tables` en todas las páginas.
+- ~~La conversión es lenta~~: corregido por la prioridad 6 (−34 %); `find_tables` ya solo corre en páginas con pérdida.
+- Los PDF de arXiv a dos columnas siguen perdiendo texto y ecuaciones: `layout` no lo arregla (`arxiv-bert-en.pdf` pasa de 12 a 14 páginas con pérdida).
 
 ## Plan, por prioridad
 
@@ -87,8 +87,8 @@ Cada punto incluye su criterio de aceptación. No pases al siguiente sin medir e
    - *Aceptación*: más respuestas `grounded`, 0 cifras no respaldadas y 0 regresiones en la aceptación.
 5. ~~**Reducir llamadas al LLM.**~~ Hecho; ver `docs/h3/llm-calls.md`. El cuello de botella eran los tokens decodificados, no el número de llamadas. No se fusionó intención y suficiencia, porque la intención no debe ver los pasajes; se hacen en paralelo. La generación ya no copia los pasajes, y los seguimientos autónomos no se reformulan. Respuestas p50/p95 de 14,5/30,8 s a 8,0/13,1 s; agnóstico 62/64 con 45 `grounded` / 1 `grounded_extract`; validación 45/46 (`VAL2-A008` se abstiene). Los identificadores cortos en la evaluación se descartaron porque cambiaban decisiones. Fusiona la intención y la suficiencia en una sola llamada estructurada, y no reformules cuando `needs_context` sea falso y no haya historial relevante. Las latencias por fase están en `result.latency` de cada `RetrievalRun`.
    - *Aceptación*: p50/p95 de latencia del chat medidos antes y después, y la misma calidad en los bancos.
-6. **Conversión PDF.** Compara `pymupdf_layout`, que la propia librería recomienda en sus avisos, o el modo no *legacy* de pymupdf4llm frente a la recuperación heurística actual. Usa el corpus agnóstico, sobre todo arXiv, el Mundial y la tabla periódica. Mide la cobertura de palabras por página, las tablas correctas y el tiempo de conversión. Limita `find_tables` a las páginas con pérdida detectada.
-   - *Aceptación*: menos páginas con `pdf_text_loss`, tablas con correspondencia correcta entre fila y columna y conversión más rápida.
+6. ~~**Conversión PDF.**~~ Hecho; ver `docs/h3/pdf-conversion.md`. `recover_pdf_page` ya calcula la pérdida antes de `find_tables()` y solo escanea tablas en páginas con texto perdido: Markdown **idéntico por SHA-256** en los 17 PDF y conversión de 167,4 s a 110,3 s (−34 %, 412 páginas). Se midieron tres estrategias (`legacy`, `layout` con `pymupdf-layout`, `tables-lines`): `layout` baja las páginas con pérdida de 26 a 19 pero empeora tablas (19 → 13 con todas sus palabras; 1496 → 4983 palabras perdidas) y tarda +40,6 %, y encima `arxiv-bert-en.pdf` empeora (12 → 14). Decisión: el defecto sigue `legacy`; `BIB_PDF_LAYOUT=layout` queda disponible con el extra opcional `pymupdf-layout` y caída a `legacy` + diagnóstico `pdf_layout_unavailable`. Como el defecto no cambia, **no hace falta reindexar ni recalibrar**.
+   - *Aceptación*: «conversión más rápida» cumplida (−34 %). «Menos páginas con `pdf_text_loss`» solo se logra con `layout`, que no se adopta por tablas y tiempo. La correspondencia fila/columna quedó sin métrica fiable (la de palabras no distingue orden); está documentada como limitación.
 7. **Primeras preguntas en otro idioma.** «How long does a queen bee live?» se abstenía en primer turno porque no se traduce; con la agrupación de fragmentos ya se responde, pero el comportamiento translingüe sigue dependiendo de la pregunta. Valora traducir o normalizar en el primer turno solo cuando el idioma no sea español, y añade estos casos a los bancos.
 8. **Política heredada.** Mide en la práctica si heredar el umbral al publicar documentos nuevos introduce respuestas indebidas: publica el corpus agnóstico con la política heredada y pasa el banco agnóstico antes de recalibrar.
 
