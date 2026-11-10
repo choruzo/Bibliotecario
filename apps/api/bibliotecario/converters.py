@@ -192,7 +192,9 @@ def recover_pdf_page(page, markdown):
     """Return (leading, trailing, diagnostics) for page text the layout conversion dropped.
 
     Tables and text blocks are only added when their words are missing from the
-    converted page, so correctly converted content is never duplicated.
+    converted page, so correctly converted content is never duplicated. Page
+    loss is measured before table detection and pages with no missing text skip
+    the expensive ``find_tables()`` scan.
     """
     available, number = _words(markdown), page.number + 1
     stream = [_stream(markdown)]
@@ -200,6 +202,21 @@ def recover_pdf_page(page, markdown):
     blocks = [b for b in page.get_text("blocks") if b[6] == 0 and b[4].strip()]
     missing = {id(b): _block_missing(b[4], stream[0], available) > 0.5 for b in blocks}
     first_present = min((b[1] for b in blocks if not missing[id(b)]), default=float("inf"))
+    # Page loss is known before table detection: the page text is already
+    # available and the converted Markdown has not changed yet. Table detection
+    # is expensive, so only pages with missing text can hold a table worth
+    # rebuilding; a page without a single missing block line is left untouched.
+    source = _words(page.get_text())
+    total = sum(source.values())
+
+    def coverage():
+        return 1 - sum((source - available).values()) / total if total else 1.0
+
+    pre_runs = None
+    scan_tables = any(missing.values()) or coverage() < PDF_MIN_COVERAGE
+    if not scan_tables:
+        pre_runs = {id(b): _missing_runs(b[4], stream[0], available) for b in blocks}
+        scan_tables = any(pre_runs.values())
 
     def place(y, text):
         # Content above the first converted block continues the previous page's section.
@@ -207,10 +224,12 @@ def recover_pdf_page(page, markdown):
         available.update(_words(text))
         stream[0] += _stream(text)
 
-    try:
-        tables = page.find_tables().tables
-    except Exception:  # pragma: no cover - PyMuPDF table detection is best effort
-        tables = []
+    tables = []
+    if scan_tables:
+        try:
+            tables = page.find_tables().tables
+        except Exception:  # pragma: no cover - PyMuPDF table detection is best effort
+            tables = []
     for table in tables:
         text = page.get_textbox(table.bbox)
         if _missing(text, available) <= 0.2:
@@ -221,17 +240,20 @@ def recover_pdf_page(page, markdown):
             boxes.append(table.bbox)
             if f"pdf_tables_recovered_page_{number}" not in diagnostics:
                 diagnostics.append(f"pdf_tables_recovered_page_{number}")
-    for block in blocks:
-        if any(_center_in(block[:4], box) for box in boxes):
-            continue
-        for lines in _missing_runs(block[4], stream[0], available):
-            # Escape leading markdown markers so recovered text stays inert paragraph text.
-            place(block[1], "\n".join(re.sub(r"^([#>*+\-|]|\d+[.)])", r"\\\1", line) for line in lines))
-            if f"pdf_text_recovered_page_{number}" not in diagnostics:
-                diagnostics.append(f"pdf_text_recovered_page_{number}")
-    source = _words(page.get_text())
-    total = sum(source.values())
-    if total and 1 - sum((source - available).values()) / total < PDF_MIN_COVERAGE:
+    # A page whose pre-scan found no missing run at all (and where no table was
+    # placed) has nothing left to recover. Otherwise the runs are recomputed per
+    # block, because recovered text updates the available words for later blocks.
+    clean = pre_runs is not None and not boxes and not any(pre_runs.values())
+    if not clean:
+        for block in blocks:
+            if any(_center_in(block[:4], box) for box in boxes):
+                continue
+            for lines in _missing_runs(block[4], stream[0], available):
+                # Escape leading markdown markers so recovered text stays inert paragraph text.
+                place(block[1], "\n".join(re.sub(r"^([#>*+\-|]|\d+[.)])", r"\\\1", line) for line in lines))
+                if f"pdf_text_recovered_page_{number}" not in diagnostics:
+                    diagnostics.append(f"pdf_text_recovered_page_{number}")
+    if total and coverage() < PDF_MIN_COVERAGE:
         diagnostics.append(f"pdf_text_loss_page_{number}")
     order = lambda items: [text for _, text in sorted(items, key=lambda item: item[0])]
     return order(leading), order(trailing), diagnostics
