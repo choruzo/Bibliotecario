@@ -78,7 +78,7 @@ foreach ($file in @(Get-ChildItem $stateDir -Filter 'loop-*.json' -File -ErrorAc
 
 # Validar Run y tareas.
 $runResponse = Invoke-Orca orchestration run-show --id $RunId --json
-$run = (Get-OrcaResult $runResponse).run
+$run = Get-RunRecord $runResponse
 if (-not $run) { throw "No existe el Run $RunId." }
 
 $taskResponse = Invoke-Orca orchestration task-list --run $RunId --json

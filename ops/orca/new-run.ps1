@@ -9,13 +9,14 @@ param(
 
 $coordinator = Get-Coordinator
 $runResponse = Invoke-Orca orchestration run-create --from $coordinator --objective $Objective --json
-$run = (Get-OrcaResult $runResponse).run
+$run = Get-RunRecord $runResponse
 Write-Output "RUN=$($run.id)"
 
 if ($TaskTitle) {
     if (-not $Spec) { $Spec = "Tarea $TaskTitle" }
     $taskResponse = Invoke-Orca orchestration task-create --from $coordinator --run $run.id --task-title $TaskTitle --spec $Spec --deps $Deps --json
-    $task = (Get-OrcaResult $taskResponse).task
-    Write-Output "TASK=$($task.id)"
+    $taskResult = Get-OrcaResult $taskResponse
+    $taskId = if ($taskResult.PSObject.Properties['taskId']) { $taskResult.taskId } else { $taskResult.task.id }
+    Write-Output "TASK=$taskId"
 }
 

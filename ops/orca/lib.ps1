@@ -53,6 +53,24 @@ function Get-OrcaResult {
     return $Response.result
 }
 
+function Get-RunRecord {
+    # Orca 1.4 devuelve `runId`/`objective` en la raiz de run-show y run-create;
+    # el kit antiguo esperaba `result.run` con `id` y `created_at`. Acepta ambos.
+    param([Parameter(Mandatory)]$Response)
+
+    $result = Get-OrcaResult $Response
+    if ($result.PSObject.Properties['run'] -and $result.run) { return $result.run }
+
+    $id = if ($result.PSObject.Properties['runId']) { $result.runId } else { $result.id }
+    if (-not $id) { return $null }
+
+    return [pscustomobject]@{
+        id         = $id
+        objective  = $result.objective
+        created_at = if ($result.PSObject.Properties['createdAt']) { $result.createdAt } else { $null }
+    }
+}
+
 function Get-StateDir {
     $dir = Join-Path (Get-RepoRoot) '.orca-run'
     if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Force -Path $dir | Out-Null }
@@ -106,7 +124,7 @@ function Bind-Run {
     )
 
     $current = Invoke-Orca orchestration run-current --from $Coordinator --json
-    if ($current.ok -and $current.result.run -and $current.result.run.id -eq $RunId) { return }
+    if ($current.ok -and (Get-RunRecord $current).id -eq $RunId) { return }
 
     $used = Invoke-Orca orchestration run-use --id $RunId --from $Coordinator --json
     if (-not $used.ok) {
@@ -115,8 +133,9 @@ function Bind-Run {
 }
 
 function Get-TaskSlug {
-    param([Parameter(Mandatory)][string]$Title)
+    param([string]$Title = '')
 
+    if ([string]::IsNullOrWhiteSpace($Title)) { return 'task' }
     $slug = $Title.ToLowerInvariant() -replace '[^a-z0-9]+', '-' -replace '^-+|-+$', ''
     if ($slug.Length -gt 40) { $slug = $slug.Substring(0, 40).TrimEnd('-') }
     if (-not $slug) { $slug = 'task' }

@@ -137,7 +137,8 @@ function Get-RunInfo {
     param([Parameter(Mandatory)][string]$Id)
     if ($script:RunCache.ContainsKey($Id)) { return $script:RunCache[$Id] }
     $response = Invoke-Orca orchestration run-show --id $Id --json
-    $run = (Get-OrcaResult $response).run
+    $run = Get-RunRecord $response
+    if (-not $run) { return $null }
     $run | Add-Member -NotePropertyName createdAt -NotePropertyValue (ConvertTo-IsoString $run.created_at) -Force
     $run | Add-Member -NotePropertyName createdAtValue -NotePropertyValue (ConvertTo-DateTimeOffset $run.created_at) -Force
     $script:RunCache[$Id] = $run

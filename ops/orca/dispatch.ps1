@@ -14,7 +14,7 @@ $repoId = Get-RepoId
 $stateDir = Get-StateDir
 $dispatches = @(Read-Dispatches -RunId $RunId)
 
-$taskResponse = Invoke-Orca orchestration task-list --from $coordinator --run $RunId --json
+$taskResponse = Invoke-Orca orchestration task-list --from $coordinator --run $RunId --json --full
 $tasks = @((Get-OrcaResult $taskResponse).tasks)
 
 $active = @($tasks | Where-Object { $_.status -eq 'dispatched' }).Count
@@ -32,7 +32,7 @@ if ($ready.Count -eq 0) {
 }
 
 foreach ($task in $ready) {
-    $slug = Get-TaskSlug -Title $task.task_title
+    $slug = Get-TaskSlug -Title ($(if ($task.task_title) { $task.task_title } elseif ($task.display_name) { $task.display_name } else { $task.title }))
     $shortId = Get-TaskShortId -TaskId $task.id
     $name = "$slug-$shortId"
 
