@@ -118,21 +118,33 @@ function Request-Changes {
 function Handle-Done {
     param($Message)
 
+    # Orca puede entregar `payload` como objeto ya parseado o como cadena JSON.
     $payload = $null
-    try { $payload = $Message.payload | ConvertFrom-Json } catch { $payload = $null }
-    if (-not $payload -or -not $payload.taskId) {
-        Write-Warning "worker_done sin taskId: $($Message.id)"
+    try {
+        $payload = if ($Message.payload -is [string]) { $Message.payload | ConvertFrom-Json } else { $Message.payload }
+    }
+    catch { $payload = $null }
+
+    $taskId = if ($payload) { $payload.taskId } else { $null }
+    if (-not $taskId -and $payload -and $payload.dispatchId) {
+        $match = @($script:Dispatches | Where-Object { $_.dispatchId -eq $payload.dispatchId }) | Select-Object -Last 1
+        if ($match) { $taskId = $match.taskId }
+    }
+    if (-not $taskId -and $Message.from) {
+        $match = @($script:Dispatches | Where-Object { $_.workerHandle -eq $Message.from }) | Select-Object -Last 1
+        if ($match) { $taskId = $match.taskId }
+    }
+    if (-not $taskId) {
+        Write-Warning "worker_done sin taskId ni dispatch reconocible: $($Message.id)"
         return 'CONTINUE'
     }
-
-    $taskId = $payload.taskId
     $record = Get-Record -TaskId $taskId
     if (-not $record) {
         Write-Warning "No hay mapping local para $taskId"
         return 'CONTINUE'
     }
 
-    if ($payload.outcome -ne 'succeeded') {
+    if ($payload -and $payload.outcome -and $payload.outcome -ne 'succeeded') {
         $update = Invoke-Orca orchestration task-update --from $coordinator --run $RunId --id $taskId --status failed --result "worker outcome: $($payload.outcome)" --json
         if (-not $update.ok) { Write-Warning $update.error.message }
         Set-RecordValue -Record $record -Name 'status' -Value 'failed'
@@ -239,6 +251,17 @@ while (-not $stopReason) {
             break
         }
         if ($message.type -eq 'escalation') {
+            # Orca marca `needs-input` cuando el TUI queda quieto; en la practica el
+            # worker sigue trabajando en un comando largo. Solo se detiene el bucle
+            # ante una escalada de otro tipo (el watchdog cubre un worker de verdad parado).
+            $payload = $null
+            if ($message.payload) {
+                try { $payload = if ($message.payload -is [string]) { $message.payload | ConvertFrom-Json } else { $message.payload } } catch { $payload = $null }
+            }
+            if ($payload -and $payload.stopReason -eq 'needs-input') {
+                Write-Output "[loop] IGNORED needs-input $($message.id) task=$($payload.taskId)"
+                continue
+            }
             Write-Output "[loop] ESCALATION $($message.id): $($message.body)"
             $stopReason = 'ESCALATION'
             break
