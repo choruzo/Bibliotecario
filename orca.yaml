@@ -1,0 +1,4 @@
+worktree:
+  sharedDirectories:
+    - .venv
+    - apps/web/node_modules

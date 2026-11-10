@@ -26,3 +26,4 @@ node_modules/
 *.egg-info/
 .uv-cache/
 test-results/
+.orca-run/
