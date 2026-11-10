@@ -4,8 +4,9 @@
 Per PDF it reports pages, pages flagged with ``pdf_text_loss_page_*``, tables
 detected and rebuilt, words inside detected tables that are absent from the
 rebuilt Markdown, word coverage per page, Markdown size/SHA-256 and conversion
-seconds. Results are printed as JSON (one line per file plus a summary) and can
-be written to a single ``--json`` document.
+seconds. ``--layout`` selects the converter strategy (``legacy``, ``layout`` or
+the measurement-only ``tables-lines``). Results are printed as JSON (one line
+per file plus a summary) and can be written to a single ``--json`` document.
 
 The measurement runs the production conversion path (``bibliotecario.converters
 .convert``) from this worktree, not the editable install of the main checkout:
@@ -15,7 +16,7 @@ Usage::
 
     .venv/Scripts/python.exe scripts/h3/pdf_conversion_report.py \
         --corpus D:/Archivos/Javier/Proyectos/Bibliotecario/.artifacts/agnostic-corpus \
-        --json .orca-task/pdf-conversion-after.json
+        --layout legacy --json .orca-task/pdf-conversion-legacy.json
 """
 from __future__ import annotations
 
@@ -49,7 +50,8 @@ import bibliotecario.converters as converters  # noqa: E402
 
 DEFAULT_CORPUS = Path("D:/Archivos/Javier/Proyectos/Bibliotecario/.artifacts/agnostic-corpus")
 # Only the settings fields the PDF branch of convert()/validate_file() reads.
-SETTINGS = SimpleNamespace(normalized_max_bytes=20 * 1024 * 1024, extraction_max_pages=1000)
+SETTINGS = SimpleNamespace(normalized_max_bytes=20 * 1024 * 1024, extraction_max_pages=1000,
+                           pdf_layout="legacy")
 
 
 def _page_markdown(leading, chunk_text, trailing):
@@ -61,7 +63,7 @@ def _count(diagnostics, prefix):
     return sum(1 for item in diagnostics if item.startswith(prefix))
 
 
-def _convert(path):
+def _convert(path, layout="legacy"):
     """Run convert() while capturing each page's chunk and recovery result."""
     captured = {}
     original = converters.recover_pdf_page
@@ -73,11 +75,14 @@ def _convert(path):
         return leading, trailing, diagnostics
 
     converters.recover_pdf_page = capture
+    previous = getattr(SETTINGS, "pdf_layout", "legacy")
+    SETTINGS.pdf_layout = layout
     try:
         started = time.perf_counter()
         converted = converters.convert(path, "pdf", SETTINGS, filename=path.name)
         seconds = time.perf_counter() - started
     finally:
+        SETTINGS.pdf_layout = previous
         converters.recover_pdf_page = original
     return converted, captured, seconds
 
@@ -132,8 +137,8 @@ def _analyse_pages(document, captured):
     }
 
 
-def measure(path):
-    converted, captured, seconds = _convert(path)
+def measure(path, layout="legacy"):
+    converted, captured, seconds = _convert(path, layout)
     diagnostics = converted["diagnostics"]
     with pymupdf.open(path) as document:
         pages = len(document)
@@ -144,6 +149,8 @@ def measure(path):
         "bytes": path.stat().st_size,
         "pages": pages,
         "secs": round(seconds, 3),
+        "requested_layout": layout,
+        "pdf_layout": converted.get("pdf_layout", "legacy"),
         "markdown_bytes": len(markdown.encode("utf-8")),
         "sha256": converted["sha256"],
         "pages_text_loss": _count(diagnostics, "pdf_text_loss_page_"),
@@ -174,13 +181,16 @@ def main(argv=None):
     parser.add_argument("--corpus", type=Path, default=DEFAULT_CORPUS,
                         help="directory holding the PDFs (default: %(default)s)")
     parser.add_argument("--files", default="", help="comma-separated PDF names inside --corpus")
+    parser.add_argument("--layout", default="legacy",
+                        choices=list(converters.PDF_LAYOUT_STRATEGIES) + ["tables-lines"],
+                        help="PDF converter strategy (default: %(default)s)")
     parser.add_argument("--json", type=Path, default=None, help="write the full report to this path")
     args = parser.parse_args(argv)
 
     paths = select_files(args.corpus, args.files)
     records = []
     for path in paths:
-        record = measure(path)
+        record = measure(path, args.layout)
         records.append(record)
         console = {key: value for key, value in record.items()
                    if key not in {"diagnostics", "table_pages", "loss_pages"}}
@@ -188,6 +198,8 @@ def main(argv=None):
 
     slowest = sorted(records, key=lambda item: item["secs"], reverse=True)[:5]
     summary = {
+        "requested_layout": args.layout,
+        "fallbacks": sum(1 for item in records if item["pdf_layout"] != args.layout),
         "files": len(records),
         "pages": sum(item["pages"] for item in records),
         "secs": round(sum(item["secs"] for item in records), 3),

@@ -37,6 +37,10 @@ class Settings(BaseSettings):
     job_lease_seconds: int = Field(default=30, ge=10, le=300)
     worker_poll_seconds: float = Field(default=2, ge=0.5, le=60)
     conversion_timeout_seconds: int = Field(default=180, ge=10, le=1800)
+    # Estrategia de conversion PDF: ``legacy`` (pymupdf4llm clasico, por
+    # defecto) o ``layout`` (pymupdf.layout). El defecto solo cambia con
+    # evidencia medida; ver docs/h3/pdf-conversion.md.
+    pdf_layout: str = Field(default="legacy", pattern="^(legacy|layout)$")
     index_timeout_seconds: int = Field(default=900, ge=10, le=3600)
     retired_retention_days: int = Field(default=90, ge=0)
 
