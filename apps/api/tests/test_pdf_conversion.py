@@ -1,5 +1,31 @@
-"""PDF conversion recovery: table detection is limited to pages that lost text."""
-from bibliotecario.converters import recover_pdf_page
+"""PDF conversion recovery and selectable converter strategies."""
+import importlib.util
+import sys
+from types import SimpleNamespace
+
+from bibliotecario import converters
+from bibliotecario.config import Settings
+from bibliotecario.converters import convert, recover_pdf_page
+
+
+def pdf_settings(**changes):
+    """The Settings attributes read by convert()/validate_file() for PDFs."""
+    values = dict(normalized_max_bytes=20 * 1024 * 1024, extraction_max_pages=1000,
+                  pdf_layout="legacy")
+    return SimpleNamespace(**(values | changes))
+
+
+def two_column_pdf(path):
+    import pymupdf
+
+    pdf = pymupdf.open()
+    page = pdf.new_page()
+    left = "\n".join(f"Columna izquierda linea {n}." for n in range(1, 9))
+    right = "\n".join(f"Columna derecha linea {n}." for n in range(1, 9))
+    page.insert_textbox(pymupdf.Rect(60, 60, 280, 420), left, fontsize=11)
+    page.insert_textbox(pymupdf.Rect(320, 60, 540, 420), right, fontsize=11)
+    pdf.save(path)
+    pdf.close()
 
 
 class FakeTables:
@@ -113,3 +139,53 @@ def test_document_scan_calls_find_tables_only_on_lossy_pages():
     # The old implementation scanned every page of the document (2 calls).
     assert clean.find_tables_calls == 0
     assert sum(page.find_tables_calls for page in pages) == 1
+
+
+def test_pdf_layout_setting_defaults_to_legacy(tmp_path, monkeypatch):
+    values = dict(environment="test", database_url="sqlite://", storage_path=tmp_path,
+                  llm_api_key="test-secret", embedding_dimensions=3)
+    assert Settings(_env_file=None, **values).pdf_layout == "legacy"
+    monkeypatch.setenv("BIB_PDF_LAYOUT", "layout")
+    assert Settings(_env_file=None, **values).pdf_layout == "layout"
+
+
+def test_default_setting_does_not_change_the_conversion(tmp_path):
+    file = tmp_path / "two-columns.pdf"
+    two_column_pdf(file)
+    implicit = convert(file, "pdf", pdf_settings())
+    explicit = convert(file, "pdf", pdf_settings(pdf_layout="legacy"))
+    assert implicit["pdf_layout"] == "legacy"
+    assert implicit["sha256"] == explicit["sha256"]
+    assert implicit["markdown"] == explicit["markdown"]
+    assert implicit["diagnostics"] == explicit["diagnostics"]
+
+
+def test_missing_layout_extra_falls_back_to_legacy(tmp_path, monkeypatch):
+    file = tmp_path / "two-columns.pdf"
+    two_column_pdf(file)
+    # ``None`` in sys.modules makes ``import pymupdf.layout`` raise ImportError,
+    # which is exactly what happens when the optional extra is not installed.
+    monkeypatch.setitem(sys.modules, "pymupdf.layout", None)
+    result = convert(file, "pdf", pdf_settings(pdf_layout="layout"))
+    assert result["pdf_layout"] == "legacy"
+    assert "pdf_layout_unavailable" in result["diagnostics"]
+    assert result["sha256"] == convert(file, "pdf", pdf_settings())["sha256"]
+
+
+def test_layout_strategy_converts_a_small_pdf(tmp_path):
+    if importlib.util.find_spec("pymupdf.layout") is None:
+        import pytest
+
+        pytest.skip("optional pymupdf-layout extra is not installed")
+    file = tmp_path / "two-columns.pdf"
+    two_column_pdf(file)
+    result = convert(file, "pdf", pdf_settings(pdf_layout="layout"))
+    assert result["pdf_layout"] == "layout"
+    assert "pdf_layout_unavailable" not in result["diagnostics"]
+    assert result["provenance"][0]["page"] == 1
+    for expected in ("Columna izquierda linea 1.", "Columna izquierda linea 8.",
+                     "Columna derecha linea 1.", "Columna derecha linea 8."):
+        assert expected in result["markdown"]
+    # A two-column layout read in order keeps the left column before the right.
+    assert (result["markdown"].index("Columna izquierda linea 8.")
+            < result["markdown"].index("Columna derecha linea 1."))

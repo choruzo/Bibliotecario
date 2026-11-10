@@ -259,6 +259,60 @@ def recover_pdf_page(page, markdown):
     return order(leading), order(trailing), diagnostics
 
 
+PDF_LAYOUT_STRATEGIES = ("legacy", "layout")
+
+
+def _legacy_pdf_chunks(document, table_strategy="lines_strict"):
+    """Classic pymupdf4llm Markdown, one chunk per page (the historical path)."""
+    import pymupdf4llm
+
+    # Called through the module attribute so callers/tests can intercept it.
+    return pymupdf4llm.to_markdown(document, page_chunks=True, use_ocr=False,
+                                   write_images=False, ignore_images=True,
+                                   show_progress=False, table_strategy=table_strategy)
+
+
+def _layout_pdf_chunks(document):
+    """Markdown chunks from ``pymupdf.layout``; ``None`` when it is unavailable.
+
+    The extra is optional: importing ``pymupdf.layout`` activates PyMuPDF's
+    ONNX layout analyser, and ``pymupdf4llm`` exposes its layout writer as the
+    ``document_layout`` helper. Both imports are deferred and failures fall back
+    to the legacy converter instead of breaking ingestion.
+    """
+    try:
+        import pymupdf.layout  # noqa: F401  (activates pymupdf._get_layout)
+        from pymupdf4llm.helpers import document_layout
+    except ImportError:
+        return None
+    try:
+        parsed = document_layout.parse_document(document, filename=document.name,
+                                                write_images=False, embed_images=False,
+                                                force_text=True, use_ocr=False)
+        chunks = parsed.to_markdown(page_chunks=True)
+    except Exception:  # pragma: no cover - layout analyser/model failures
+        return None
+    if len(chunks) != document.page_count or any("text" not in chunk for chunk in chunks):
+        return None
+    return chunks
+
+
+def pdf_markdown_chunks(document, strategy="legacy"):
+    """Return ``(chunks, used_strategy)`` for the selected PDF converter.
+
+    Unsupported or unavailable strategies degrade to ``legacy`` so the
+    configurable option can never break an ingestion.
+    """
+    if strategy == "layout":
+        chunks = _layout_pdf_chunks(document)
+        if chunks is not None:
+            return chunks, "layout"
+        return _legacy_pdf_chunks(document), "legacy"
+    if strategy == "tables-lines":  # measurement-only variant (table_strategy)
+        return _legacy_pdf_chunks(document, table_strategy="lines"), "tables-lines"
+    return _legacy_pdf_chunks(document), "legacy"
+
+
 def convert(path, fmt, settings, filename=None):
     validate_file(path, filename or f"original.{fmt}", None, settings)
     diagnostics, locators = [], []
@@ -270,7 +324,7 @@ def convert(path, fmt, settings, filename=None):
         locators = provenance(markdown, fmt)
     elif fmt == "pdf":
         import pymupdf
-        import pymupdf4llm
+        pdf_layout = None
         pieces, offset, sections = [], 0, []
         with pymupdf.open(path) as document:
             for page in document:
@@ -278,8 +332,10 @@ def convert(path, fmt, settings, filename=None):
                     diagnostics.append(f"possible_ocr_page_{page.number + 1}")
                 if page.get_images() and "pdf_images_omitted" not in diagnostics:
                     diagnostics.append("pdf_images_omitted")
-            chunks = pymupdf4llm.to_markdown(document, page_chunks=True, use_ocr=False,
-                                            write_images=False, ignore_images=True, show_progress=False)
+            strategy = getattr(settings, "pdf_layout", None) or "legacy"
+            chunks, pdf_layout = pdf_markdown_chunks(document, strategy)
+            if strategy == "layout" and pdf_layout == "legacy":
+                diagnostics.append("pdf_layout_unavailable")
             recovered = [recover_pdf_page(page, chunk["text"]) for page, chunk in zip(document, chunks)]
         for index, chunk in enumerate(chunks):
             leading, trailing, found = recovered[index]
@@ -298,5 +354,8 @@ def convert(path, fmt, settings, filename=None):
         raise InvalidFile("normalized_too_large")
     if not markdown.strip():
         diagnostics.append("empty_document")
-    return {"markdown": markdown, "provenance": locators, "diagnostics": diagnostics,
-            "sha256": hashlib.sha256(markdown.encode("utf-8")).hexdigest()}
+    result = {"markdown": markdown, "provenance": locators, "diagnostics": diagnostics,
+              "sha256": hashlib.sha256(markdown.encode("utf-8")).hexdigest()}
+    if fmt == "pdf":
+        result["pdf_layout"] = pdf_layout or "legacy"
+    return result
