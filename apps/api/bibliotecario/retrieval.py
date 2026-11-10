@@ -244,14 +244,21 @@ async def inspect(body: Search, request: Request, identity=Depends(require_csrf)
         if body.previous_questions:
             if any(not q.strip() or len(q) > 1000 for q in body.previous_questions):
                 raise ValueError("invalid_history")
-        # Same query normalization and contextual reformulation as chat.
+        # Same query normalization, translation and contextual reformulation as chat.
         from .chat import contextual_query
+        diagnostics = {}
         query = await contextual_query(request.app.state.clients, query, "",
                                        [{"role": "user", "content": q, "references": []}
-                                        for q in body.previous_questions])
+                                        for q in body.previous_questions], diagnostics=diagnostics)
         result = await retrieve(db, request.app.state.settings, request.app.state.clients,
                                 query, body.limit, body.document_id, admin=body.scope == "admin")
         result["question"] = body.query
+        result["translation"] = {key: diagnostics[key] for key in
+            ("language", "translation", "translation_ms", "translation_error") if key in diagnostics}
+        if diagnostics.get("translation") == "failed":
+            result["diagnostics"] = list(result.get("diagnostics", [])) + ["translation_failed"]
+        if "translation_ms" in diagnostics:
+            result.setdefault("latency", {})["translation_ms"] = diagnostics["translation_ms"]
         result["previous_questions"] = body.previous_questions
         result["llm"] = summarize_calls(calls) | {"trace": calls}
         run = RetrievalRun(actor_id=identity.user.id, query=query, status="completed", result=result, created_at=int(time.time()))
