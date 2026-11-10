@@ -18,7 +18,7 @@ La traza `4307af43-a37d-46ba-b1e7-b20fa6987d10`, correspondiente a la pregunta s
 
 ## Evaluación reproducible
 
-Los bancos `evaluation/h3/colloquial-calibration-v1.jsonl` y `evaluation/h3/colloquial-validation-v1.jsonl` conservan los casos originales H0/VAL2 y añaden preguntas coloquiales independientes: 32 casos de calibración y 31 de validación. No se divide un grupo conversacional entre ambos bancos.
+Los bancos `evaluation/h3/colloquial-calibration-v1.jsonl` y `evaluation/h3/colloquial-validation-v1.jsonl` conservan los casos originales H0/VAL2 y añaden preguntas coloquiales independientes: 32 casos de calibración y 31 de validación en su versión original. La validación tiene ahora 33 casos tras añadir dos primeras preguntas translingües (ver `translingual-first-turn.md`). No se divide un grupo conversacional entre ambos bancos.
 
 ```powershell
 .venv/Scripts/python.exe scripts/h3/calibrate_library.py --scope admin --calibration-bank evaluation/h3/colloquial-calibration-v1.jsonl --validation-bank evaluation/h3/colloquial-validation-v1.jsonl

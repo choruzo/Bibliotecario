@@ -30,7 +30,7 @@ La publicación de los 16 nuevos tardó entre 57 y 176 s por documento (conversi
 
 ## Bancos
 
-`evaluation/h3/agnostic-calibration-v1.jsonl` y `agnostic-validation-v1.jsonl`, 32 casos cada uno:
+`evaluation/h3/agnostic-calibration-v1.jsonl` y `agnostic-validation-v1.jsonl`, 32 casos cada uno en su versión original. La validación tiene ahora 40 casos tras añadir 8 preguntas translingües (ver `translingual-first-turn.md`); las tablas y resultados de este documento describen los 32 originales.
 
 | Clase | Calibración | Validación |
 | --- | ---: | ---: |

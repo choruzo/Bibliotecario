@@ -29,3 +29,5 @@
 {"id": "COL-validation-A005", "kind": "answerable", "language": "es", "query": "que tengo que comprobar antes de bajarme el repositorio", "expected_documents": ["DOC-005"], "expected_sections": []}
 {"id": "COL-validation-A006", "kind": "answerable", "language": "es", "query": "como saco un reporte en cantata", "expected_documents": ["DOC-002"], "expected_sections": []}
 {"id": "COL-validation-A007", "kind": "answerable", "language": "es", "query": "me explicas los pasos para analizar con sonarqube", "expected_documents": ["DOC-011"], "expected_sections": []}
+{"id": "COL-validation-T001", "kind": "answerable", "language": "en", "query": "How do I connect to the Cisco console?", "expected_documents": ["DOC-007"], "expected_sections": [], "tags": ["translingual", "en"]}
+{"id": "COL-validation-T002", "kind": "answerable", "language": "fr", "query": "Que faut-il vérifier avant de télécharger le dépôt ?", "expected_documents": ["DOC-005"], "expected_sections": [], "tags": ["translingual", "fr"]}
