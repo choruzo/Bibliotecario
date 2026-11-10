@@ -53,6 +53,18 @@ try {
         ForEach-Object { $_ -replace '\\', '/' } |
         Sort-Object -Unique
 
+    # Si el worker ya commiteo su trabajo, el diff local esta vacio: los archivos
+    # son los del rango base...HEAD, o el review no tendria nada que commitear.
+    if ($files.Count -eq 0) {
+        $baseRef = if (& git rev-parse --verify --quiet main) { 'main' } elseif (& git rev-parse --verify --quiet master) { 'master' } else { $null }
+        if ($baseRef) {
+            $files = @(& git diff --name-only "$baseRef...HEAD" 2>$null) |
+                Where-Object { $_ -and $_ -notmatch '^(report\.md|\.orca-task/)|(^|/)logs/|\.log$' } |
+                ForEach-Object { $_ -replace '\\', '/' } |
+                Sort-Object -Unique
+        }
+    }
+
     $review.verdict = 'ACEPTADO'
     $review.files = @($files)
     $review | ConvertTo-Json -Depth 10 | Set-Content $reviewPath -Encoding UTF8
