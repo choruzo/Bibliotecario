@@ -98,4 +98,4 @@ Comparación campo a campo de `files[]` entre `.orca-task/pdf-conversion-before.
 
 ## Commit
 
-Commit local en la rama `choruzo/pdf-conv-baseline-dd61ac-2` (sin push); el SHA se indica en el `worker_done`.
+Commit local en la rama `choruzo/pdf-conv-baseline-dd61ac-2` (sin push): `2db75521a066c419582b14437786840639681f9b` — `feat(api): limit PDF table detection to pages with text loss`.
