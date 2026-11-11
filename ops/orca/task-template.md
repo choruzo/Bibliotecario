@@ -31,7 +31,8 @@ Copia esta plantilla en `task-create --spec` y rellénala. La spec debe ser **au
 - Worktree: el que asigne Orca.
 - Rama: la que cree Orca para el worktree.
 - Informe: `report.md`.
-- Prohibido: push, merge, rebase, tocar otros worktrees.
+- Prohibido: push, merge, rebase, `task-update`, `git add`, `git commit`, tocar otros worktrees.
+- Deja los cambios sin stage: el orquestador hace el review, el commit y la integración.
 
 ## Riesgos / notas
 - ...

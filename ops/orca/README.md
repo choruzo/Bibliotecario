@@ -121,3 +121,12 @@ panel de control, AutoAnswer/AutoRescue/AutoRepair, recuperacion de workers
 estancados, reanudacion de terminales muertas, presupuesto, notificaciones y
 routing de modelos. `check.ps1` y `setup-worktree.ps1` siguen siendo los
 adaptados a Bibliotecario.
+
+## Sincronizacion 2026-11-12
+
+Integridad de entrega: `completed` no cuenta hasta tener `integrationSha`;
+reconciliacion de tareas completadas sin integrar, worker sin `task-update` ni
+commit, coordinador por Run, escalaciones cualificadas con `worker-show`,
+watchdog con evidencia, `integrate.ps1` con `setup-worktree`/`-Full`
+condicional/fast-forward y `cleanup.ps1` con reintentos y `-Settled`.
+`check.ps1` y `setup-worktree.ps1` siguen siendo los adaptados a Bibliotecario.

@@ -33,6 +33,15 @@ permissions:
   - action: shell
     resource: "git rebase *"
     effect: deny
+  - action: shell
+    resource: "git add *"
+    effect: deny
+  - action: shell
+    resource: "git commit *"
+    effect: deny
+  - action: shell
+    resource: "orca orchestration task-update *"
+    effect: deny
   - action: external_directory
     resource: "*"
     effect: deny

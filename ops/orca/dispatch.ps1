@@ -8,7 +8,7 @@ param(
 
 . (Join-Path $PSScriptRoot 'lib.ps1')
 
-$coordinator = Get-Coordinator
+$coordinator = Get-Coordinator -RunId $RunId
 Bind-Run -RunId $RunId -Coordinator $coordinator
 $repoId = Get-RepoId
 $stateDir = Get-StateDir
@@ -103,6 +103,8 @@ foreach ($task in $ready) {
             worktree     = $worktree.path
             branch       = $worktree.branch
             terminal     = "worker:$name"
+            status       = 'dispatched'
+            baseBranch   = $BaseBranch
             createdAt    = (Get-Date).ToString('o')
         }
         $dispatches += $record

@@ -27,6 +27,15 @@ permissions:
   - action: shell
     resource: "pwsh ops/orca/check.ps1 *"
     effect: allow
+  - action: shell
+    resource: "git add *"
+    effect: deny
+  - action: shell
+    resource: "git commit *"
+    effect: deny
+  - action: shell
+    resource: "orca orchestration task-update *"
+    effect: deny
   - action: external_directory
     resource: "*"
     effect: deny

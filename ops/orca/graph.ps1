@@ -534,6 +534,17 @@ function Get-QueryParams {
     return $params
 }
 
+function Test-LoopRunningForRun {
+    param([string]$RunId)
+
+    $file = Join-Path $stateDir "loop-$RunId.json"
+    if (-not (Test-Path $file)) { return $false }
+    try { $meta = Get-Content $file -Raw -Encoding UTF8 | ConvertFrom-Json } catch { return $false }
+    if (-not $meta -or -not $meta.pid) { return $false }
+    if ($meta.status -notin @('running', 'starting')) { return $false }
+    return [bool](Get-Process -Id ([int]$meta.pid) -ErrorAction SilentlyContinue)
+}
+
 function Invoke-UiAction {
     param(
         [Parameter(Mandatory)][string]$Action,
@@ -578,7 +589,7 @@ function Invoke-UiAction {
             try { $question = Get-Content $questionFile -Raw -Encoding UTF8 | ConvertFrom-Json } catch { return [ordered]@{ ok = $false; error = 'Pregunta ilegible' } }
             $messageId = [string]$question.message.id
             if (-not $messageId) { return [ordered]@{ ok = $false; error = 'La pregunta no tiene message id' } }
-            $coordinator = if ($question.coordinator) { [string]$question.coordinator } else { Get-Coordinator }
+            $coordinator = if ($question.coordinator) { [string]$question.coordinator } else { Get-Coordinator -RunId $runId }
             $reply = Invoke-Orca orchestration reply --id $messageId --body $answer --run $runId --from $coordinator --json
             if (-not $reply.ok) { return [ordered]@{ ok = $false; error = "Orca rechazo la respuesta: $($reply.error.message)" } }
             try {
@@ -591,8 +602,11 @@ function Invoke-UiAction {
         'retry-task' {
             $taskId = [string]$Payload.taskId
             if ($taskId -notmatch '^task_[A-Za-z0-9_]+$') { return [ordered]@{ ok = $false; error = 'taskId invalido' } }
+            if (Test-LoopRunningForRun -RunId $runId) {
+                return [ordered]@{ ok = $false; error = 'El bucle esta en marcha; para el runner antes de reintentar una tarea.' }
+            }
             try {
-                $coordinator = Get-Coordinator
+                $coordinator = Get-Coordinator -RunId $runId
                 Bind-Run -RunId $runId -Coordinator $coordinator
                 $update = Invoke-Orca orchestration task-update --from $coordinator --run $runId --id $taskId --status ready --result 'ui_retry' --json
             }
@@ -600,6 +614,20 @@ function Invoke-UiAction {
                 return [ordered]@{ ok = $false; error = $_.Exception.Message }
             }
             if (-not $update.ok) { return [ordered]@{ ok = $false; error = "Orca rechazo el reintento: $($update.error.message)" } }
+
+            # Refleja el reintento en el estado local para que la reconciliacion
+            # no confunda la tarea ready con una reversion silenciosa del runtime.
+            try {
+                $records = @(Read-Dispatches -RunId $runId)
+                $record = @($records | Where-Object { $_.taskId -eq $taskId }) | Select-Object -Last 1
+                if ($record) {
+                    if ($record.PSObject.Properties['status']) { $record.status = 'ready' }
+                    else { $record | Add-Member -NotePropertyName status -NotePropertyValue 'ready' }
+                    Save-Dispatches -RunId $runId -Dispatches $records | Out-Null
+                }
+            }
+            catch { }
+            Write-Audit -RunId $runId -Actor 'panel' -Action 'retry-task' -TaskId $taskId -Reason 'ui_retry'
             return [ordered]@{ ok = $true; output = "Tarea $taskId marcada ready" }
         }
         default {
