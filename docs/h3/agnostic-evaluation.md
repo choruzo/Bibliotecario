@@ -68,6 +68,8 @@ Tras publicar el corpus, el chat siguió usando la política aprobada del corpus
 
 En esta muestra, heredar el umbral al publicar documentos de otros dominios no introdujo respuestas indebidas. Es una muestra pequeña: no garantiza nada para otros corpus.
 
+Repetición del 11/11/2026 con el banco de 40 casos (8 translingües) y la firma nueva de la traducción: se publicó un documento que no estaba en la calibración («Sistema de diseno de la interfaz») y la API siguió respondiendo con la política calibrada (`inherited: true`, política `40382417…`) en vez de `uncalibrated`. El banco completo (`agnostic-acceptance-admin-inherited-p8.json`) dio **36 de 40, 0 indebidas y 0 cifras sin respaldo**, idéntico a la política exacta, con p50/p95 de 7,9/12,9 s. Los cuatro fallos son los de siempre: `U002`, `U003` y `T008` piden aclaración en vez de abstenerse, y `T002` (alemán, Ganímedes) se abstiene por puntuación. El documento de prueba se retiró después (la retención de 90 días impide borrarlo) y la política volvió a coincidir con el corpus exacto (`inherited: false`).
+
 Repetición operativa: la primera pasada marcó dos `unsupported_number` en respuestas extractivas del BOE. Era un falso positivo del arnés: la respuesta extractiva muestra cada pasaje bajo su encabezado documental («TEXTO CONSOLIDADO Última modificación: 20 de mayo de 2026») y el arnés solo admitía cifras de las citas. Se corrigió para admitir también títulos y apartados citados, igual que la validación del API, y el informe se recalculó sobre las respuestas guardadas sin repetir el chat.
 
 ## Calibración combinada
