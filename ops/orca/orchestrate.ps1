@@ -729,7 +729,10 @@ function Invoke-TaskDelivery {
     if (-not $Record.worktree -or -not (Test-Path $Record.worktree)) {
         $result = 'completed_sin_worktree'
         $update = Invoke-Orca orchestration task-update --from $coordinator --run $RunId --id $TaskId --status blocked --result $result --json
-        if (-not $update.ok) { Write-Warning $update.error.message }
+        if (-not $update.ok) {
+            Write-Warning $update.error.message
+            $script:IntegrityBlocked = $true
+        }
         Set-RecordValue -Record $Record -Name 'status' -Value 'blocked'
         Save-Record -Record $Record
         Write-Audit -RunId $RunId -Actor 'loop' -Action 'blocked' -TaskId $TaskId -DispatchId $Record.dispatchId -Reason $result
@@ -805,7 +808,10 @@ function Invoke-TaskDelivery {
     if (-not $integrationOk) {
         Write-Warning "Integración falló para ${TaskId}: $integrationOutput"
         $update = Invoke-Orca orchestration task-update --from $coordinator --run $RunId --id $TaskId --status blocked --result 'integration failed' --json
-        if (-not $update.ok) { Write-Warning $update.error.message }
+        if (-not $update.ok) {
+            Write-Warning $update.error.message
+            $script:IntegrityBlocked = $true
+        }
         Set-RecordValue -Record $Record -Name 'status' -Value 'blocked'
         Save-Record -Record $Record
         Write-Audit -RunId $RunId -Actor 'loop' -Action 'blocked' -TaskId $TaskId -DispatchId $Record.dispatchId -Reason 'integration failed'
