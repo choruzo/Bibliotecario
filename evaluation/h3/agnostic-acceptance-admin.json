@@ -1,34 +1,33 @@
 {
-  "date": "2026-10-02",
+  "date": "2026-11-11",
   "scope": "admin",
   "banks": {
-    "evaluation/h3/agnostic-calibration-v1.jsonl": "2d11639437eedb370d28d003582cf31a306bf59f4e98d26b9980e75bf771676b",
-    "evaluation/h3/agnostic-validation-v1.jsonl": "101cd66cda1d7097e0e7fffd81280522669ca158ea779b4d3e6d026fcb538e18"
+    "evaluation/h3/agnostic-validation-v1.jsonl": "dec0d699cbcc7ba86985b761147a1fb4e4273f3e2e9cc0804c2133944e7377fc"
   },
-  "passed": 62,
-  "total": 64,
+  "passed": 36,
+  "total": 40,
   "improper_answers": 0,
   "unsupported_numbers": 0,
   "outcomes": {
-    "grounded": 34,
-    "grounded_extract": 12
+    "grounded": 28
   },
+  "fallbacks": {},
   "by_kind": {
     "answerable": {
-      "passed": 32,
-      "total": 32
+      "passed": 21,
+      "total": 22
     },
     "unanswerable": {
-      "passed": 10,
-      "total": 12
+      "passed": 5,
+      "total": 8
     },
     "ambiguous": {
-      "passed": 6,
-      "total": 6
+      "passed": 3,
+      "total": 3
     },
     "conversation": {
-      "passed": 14,
-      "total": 14
+      "passed": 7,
+      "total": 7
     }
   },
   "by_domain": {
@@ -37,34 +36,26 @@
       "total": 3
     },
     "astronomía": {
-      "passed": 3,
+      "passed": 2,
       "total": 3
     },
     "medicina": {
-      "passed": 4,
-      "total": 4
+      "passed": 2,
+      "total": 2
     },
     "química": {
       "passed": 2,
       "total": 2
     },
     "deporte": {
-      "passed": 5,
-      "total": 5
+      "passed": 1,
+      "total": 1
     },
     "fiscalidad": {
-      "passed": 4,
-      "total": 4
-    },
-    "historia": {
-      "passed": 2,
-      "total": 2
-    },
-    "biología vegetal": {
       "passed": 3,
       "total": 3
     },
-    "nutrición": {
+    "historia": {
       "passed": 1,
       "total": 1
     },
@@ -72,611 +63,40 @@
       "passed": 2,
       "total": 2
     },
+    "economía": {
+      "passed": 1,
+      "total": 1
+    },
     "geología": {
-      "passed": 2,
-      "total": 2
+      "passed": 1,
+      "total": 1
     },
     "agroalimentación": {
       "passed": 2,
       "total": 2
     },
     "derecho": {
-      "passed": 5,
-      "total": 5
+      "passed": 2,
+      "total": 2
     },
     "inteligencia artificial": {
-      "passed": 7,
-      "total": 7
+      "passed": 4,
+      "total": 4
     },
     "—": {
-      "passed": 16,
-      "total": 18
+      "passed": 8,
+      "total": 11
     },
-    "economía": {
-      "passed": 1,
-      "total": 1
+    "biología vegetal": {
+      "passed": 2,
+      "total": 2
     }
   },
   "failures": {
-    "expected_abstain": 2
+    "expected_abstain": 3,
+    "expected_answer": 1
   },
   "cases": [
-    {
-      "id": "AGN-CAL-A001",
-      "kind": "answerable",
-      "language": "es",
-      "domain": "biología",
-      "status": "completed",
-      "chat_outcome": {
-        "status": "completed",
-        "reason": "grounded"
-      },
-      "decision": "calibrated_score",
-      "assessment": "answer",
-      "score": 2.6021809577941895,
-      "policy_inherited": false,
-      "seconds": 15.1,
-      "failures": [],
-      "passed": true
-    },
-    {
-      "id": "AGN-CAL-A002",
-      "kind": "answerable",
-      "language": "es",
-      "domain": "astronomía",
-      "status": "completed",
-      "chat_outcome": {
-        "status": "completed",
-        "reason": "grounded_extract"
-      },
-      "decision": "calibrated_score",
-      "assessment": "answer",
-      "score": 0.6306202411651611,
-      "policy_inherited": false,
-      "seconds": 21.3,
-      "failures": [],
-      "passed": true
-    },
-    {
-      "id": "AGN-CAL-A003",
-      "kind": "answerable",
-      "language": "es",
-      "domain": "medicina",
-      "status": "completed",
-      "chat_outcome": {
-        "status": "completed",
-        "reason": "grounded"
-      },
-      "decision": "calibrated_score",
-      "assessment": "answer",
-      "score": 4.643367767333984,
-      "policy_inherited": false,
-      "seconds": 14.6,
-      "failures": [],
-      "passed": true
-    },
-    {
-      "id": "AGN-CAL-A004",
-      "kind": "answerable",
-      "language": "es",
-      "domain": "química",
-      "status": "completed",
-      "chat_outcome": {
-        "status": "completed",
-        "reason": "grounded_extract"
-      },
-      "decision": "calibrated_score",
-      "assessment": "answer",
-      "score": 6.437019348144531,
-      "policy_inherited": false,
-      "seconds": 13.2,
-      "failures": [],
-      "passed": true
-    },
-    {
-      "id": "AGN-CAL-A005",
-      "kind": "answerable",
-      "language": "es",
-      "domain": "deporte",
-      "status": "completed",
-      "chat_outcome": {
-        "status": "completed",
-        "reason": "grounded"
-      },
-      "decision": "calibrated_score",
-      "assessment": "answer",
-      "score": 2.886467933654785,
-      "policy_inherited": false,
-      "seconds": 17.0,
-      "failures": [],
-      "passed": true
-    },
-    {
-      "id": "AGN-CAL-A006",
-      "kind": "answerable",
-      "language": "es",
-      "domain": "fiscalidad",
-      "status": "completed",
-      "chat_outcome": {
-        "status": "completed",
-        "reason": "grounded"
-      },
-      "decision": "calibrated_score",
-      "assessment": "answer",
-      "score": 4.299419403076172,
-      "policy_inherited": false,
-      "seconds": 12.7,
-      "failures": [],
-      "passed": true
-    },
-    {
-      "id": "AGN-CAL-A007",
-      "kind": "answerable",
-      "language": "es",
-      "domain": "historia",
-      "status": "completed",
-      "chat_outcome": {
-        "status": "completed",
-        "reason": "grounded"
-      },
-      "decision": "calibrated_score",
-      "assessment": "answer",
-      "score": 2.716578960418701,
-      "policy_inherited": false,
-      "seconds": 13.1,
-      "failures": [],
-      "passed": true
-    },
-    {
-      "id": "AGN-CAL-A008",
-      "kind": "answerable",
-      "language": "es",
-      "domain": "biología vegetal",
-      "status": "completed",
-      "chat_outcome": {
-        "status": "completed",
-        "reason": "grounded"
-      },
-      "decision": "calibrated_score",
-      "assessment": "answer",
-      "score": 2.9332115650177,
-      "policy_inherited": false,
-      "seconds": 14.3,
-      "failures": [],
-      "passed": true
-    },
-    {
-      "id": "AGN-CAL-A009",
-      "kind": "answerable",
-      "language": "es",
-      "domain": "nutrición",
-      "status": "completed",
-      "chat_outcome": {
-        "status": "completed",
-        "reason": "grounded_extract"
-      },
-      "decision": "calibrated_score",
-      "assessment": "answer",
-      "score": 7.863250255584717,
-      "policy_inherited": false,
-      "seconds": 28.3,
-      "failures": [],
-      "passed": true
-    },
-    {
-      "id": "AGN-CAL-A010",
-      "kind": "answerable",
-      "language": "es",
-      "domain": "informática",
-      "status": "completed",
-      "chat_outcome": {
-        "status": "completed",
-        "reason": "grounded"
-      },
-      "decision": "calibrated_score",
-      "assessment": "answer",
-      "score": 5.734837055206299,
-      "policy_inherited": false,
-      "seconds": 15.4,
-      "failures": [],
-      "passed": true
-    },
-    {
-      "id": "AGN-CAL-A011",
-      "kind": "answerable",
-      "language": "es",
-      "domain": "geología",
-      "status": "completed",
-      "chat_outcome": {
-        "status": "completed",
-        "reason": "grounded_extract"
-      },
-      "decision": "calibrated_score",
-      "assessment": "answer",
-      "score": 2.6115102767944336,
-      "policy_inherited": false,
-      "seconds": 13.4,
-      "failures": [],
-      "passed": true
-    },
-    {
-      "id": "AGN-CAL-A012",
-      "kind": "answerable",
-      "language": "es",
-      "domain": "agroalimentación",
-      "status": "completed",
-      "chat_outcome": {
-        "status": "completed",
-        "reason": "grounded"
-      },
-      "decision": "calibrated_score",
-      "assessment": "answer",
-      "score": 4.0375237464904785,
-      "policy_inherited": false,
-      "seconds": 17.1,
-      "failures": [],
-      "passed": true
-    },
-    {
-      "id": "AGN-CAL-A013",
-      "kind": "answerable",
-      "language": "es",
-      "domain": "derecho",
-      "status": "completed",
-      "chat_outcome": {
-        "status": "completed",
-        "reason": "grounded"
-      },
-      "decision": "calibrated_score",
-      "assessment": "answer",
-      "score": 3.2857112884521484,
-      "policy_inherited": false,
-      "seconds": 12.0,
-      "failures": [],
-      "passed": true
-    },
-    {
-      "id": "AGN-CAL-A014",
-      "kind": "answerable",
-      "language": "es",
-      "domain": "derecho",
-      "status": "completed",
-      "chat_outcome": {
-        "status": "completed",
-        "reason": "grounded"
-      },
-      "decision": "calibrated_score",
-      "assessment": "answer",
-      "score": 4.498261451721191,
-      "policy_inherited": false,
-      "seconds": 21.4,
-      "failures": [],
-      "passed": true
-    },
-    {
-      "id": "AGN-CAL-A015",
-      "kind": "answerable",
-      "language": "en",
-      "domain": "inteligencia artificial",
-      "status": "completed",
-      "chat_outcome": {
-        "status": "completed",
-        "reason": "grounded"
-      },
-      "decision": "calibrated_score",
-      "assessment": "answer",
-      "score": 6.5873613357543945,
-      "policy_inherited": false,
-      "seconds": 24.7,
-      "failures": [],
-      "passed": true
-    },
-    {
-      "id": "AGN-CAL-A016",
-      "kind": "answerable",
-      "language": "en",
-      "domain": "derecho",
-      "status": "completed",
-      "chat_outcome": {
-        "status": "completed",
-        "reason": "grounded"
-      },
-      "decision": "calibrated_score",
-      "assessment": "answer",
-      "score": 2.9425206184387207,
-      "policy_inherited": false,
-      "seconds": 13.0,
-      "failures": [],
-      "passed": true
-    },
-    {
-      "id": "AGN-CAL-U001",
-      "kind": "unanswerable",
-      "language": "es",
-      "domain": "—",
-      "status": "abstained",
-      "chat_outcome": {
-        "status": "abstained",
-        "reason": "evidence_assessed"
-      },
-      "decision": "evidence_assessed",
-      "assessment": "abstain",
-      "score": -3.958765983581543,
-      "policy_inherited": null,
-      "seconds": 4.5,
-      "failures": [],
-      "passed": true
-    },
-    {
-      "id": "AGN-CAL-U002",
-      "kind": "unanswerable",
-      "language": "es",
-      "domain": "—",
-      "status": "abstained",
-      "chat_outcome": {
-        "status": "abstained",
-        "reason": "evidence_assessed"
-      },
-      "decision": "evidence_assessed",
-      "assessment": "abstain",
-      "score": -2.196274995803833,
-      "policy_inherited": null,
-      "seconds": 5.2,
-      "failures": [],
-      "passed": true
-    },
-    {
-      "id": "AGN-CAL-U003",
-      "kind": "unanswerable",
-      "language": "es",
-      "domain": "—",
-      "status": "abstained",
-      "chat_outcome": {
-        "status": "abstained",
-        "reason": "evidence_assessed"
-      },
-      "decision": "evidence_assessed",
-      "assessment": "abstain",
-      "score": -5.83418607711792,
-      "policy_inherited": null,
-      "seconds": 5.2,
-      "failures": [],
-      "passed": true
-    },
-    {
-      "id": "AGN-CAL-U004",
-      "kind": "unanswerable",
-      "language": "es",
-      "domain": "—",
-      "status": "abstained",
-      "chat_outcome": {
-        "status": "abstained",
-        "reason": "evidence_assessed"
-      },
-      "decision": "evidence_assessed",
-      "assessment": "abstain",
-      "score": -0.18804988265037537,
-      "policy_inherited": null,
-      "seconds": 5.2,
-      "failures": [],
-      "passed": true
-    },
-    {
-      "id": "AGN-CAL-U005",
-      "kind": "unanswerable",
-      "language": "es",
-      "domain": "—",
-      "status": "abstained",
-      "chat_outcome": {
-        "status": "abstained",
-        "reason": "evidence_assessed"
-      },
-      "decision": "evidence_assessed",
-      "assessment": "abstain",
-      "score": -0.3291934132575989,
-      "policy_inherited": null,
-      "seconds": 4.7,
-      "failures": [],
-      "passed": true
-    },
-    {
-      "id": "AGN-CAL-U006",
-      "kind": "unanswerable",
-      "language": "es",
-      "domain": "—",
-      "status": "abstained",
-      "chat_outcome": {
-        "status": "abstained",
-        "reason": "evidence_assessed"
-      },
-      "decision": "evidence_assessed",
-      "assessment": "abstain",
-      "score": -4.055063247680664,
-      "policy_inherited": null,
-      "seconds": 5.0,
-      "failures": [],
-      "passed": true
-    },
-    {
-      "id": "AGN-CAL-M001",
-      "kind": "ambiguous",
-      "language": "es",
-      "domain": "—",
-      "status": "abstained",
-      "chat_outcome": {
-        "status": "abstained",
-        "reason": "clarification_required"
-      },
-      "decision": "ambiguous_question",
-      "assessment": "clarify",
-      "score": -4.403682708740234,
-      "policy_inherited": null,
-      "seconds": 1.7,
-      "failures": [],
-      "passed": true
-    },
-    {
-      "id": "AGN-CAL-M002",
-      "kind": "ambiguous",
-      "language": "es",
-      "domain": "—",
-      "status": "abstained",
-      "chat_outcome": {
-        "status": "abstained",
-        "reason": "clarification_required"
-      },
-      "decision": "ambiguous_question",
-      "assessment": "clarify",
-      "score": -1.0506880283355713,
-      "policy_inherited": null,
-      "seconds": 1.5,
-      "failures": [],
-      "passed": true
-    },
-    {
-      "id": "AGN-CAL-M003",
-      "kind": "ambiguous",
-      "language": "es",
-      "domain": "—",
-      "status": "abstained",
-      "chat_outcome": {
-        "status": "abstained",
-        "reason": "clarification_required"
-      },
-      "decision": "ambiguous_question",
-      "assessment": "clarify",
-      "score": -0.8214010000228882,
-      "policy_inherited": null,
-      "seconds": 1.5,
-      "failures": [],
-      "passed": true
-    },
-    {
-      "id": "AGN-CAL-C001-T1",
-      "kind": "conversation",
-      "language": "es",
-      "domain": "medicina",
-      "status": "completed",
-      "chat_outcome": {
-        "status": "completed",
-        "reason": "grounded_extract"
-      },
-      "decision": "calibrated_score",
-      "assessment": "answer",
-      "score": 6.0601091384887695,
-      "policy_inherited": false,
-      "seconds": 25.0,
-      "failures": [],
-      "passed": true
-    },
-    {
-      "id": "AGN-CAL-C001-T2",
-      "kind": "conversation",
-      "language": "es",
-      "domain": "medicina",
-      "status": "completed",
-      "chat_outcome": {
-        "status": "completed",
-        "reason": "grounded_extract"
-      },
-      "decision": "calibrated_score",
-      "assessment": "answer",
-      "score": 7.560023307800293,
-      "policy_inherited": false,
-      "seconds": 15.9,
-      "failures": [],
-      "passed": true
-    },
-    {
-      "id": "AGN-CAL-C002-T1",
-      "kind": "conversation",
-      "language": "es",
-      "domain": "deporte",
-      "status": "completed",
-      "chat_outcome": {
-        "status": "completed",
-        "reason": "grounded_extract"
-      },
-      "decision": "calibrated_score",
-      "assessment": "answer",
-      "score": 3.5355329513549805,
-      "policy_inherited": false,
-      "seconds": 17.7,
-      "failures": [],
-      "passed": true
-    },
-    {
-      "id": "AGN-CAL-C002-T2",
-      "kind": "conversation",
-      "language": "es",
-      "domain": "deporte",
-      "status": "completed",
-      "chat_outcome": {
-        "status": "completed",
-        "reason": "grounded"
-      },
-      "decision": "calibrated_score",
-      "assessment": "answer",
-      "score": 1.5726470947265625,
-      "policy_inherited": false,
-      "seconds": 22.8,
-      "failures": [],
-      "passed": true
-    },
-    {
-      "id": "AGN-CAL-C002-T3",
-      "kind": "conversation",
-      "language": "es",
-      "domain": "deporte",
-      "status": "completed",
-      "chat_outcome": {
-        "status": "completed",
-        "reason": "grounded"
-      },
-      "decision": "calibrated_score",
-      "assessment": "answer",
-      "score": 4.255953311920166,
-      "policy_inherited": false,
-      "seconds": 33.8,
-      "failures": [],
-      "passed": true
-    },
-    {
-      "id": "AGN-CAL-C003-T1",
-      "kind": "conversation",
-      "language": "es",
-      "domain": "inteligencia artificial",
-      "status": "completed",
-      "chat_outcome": {
-        "status": "completed",
-        "reason": "grounded"
-      },
-      "decision": "calibrated_score",
-      "assessment": "answer",
-      "score": 2.706442356109619,
-      "policy_inherited": false,
-      "seconds": 12.3,
-      "failures": [],
-      "passed": true
-    },
-    {
-      "id": "AGN-CAL-C003-T2",
-      "kind": "conversation",
-      "language": "es",
-      "domain": "inteligencia artificial",
-      "status": "completed",
-      "chat_outcome": {
-        "status": "completed",
-        "reason": "grounded"
-      },
-      "decision": "calibrated_score",
-      "assessment": "answer",
-      "score": 2.441983222961426,
-      "policy_inherited": false,
-      "seconds": 13.2,
-      "failures": [],
-      "passed": true
-    },
     {
       "id": "AGN-VAL-A001",
       "kind": "answerable",
@@ -685,13 +105,55 @@
       "status": "completed",
       "chat_outcome": {
         "status": "completed",
-        "reason": "grounded_extract"
+        "reason": "grounded"
       },
       "decision": "calibrated_score",
       "assessment": "answer",
       "score": 5.685432434082031,
       "policy_inherited": false,
-      "seconds": 12.2,
+      "seconds": 7.9,
+      "chat_latency": {
+        "rewrite_ms": 0.76,
+        "generation_ms": 1018.13,
+        "verification_ms": 220.89,
+        "total_ms": 7756.75
+      },
+      "retrieval_latency": {
+        "embedding_ms": 54.52,
+        "search_ms": 129.49,
+        "fusion_ms": 109.97,
+        "reranking_ms": 647.54,
+        "sufficiency_ms": 5397.68
+      },
+      "llm": {
+        "calls": 4,
+        "phases": {
+          "intent": {
+            "calls": 1,
+            "ms": 3134.6,
+            "prompt_tokens": 521,
+            "completion_tokens": 6
+          },
+          "assessment": {
+            "calls": 1,
+            "ms": 5395.7,
+            "prompt_tokens": 15386,
+            "completion_tokens": 57
+          },
+          "generation": {
+            "calls": 1,
+            "ms": 1017.3,
+            "prompt_tokens": 899,
+            "completion_tokens": 31
+          },
+          "verification": {
+            "calls": 1,
+            "ms": 220.8,
+            "prompt_tokens": 400,
+            "completion_tokens": 6
+          }
+        }
+      },
       "failures": [],
       "passed": true
     },
@@ -709,7 +171,49 @@
       "assessment": "answer",
       "score": -0.38631999492645264,
       "policy_inherited": false,
-      "seconds": 21.2,
+      "seconds": 7.7,
+      "chat_latency": {
+        "rewrite_ms": 0.66,
+        "generation_ms": 1116.35,
+        "verification_ms": 259.78,
+        "total_ms": 7643.73
+      },
+      "retrieval_latency": {
+        "embedding_ms": 35.22,
+        "search_ms": 109.61,
+        "fusion_ms": 171.17,
+        "reranking_ms": 507.31,
+        "sufficiency_ms": 5244.96
+      },
+      "llm": {
+        "calls": 4,
+        "phases": {
+          "intent": {
+            "calls": 1,
+            "ms": 3091.9,
+            "prompt_tokens": 518,
+            "completion_tokens": 6
+          },
+          "assessment": {
+            "calls": 1,
+            "ms": 5243.4,
+            "prompt_tokens": 14951,
+            "completion_tokens": 59
+          },
+          "generation": {
+            "calls": 1,
+            "ms": 1115.8,
+            "prompt_tokens": 1207,
+            "completion_tokens": 34
+          },
+          "verification": {
+            "calls": 1,
+            "ms": 259.7,
+            "prompt_tokens": 728,
+            "completion_tokens": 6
+          }
+        }
+      },
       "failures": [],
       "passed": true
     },
@@ -721,13 +225,55 @@
       "status": "completed",
       "chat_outcome": {
         "status": "completed",
-        "reason": "grounded_extract"
+        "reason": "grounded"
       },
       "decision": "calibrated_score",
       "assessment": "answer",
       "score": 4.704861640930176,
       "policy_inherited": false,
-      "seconds": 20.6,
+      "seconds": 11.4,
+      "chat_latency": {
+        "rewrite_ms": 0.96,
+        "generation_ms": 3566.25,
+        "verification_ms": 291.96,
+        "total_ms": 11292.09
+      },
+      "retrieval_latency": {
+        "embedding_ms": 59.22,
+        "search_ms": 112.13,
+        "fusion_ms": 52.34,
+        "reranking_ms": 509.71,
+        "sufficiency_ms": 6478.45
+      },
+      "llm": {
+        "calls": 5,
+        "phases": {
+          "intent": {
+            "calls": 1,
+            "ms": 3093.3,
+            "prompt_tokens": 523,
+            "completion_tokens": 6
+          },
+          "assessment": {
+            "calls": 1,
+            "ms": 6476.8,
+            "prompt_tokens": 15453,
+            "completion_tokens": 97
+          },
+          "generation": {
+            "calls": 1,
+            "ms": 3565.7,
+            "prompt_tokens": 1413,
+            "completion_tokens": 126
+          },
+          "verification": {
+            "calls": 2,
+            "ms": 559.1,
+            "prompt_tokens": 788,
+            "completion_tokens": 12
+          }
+        }
+      },
       "failures": [],
       "passed": true
     },
@@ -745,7 +291,49 @@
       "assessment": "answer",
       "score": 3.1749799251556396,
       "policy_inherited": false,
-      "seconds": 14.5,
+      "seconds": 8.0,
+      "chat_latency": {
+        "rewrite_ms": 0.57,
+        "generation_ms": 1735.89,
+        "verification_ms": 224.16,
+        "total_ms": 7880.43
+      },
+      "retrieval_latency": {
+        "embedding_ms": 47.83,
+        "search_ms": 128.01,
+        "fusion_ms": 88.07,
+        "reranking_ms": 493.49,
+        "sufficiency_ms": 4996.94
+      },
+      "llm": {
+        "calls": 4,
+        "phases": {
+          "intent": {
+            "calls": 1,
+            "ms": 3094.8,
+            "prompt_tokens": 522,
+            "completion_tokens": 6
+          },
+          "assessment": {
+            "calls": 1,
+            "ms": 4995.4,
+            "prompt_tokens": 13966,
+            "completion_tokens": 59
+          },
+          "generation": {
+            "calls": 1,
+            "ms": 1735.3,
+            "prompt_tokens": 947,
+            "completion_tokens": 61
+          },
+          "verification": {
+            "calls": 1,
+            "ms": 224.0,
+            "prompt_tokens": 453,
+            "completion_tokens": 6
+          }
+        }
+      },
       "failures": [],
       "passed": true
     },
@@ -763,7 +351,49 @@
       "assessment": "answer",
       "score": 4.308906555175781,
       "policy_inherited": false,
-      "seconds": 13.3,
+      "seconds": 8.5,
+      "chat_latency": {
+        "rewrite_ms": 0.68,
+        "generation_ms": 2040.22,
+        "verification_ms": 225.19,
+        "total_ms": 8314.84
+      },
+      "retrieval_latency": {
+        "embedding_ms": 44.22,
+        "search_ms": 166.25,
+        "fusion_ms": 78.65,
+        "reranking_ms": 482.69,
+        "sufficiency_ms": 5128.95
+      },
+      "llm": {
+        "calls": 4,
+        "phases": {
+          "intent": {
+            "calls": 1,
+            "ms": 3081.6,
+            "prompt_tokens": 522,
+            "completion_tokens": 6
+          },
+          "assessment": {
+            "calls": 1,
+            "ms": 5127.4,
+            "prompt_tokens": 14584,
+            "completion_tokens": 59
+          },
+          "generation": {
+            "calls": 1,
+            "ms": 2039.6,
+            "prompt_tokens": 921,
+            "completion_tokens": 72
+          },
+          "verification": {
+            "calls": 1,
+            "ms": 225.1,
+            "prompt_tokens": 443,
+            "completion_tokens": 6
+          }
+        }
+      },
       "failures": [],
       "passed": true
     },
@@ -781,7 +411,49 @@
       "assessment": "answer",
       "score": 1.759958267211914,
       "policy_inherited": false,
-      "seconds": 19.9,
+      "seconds": 8.4,
+      "chat_latency": {
+        "rewrite_ms": 0.6,
+        "generation_ms": 1504.0,
+        "verification_ms": 258.23,
+        "total_ms": 8327.12
+      },
+      "retrieval_latency": {
+        "embedding_ms": 49.37,
+        "search_ms": 128.1,
+        "fusion_ms": 90.2,
+        "reranking_ms": 501.55,
+        "sufficiency_ms": 5514.7
+      },
+      "llm": {
+        "calls": 4,
+        "phases": {
+          "intent": {
+            "calls": 1,
+            "ms": 3088.3,
+            "prompt_tokens": 524,
+            "completion_tokens": 6
+          },
+          "assessment": {
+            "calls": 1,
+            "ms": 5513.1,
+            "prompt_tokens": 15940,
+            "completion_tokens": 56
+          },
+          "generation": {
+            "calls": 1,
+            "ms": 1503.2,
+            "prompt_tokens": 1143,
+            "completion_tokens": 49
+          },
+          "verification": {
+            "calls": 1,
+            "ms": 258.1,
+            "prompt_tokens": 659,
+            "completion_tokens": 6
+          }
+        }
+      },
       "failures": [],
       "passed": true
     },
@@ -799,7 +471,49 @@
       "assessment": "answer",
       "score": 6.414032936096191,
       "policy_inherited": false,
-      "seconds": 23.9,
+      "seconds": 8.7,
+      "chat_latency": {
+        "rewrite_ms": 0.54,
+        "generation_ms": 1398.61,
+        "verification_ms": 277.32,
+        "total_ms": 8627.58
+      },
+      "retrieval_latency": {
+        "embedding_ms": 40.85,
+        "search_ms": 107.35,
+        "fusion_ms": 127.09,
+        "reranking_ms": 522.49,
+        "sufficiency_ms": 5928.75
+      },
+      "llm": {
+        "calls": 4,
+        "phases": {
+          "intent": {
+            "calls": 1,
+            "ms": 3124.0,
+            "prompt_tokens": 526,
+            "completion_tokens": 6
+          },
+          "assessment": {
+            "calls": 1,
+            "ms": 5927.1,
+            "prompt_tokens": 16724,
+            "completion_tokens": 61
+          },
+          "generation": {
+            "calls": 1,
+            "ms": 1398.0,
+            "prompt_tokens": 1330,
+            "completion_tokens": 45
+          },
+          "verification": {
+            "calls": 1,
+            "ms": 277.2,
+            "prompt_tokens": 824,
+            "completion_tokens": 6
+          }
+        }
+      },
       "failures": [],
       "passed": true
     },
@@ -811,13 +525,55 @@
       "status": "completed",
       "chat_outcome": {
         "status": "completed",
-        "reason": "grounded_extract"
+        "reason": "grounded"
       },
       "decision": "calibrated_score",
       "assessment": "answer",
       "score": 5.102507591247559,
       "policy_inherited": false,
-      "seconds": 12.2,
+      "seconds": 8.7,
+      "chat_latency": {
+        "rewrite_ms": 0.6,
+        "generation_ms": 1555.2,
+        "verification_ms": 264.54,
+        "total_ms": 8585.47
+      },
+      "retrieval_latency": {
+        "embedding_ms": 46.58,
+        "search_ms": 113.55,
+        "fusion_ms": 88.59,
+        "reranking_ms": 541.41,
+        "sufficiency_ms": 5799.95
+      },
+      "llm": {
+        "calls": 4,
+        "phases": {
+          "intent": {
+            "calls": 1,
+            "ms": 3134.0,
+            "prompt_tokens": 524,
+            "completion_tokens": 6
+          },
+          "assessment": {
+            "calls": 1,
+            "ms": 5798.4,
+            "prompt_tokens": 16362,
+            "completion_tokens": 59
+          },
+          "generation": {
+            "calls": 1,
+            "ms": 1554.4,
+            "prompt_tokens": 863,
+            "completion_tokens": 54
+          },
+          "verification": {
+            "calls": 1,
+            "ms": 264.4,
+            "prompt_tokens": 363,
+            "completion_tokens": 6
+          }
+        }
+      },
       "failures": [],
       "passed": true
     },
@@ -835,7 +591,49 @@
       "assessment": "answer",
       "score": 0.029485806822776794,
       "policy_inherited": false,
-      "seconds": 19.2,
+      "seconds": 9.8,
+      "chat_latency": {
+        "rewrite_ms": 0.67,
+        "generation_ms": 2158.93,
+        "verification_ms": 319.69,
+        "total_ms": 9715.79
+      },
+      "retrieval_latency": {
+        "embedding_ms": 44.37,
+        "search_ms": 258.9,
+        "fusion_ms": 57.06,
+        "reranking_ms": 535.57,
+        "sufficiency_ms": 6158.61
+      },
+      "llm": {
+        "calls": 5,
+        "phases": {
+          "intent": {
+            "calls": 1,
+            "ms": 3130.7,
+            "prompt_tokens": 518,
+            "completion_tokens": 6
+          },
+          "assessment": {
+            "calls": 1,
+            "ms": 6156.9,
+            "prompt_tokens": 14248,
+            "completion_tokens": 97
+          },
+          "generation": {
+            "calls": 1,
+            "ms": 2158.4,
+            "prompt_tokens": 1469,
+            "completion_tokens": 73
+          },
+          "verification": {
+            "calls": 2,
+            "ms": 613.6,
+            "prompt_tokens": 823,
+            "completion_tokens": 12
+          }
+        }
+      },
       "failures": [],
       "passed": true
     },
@@ -853,7 +651,49 @@
       "assessment": "answer",
       "score": 1.9498947858810425,
       "policy_inherited": false,
-      "seconds": 12.4,
+      "seconds": 7.5,
+      "chat_latency": {
+        "rewrite_ms": 0.64,
+        "generation_ms": 1817.7,
+        "verification_ms": 241.62,
+        "total_ms": 7450.18
+      },
+      "retrieval_latency": {
+        "embedding_ms": 56.27,
+        "search_ms": 119.38,
+        "fusion_ms": 73.5,
+        "reranking_ms": 447.62,
+        "sufficiency_ms": 4469.6
+      },
+      "llm": {
+        "calls": 4,
+        "phases": {
+          "intent": {
+            "calls": 1,
+            "ms": 2948.0,
+            "prompt_tokens": 526,
+            "completion_tokens": 6
+          },
+          "assessment": {
+            "calls": 1,
+            "ms": 4468.0,
+            "prompt_tokens": 12508,
+            "completion_tokens": 57
+          },
+          "generation": {
+            "calls": 1,
+            "ms": 1816.9,
+            "prompt_tokens": 906,
+            "completion_tokens": 64
+          },
+          "verification": {
+            "calls": 1,
+            "ms": 241.5,
+            "prompt_tokens": 415,
+            "completion_tokens": 6
+          }
+        }
+      },
       "failures": [],
       "passed": true
     },
@@ -871,7 +711,49 @@
       "assessment": "answer",
       "score": 6.270615577697754,
       "policy_inherited": false,
-      "seconds": 14.3,
+      "seconds": 7.9,
+      "chat_latency": {
+        "rewrite_ms": 0.55,
+        "generation_ms": 1481.53,
+        "verification_ms": 223.69,
+        "total_ms": 7774.52
+      },
+      "retrieval_latency": {
+        "embedding_ms": 40.55,
+        "search_ms": 106.8,
+        "fusion_ms": 42.55,
+        "reranking_ms": 479.9,
+        "sufficiency_ms": 5211.93
+      },
+      "llm": {
+        "calls": 4,
+        "phases": {
+          "intent": {
+            "calls": 1,
+            "ms": 3130.1,
+            "prompt_tokens": 521,
+            "completion_tokens": 6
+          },
+          "assessment": {
+            "calls": 1,
+            "ms": 5210.4,
+            "prompt_tokens": 14840,
+            "completion_tokens": 58
+          },
+          "generation": {
+            "calls": 1,
+            "ms": 1480.8,
+            "prompt_tokens": 960,
+            "completion_tokens": 51
+          },
+          "verification": {
+            "calls": 1,
+            "ms": 223.6,
+            "prompt_tokens": 462,
+            "completion_tokens": 6
+          }
+        }
+      },
       "failures": [],
       "passed": true
     },
@@ -889,7 +771,49 @@
       "assessment": "answer",
       "score": 7.783975601196289,
       "policy_inherited": false,
-      "seconds": 23.4,
+      "seconds": 12.9,
+      "chat_latency": {
+        "rewrite_ms": 0.55,
+        "generation_ms": 4235.24,
+        "verification_ms": 329.14,
+        "total_ms": 12725.23
+      },
+      "retrieval_latency": {
+        "embedding_ms": 47.67,
+        "search_ms": 160.86,
+        "fusion_ms": 170.99,
+        "reranking_ms": 491.75,
+        "sufficiency_ms": 7121.82
+      },
+      "llm": {
+        "calls": 6,
+        "phases": {
+          "intent": {
+            "calls": 1,
+            "ms": 3106.5,
+            "prompt_tokens": 523,
+            "completion_tokens": 6
+          },
+          "assessment": {
+            "calls": 1,
+            "ms": 7120.2,
+            "prompt_tokens": 13786,
+            "completion_tokens": 137
+          },
+          "generation": {
+            "calls": 1,
+            "ms": 4234.5,
+            "prompt_tokens": 1997,
+            "completion_tokens": 148
+          },
+          "verification": {
+            "calls": 3,
+            "ms": 957.1,
+            "prompt_tokens": 1127,
+            "completion_tokens": 18
+          }
+        }
+      },
       "failures": [],
       "passed": true
     },
@@ -901,13 +825,55 @@
       "status": "completed",
       "chat_outcome": {
         "status": "completed",
-        "reason": "grounded_extract"
+        "reason": "grounded"
       },
       "decision": "calibrated_score",
       "assessment": "answer",
       "score": 6.511028289794922,
       "policy_inherited": false,
-      "seconds": 19.5,
+      "seconds": 12.1,
+      "chat_latency": {
+        "rewrite_ms": 0.84,
+        "generation_ms": 5254.02,
+        "verification_ms": 333.3,
+        "total_ms": 11977.44
+      },
+      "retrieval_latency": {
+        "embedding_ms": 72.87,
+        "search_ms": 196.89,
+        "fusion_ms": 92.63,
+        "reranking_ms": 391.39,
+        "sufficiency_ms": 5459.08
+      },
+      "llm": {
+        "calls": 5,
+        "phases": {
+          "intent": {
+            "calls": 1,
+            "ms": 2872.1,
+            "prompt_tokens": 526,
+            "completion_tokens": 6
+          },
+          "assessment": {
+            "calls": 1,
+            "ms": 5457.0,
+            "prompt_tokens": 12069,
+            "completion_tokens": 95
+          },
+          "generation": {
+            "calls": 1,
+            "ms": 5252.8,
+            "prompt_tokens": 1506,
+            "completion_tokens": 188
+          },
+          "verification": {
+            "calls": 2,
+            "ms": 641.0,
+            "prompt_tokens": 919,
+            "completion_tokens": 12
+          }
+        }
+      },
       "failures": [],
       "passed": true
     },
@@ -925,7 +891,49 @@
       "assessment": "answer",
       "score": 4.284306049346924,
       "policy_inherited": false,
-      "seconds": 12.7,
+      "seconds": 7.8,
+      "chat_latency": {
+        "rewrite_ms": 0.7,
+        "generation_ms": 1485.8,
+        "verification_ms": 237.34,
+        "total_ms": 7703.26
+      },
+      "retrieval_latency": {
+        "embedding_ms": 50.18,
+        "search_ms": 119.05,
+        "fusion_ms": 85.55,
+        "reranking_ms": 572.16,
+        "sufficiency_ms": 4616.29
+      },
+      "llm": {
+        "calls": 4,
+        "phases": {
+          "intent": {
+            "calls": 1,
+            "ms": 3207.9,
+            "prompt_tokens": 523,
+            "completion_tokens": 6
+          },
+          "assessment": {
+            "calls": 1,
+            "ms": 4613.1,
+            "prompt_tokens": 13005,
+            "completion_tokens": 51
+          },
+          "generation": {
+            "calls": 1,
+            "ms": 1485.0,
+            "prompt_tokens": 930,
+            "completion_tokens": 51
+          },
+          "verification": {
+            "calls": 1,
+            "ms": 237.2,
+            "prompt_tokens": 439,
+            "completion_tokens": 6
+          }
+        }
+      },
       "failures": [],
       "passed": true
     },
@@ -941,9 +949,59 @@
       },
       "decision": "calibrated_score",
       "assessment": "answer",
-      "score": 3.301405191421509,
+      "score": 2.6637086868286133,
       "policy_inherited": false,
-      "seconds": 13.9,
+      "seconds": 8.1,
+      "chat_latency": {
+        "rewrite_ms": 383.95,
+        "translation_ms": 383.38,
+        "generation_ms": 1462.44,
+        "verification_ms": 258.77,
+        "total_ms": 7983.36
+      },
+      "retrieval_latency": {
+        "embedding_ms": 48.2,
+        "search_ms": 123.17,
+        "fusion_ms": 75.61,
+        "reranking_ms": 478.89,
+        "sufficiency_ms": 4891.32,
+        "translation_ms": 383.38
+      },
+      "llm": {
+        "calls": 5,
+        "phases": {
+          "translation": {
+            "calls": 1,
+            "ms": 383.3,
+            "prompt_tokens": 117,
+            "completion_tokens": 10
+          },
+          "intent": {
+            "calls": 1,
+            "ms": 3166.1,
+            "prompt_tokens": 518,
+            "completion_tokens": 6
+          },
+          "assessment": {
+            "calls": 1,
+            "ms": 4889.6,
+            "prompt_tokens": 13401,
+            "completion_tokens": 58
+          },
+          "generation": {
+            "calls": 1,
+            "ms": 1461.7,
+            "prompt_tokens": 952,
+            "completion_tokens": 50
+          },
+          "verification": {
+            "calls": 1,
+            "ms": 258.6,
+            "prompt_tokens": 459,
+            "completion_tokens": 6
+          }
+        }
+      },
       "failures": [],
       "passed": true
     },
@@ -959,9 +1017,59 @@
       },
       "decision": "calibrated_score",
       "assessment": "answer",
-      "score": -1.156191349029541,
+      "score": 6.95557975769043,
       "policy_inherited": false,
-      "seconds": 12.8,
+      "seconds": 11.2,
+      "chat_latency": {
+        "rewrite_ms": 577.16,
+        "translation_ms": 575.69,
+        "generation_ms": 1363.74,
+        "verification_ms": 236.69,
+        "total_ms": 11015.81
+      },
+      "retrieval_latency": {
+        "embedding_ms": 1763.41,
+        "search_ms": 252.62,
+        "fusion_ms": 132.11,
+        "reranking_ms": 767.17,
+        "sufficiency_ms": 5676.33,
+        "translation_ms": 575.69
+      },
+      "llm": {
+        "calls": 5,
+        "phases": {
+          "translation": {
+            "calls": 1,
+            "ms": 575.6,
+            "prompt_tokens": 116,
+            "completion_tokens": 10
+          },
+          "intent": {
+            "calls": 1,
+            "ms": 3454.6,
+            "prompt_tokens": 518,
+            "completion_tokens": 6
+          },
+          "assessment": {
+            "calls": 1,
+            "ms": 5672.8,
+            "prompt_tokens": 15209,
+            "completion_tokens": 57
+          },
+          "generation": {
+            "calls": 1,
+            "ms": 1363.1,
+            "prompt_tokens": 893,
+            "completion_tokens": 45
+          },
+          "verification": {
+            "calls": 1,
+            "ms": 236.6,
+            "prompt_tokens": 396,
+            "completion_tokens": 6
+          }
+        }
+      },
       "failures": [],
       "passed": true
     },
@@ -977,9 +1085,37 @@
       },
       "decision": "evidence_assessed",
       "assessment": "abstain",
-      "score": -0.7790674567222595,
+      "score": -0.7772923707962036,
       "policy_inherited": null,
-      "seconds": 4.3,
+      "seconds": 5.0,
+      "chat_latency": {
+        "rewrite_ms": 0.66,
+        "total_ms": 4920.01
+      },
+      "retrieval_latency": {
+        "embedding_ms": 67.36,
+        "search_ms": 123.75,
+        "fusion_ms": 49.14,
+        "reranking_ms": 472.39,
+        "sufficiency_ms": 4095.25
+      },
+      "llm": {
+        "calls": 2,
+        "phases": {
+          "intent": {
+            "calls": 1,
+            "ms": 3446.5,
+            "prompt_tokens": 521,
+            "completion_tokens": 6
+          },
+          "assessment": {
+            "calls": 1,
+            "ms": 4093.4,
+            "prompt_tokens": 12627,
+            "completion_tokens": 21
+          }
+        }
+      },
       "failures": [],
       "passed": true
     },
@@ -997,7 +1133,29 @@
       "assessment": "clarify",
       "score": -1.079140067100525,
       "policy_inherited": null,
-      "seconds": 1.4,
+      "seconds": 4.8,
+      "chat_latency": {
+        "rewrite_ms": 0.82,
+        "total_ms": 4748.77
+      },
+      "retrieval_latency": {
+        "embedding_ms": 47.06,
+        "search_ms": 116.72,
+        "fusion_ms": 38.73,
+        "reranking_ms": 478.92,
+        "sufficiency_ms": 3917.15
+      },
+      "llm": {
+        "calls": 2,
+        "phases": {
+          "intent": {
+            "calls": 2,
+            "ms": 3916.3,
+            "prompt_tokens": 1120,
+            "completion_tokens": 12
+          }
+        }
+      },
       "failures": [
         "expected_abstain"
       ],
@@ -1017,7 +1175,29 @@
       "assessment": "clarify",
       "score": -1.2391849756240845,
       "policy_inherited": null,
-      "seconds": 1.4,
+      "seconds": 4.5,
+      "chat_latency": {
+        "rewrite_ms": 0.6,
+        "total_ms": 4340.85
+      },
+      "retrieval_latency": {
+        "embedding_ms": 47.45,
+        "search_ms": 120.18,
+        "fusion_ms": 213.5,
+        "reranking_ms": 437.57,
+        "sufficiency_ms": 3356.94
+      },
+      "llm": {
+        "calls": 2,
+        "phases": {
+          "intent": {
+            "calls": 2,
+            "ms": 3356.0,
+            "prompt_tokens": 1097,
+            "completion_tokens": 12
+          }
+        }
+      },
       "failures": [
         "expected_abstain"
       ],
@@ -1037,7 +1217,35 @@
       "assessment": "abstain",
       "score": 5.469916820526123,
       "policy_inherited": null,
-      "seconds": 4.9,
+      "seconds": 5.1,
+      "chat_latency": {
+        "rewrite_ms": 0.57,
+        "total_ms": 4996.79
+      },
+      "retrieval_latency": {
+        "embedding_ms": 58.41,
+        "search_ms": 127.08,
+        "fusion_ms": 78.77,
+        "reranking_ms": 477.38,
+        "sufficiency_ms": 4134.24
+      },
+      "llm": {
+        "calls": 2,
+        "phases": {
+          "intent": {
+            "calls": 1,
+            "ms": 2983.3,
+            "prompt_tokens": 523,
+            "completion_tokens": 6
+          },
+          "assessment": {
+            "calls": 1,
+            "ms": 4132.7,
+            "prompt_tokens": 15173,
+            "completion_tokens": 21
+          }
+        }
+      },
       "failures": [],
       "passed": true
     },
@@ -1055,7 +1263,35 @@
       "assessment": "abstain",
       "score": -0.18528404831886292,
       "policy_inherited": null,
-      "seconds": 4.1,
+      "seconds": 5.2,
+      "chat_latency": {
+        "rewrite_ms": 1.08,
+        "total_ms": 5111.11
+      },
+      "retrieval_latency": {
+        "embedding_ms": 84.36,
+        "search_ms": 255.16,
+        "fusion_ms": 97.83,
+        "reranking_ms": 433.01,
+        "sufficiency_ms": 4046.8
+      },
+      "llm": {
+        "calls": 2,
+        "phases": {
+          "intent": {
+            "calls": 1,
+            "ms": 3466.7,
+            "prompt_tokens": 525,
+            "completion_tokens": 6
+          },
+          "assessment": {
+            "calls": 1,
+            "ms": 4044.9,
+            "prompt_tokens": 12978,
+            "completion_tokens": 21
+          }
+        }
+      },
       "failures": [],
       "passed": true
     },
@@ -1073,7 +1309,35 @@
       "assessment": "abstain",
       "score": 0.31019842624664307,
       "policy_inherited": null,
-      "seconds": 4.8,
+      "seconds": 5.7,
+      "chat_latency": {
+        "rewrite_ms": 0.63,
+        "total_ms": 5441.57
+      },
+      "retrieval_latency": {
+        "embedding_ms": 72.67,
+        "search_ms": 129.18,
+        "fusion_ms": 93.38,
+        "reranking_ms": 512.31,
+        "sufficiency_ms": 4273.61
+      },
+      "llm": {
+        "calls": 2,
+        "phases": {
+          "intent": {
+            "calls": 1,
+            "ms": 3168.7,
+            "prompt_tokens": 529,
+            "completion_tokens": 6
+          },
+          "assessment": {
+            "calls": 1,
+            "ms": 4271.7,
+            "prompt_tokens": 14750,
+            "completion_tokens": 21
+          }
+        }
+      },
       "failures": [],
       "passed": true
     },
@@ -1091,7 +1355,29 @@
       "assessment": "clarify",
       "score": -1.445585012435913,
       "policy_inherited": null,
-      "seconds": 1.5,
+      "seconds": 4.6,
+      "chat_latency": {
+        "rewrite_ms": 0.64,
+        "total_ms": 4527.05
+      },
+      "retrieval_latency": {
+        "embedding_ms": 53.78,
+        "search_ms": 122.39,
+        "fusion_ms": 278.92,
+        "reranking_ms": 436.32,
+        "sufficiency_ms": 3415.97
+      },
+      "llm": {
+        "calls": 2,
+        "phases": {
+          "intent": {
+            "calls": 2,
+            "ms": 3415.2,
+            "prompt_tokens": 1138,
+            "completion_tokens": 12
+          }
+        }
+      },
       "failures": [],
       "passed": true
     },
@@ -1109,7 +1395,29 @@
       "assessment": "clarify",
       "score": -2.307664155960083,
       "policy_inherited": null,
-      "seconds": 1.5,
+      "seconds": 5.0,
+      "chat_latency": {
+        "rewrite_ms": 0.58,
+        "total_ms": 4940.5
+      },
+      "retrieval_latency": {
+        "embedding_ms": 27.18,
+        "search_ms": 114.58,
+        "fusion_ms": 255.11,
+        "reranking_ms": 467.25,
+        "sufficiency_ms": 3801.94
+      },
+      "llm": {
+        "calls": 2,
+        "phases": {
+          "intent": {
+            "calls": 2,
+            "ms": 3801.2,
+            "prompt_tokens": 1265,
+            "completion_tokens": 12
+          }
+        }
+      },
       "failures": [],
       "passed": true
     },
@@ -1127,7 +1435,29 @@
       "assessment": "clarify",
       "score": -1.463454246520996,
       "policy_inherited": null,
-      "seconds": 1.5,
+      "seconds": 4.7,
+      "chat_latency": {
+        "rewrite_ms": 0.76,
+        "total_ms": 4559.08
+      },
+      "retrieval_latency": {
+        "embedding_ms": 66.52,
+        "search_ms": 124.92,
+        "fusion_ms": 232.57,
+        "reranking_ms": 469.5,
+        "sufficiency_ms": 3415.04
+      },
+      "llm": {
+        "calls": 2,
+        "phases": {
+          "intent": {
+            "calls": 2,
+            "ms": 3414.2,
+            "prompt_tokens": 1222,
+            "completion_tokens": 12
+          }
+        }
+      },
       "failures": [],
       "passed": true
     },
@@ -1145,7 +1475,49 @@
       "assessment": "answer",
       "score": 2.4577717781066895,
       "policy_inherited": false,
-      "seconds": 15.1,
+      "seconds": 7.3,
+      "chat_latency": {
+        "rewrite_ms": 0.56,
+        "generation_ms": 1206.53,
+        "verification_ms": 238.08,
+        "total_ms": 7189.79
+      },
+      "retrieval_latency": {
+        "embedding_ms": 48.11,
+        "search_ms": 115.93,
+        "fusion_ms": 56.93,
+        "reranking_ms": 442.94,
+        "sufficiency_ms": 4673.89
+      },
+      "llm": {
+        "calls": 4,
+        "phases": {
+          "intent": {
+            "calls": 1,
+            "ms": 3053.6,
+            "prompt_tokens": 525,
+            "completion_tokens": 6
+          },
+          "assessment": {
+            "calls": 1,
+            "ms": 4672.3,
+            "prompt_tokens": 12885,
+            "completion_tokens": 61
+          },
+          "generation": {
+            "calls": 1,
+            "ms": 1205.9,
+            "prompt_tokens": 987,
+            "completion_tokens": 38
+          },
+          "verification": {
+            "calls": 1,
+            "ms": 238.0,
+            "prompt_tokens": 482,
+            "completion_tokens": 6
+          }
+        }
+      },
       "failures": [],
       "passed": true
     },
@@ -1163,7 +1535,55 @@
       "assessment": "answer",
       "score": 3.505018949508667,
       "policy_inherited": false,
-      "seconds": 31.7,
+      "seconds": 14.3,
+      "chat_latency": {
+        "rewrite_ms": 498.78,
+        "generation_ms": 5147.58,
+        "verification_ms": 353.61,
+        "total_ms": 14085.37
+      },
+      "retrieval_latency": {
+        "embedding_ms": 53.92,
+        "search_ms": 123.26,
+        "fusion_ms": 61.93,
+        "reranking_ms": 454.0,
+        "sufficiency_ms": 7122.79
+      },
+      "llm": {
+        "calls": 7,
+        "phases": {
+          "rewrite": {
+            "calls": 1,
+            "ms": 498.0,
+            "prompt_tokens": 443,
+            "completion_tokens": 16
+          },
+          "intent": {
+            "calls": 1,
+            "ms": 3118.1,
+            "prompt_tokens": 524,
+            "completion_tokens": 6
+          },
+          "assessment": {
+            "calls": 1,
+            "ms": 7120.9,
+            "prompt_tokens": 13350,
+            "completion_tokens": 137
+          },
+          "generation": {
+            "calls": 1,
+            "ms": 5146.9,
+            "prompt_tokens": 2220,
+            "completion_tokens": 180
+          },
+          "verification": {
+            "calls": 3,
+            "ms": 1029.7,
+            "prompt_tokens": 1391,
+            "completion_tokens": 18
+          }
+        }
+      },
       "failures": [],
       "passed": true
     },
@@ -1181,7 +1601,49 @@
       "assessment": "answer",
       "score": 5.5068559646606445,
       "policy_inherited": false,
-      "seconds": 14.9,
+      "seconds": 7.3,
+      "chat_latency": {
+        "rewrite_ms": 0.59,
+        "generation_ms": 1136.37,
+        "verification_ms": 226.4,
+        "total_ms": 7271.27
+      },
+      "retrieval_latency": {
+        "embedding_ms": 44.16,
+        "search_ms": 140.6,
+        "fusion_ms": 54.01,
+        "reranking_ms": 465.87,
+        "sufficiency_ms": 4831.31
+      },
+      "llm": {
+        "calls": 4,
+        "phases": {
+          "intent": {
+            "calls": 1,
+            "ms": 3065.4,
+            "prompt_tokens": 525,
+            "completion_tokens": 6
+          },
+          "assessment": {
+            "calls": 1,
+            "ms": 4829.7,
+            "prompt_tokens": 13684,
+            "completion_tokens": 58
+          },
+          "generation": {
+            "calls": 1,
+            "ms": 1135.6,
+            "prompt_tokens": 993,
+            "completion_tokens": 38
+          },
+          "verification": {
+            "calls": 1,
+            "ms": 226.3,
+            "prompt_tokens": 489,
+            "completion_tokens": 6
+          }
+        }
+      },
       "failures": [],
       "passed": true
     },
@@ -1197,9 +1659,57 @@
       },
       "decision": "calibrated_score",
       "assessment": "answer",
-      "score": 5.470599174499512,
+      "score": 4.142093181610107,
       "policy_inherited": false,
-      "seconds": 15.4,
+      "seconds": 8.5,
+      "chat_latency": {
+        "rewrite_ms": 641.59,
+        "generation_ms": 1150.28,
+        "verification_ms": 280.78,
+        "total_ms": 8222.69
+      },
+      "retrieval_latency": {
+        "embedding_ms": 54.36,
+        "search_ms": 119.19,
+        "fusion_ms": 129.23,
+        "reranking_ms": 490.66,
+        "sufficiency_ms": 5127.63
+      },
+      "llm": {
+        "calls": 5,
+        "phases": {
+          "rewrite": {
+            "calls": 1,
+            "ms": 640.7,
+            "prompt_tokens": 457,
+            "completion_tokens": 19
+          },
+          "intent": {
+            "calls": 1,
+            "ms": 1231.0,
+            "prompt_tokens": 527,
+            "completion_tokens": 6
+          },
+          "assessment": {
+            "calls": 1,
+            "ms": 5126.0,
+            "prompt_tokens": 14503,
+            "completion_tokens": 58
+          },
+          "generation": {
+            "calls": 1,
+            "ms": 1149.5,
+            "prompt_tokens": 989,
+            "completion_tokens": 33
+          },
+          "verification": {
+            "calls": 1,
+            "ms": 280.6,
+            "prompt_tokens": 479,
+            "completion_tokens": 6
+          }
+        }
+      },
       "failures": [],
       "passed": true
     },
@@ -1215,9 +1725,51 @@
       },
       "decision": "calibrated_score",
       "assessment": "answer",
-      "score": 3.4533441066741943,
+      "score": 3.4605751037597656,
       "policy_inherited": false,
-      "seconds": 39.1,
+      "seconds": 15.8,
+      "chat_latency": {
+        "rewrite_ms": 0.82,
+        "generation_ms": 5396.28,
+        "verification_ms": 397.48,
+        "total_ms": 15599.68
+      },
+      "retrieval_latency": {
+        "embedding_ms": 83.48,
+        "search_ms": 198.41,
+        "fusion_ms": 164.07,
+        "reranking_ms": 502.78,
+        "sufficiency_ms": 8589.86
+      },
+      "llm": {
+        "calls": 6,
+        "phases": {
+          "intent": {
+            "calls": 1,
+            "ms": 3556.5,
+            "prompt_tokens": 524,
+            "completion_tokens": 6
+          },
+          "assessment": {
+            "calls": 1,
+            "ms": 8587.9,
+            "prompt_tokens": 13181,
+            "completion_tokens": 161
+          },
+          "generation": {
+            "calls": 1,
+            "ms": 5395.7,
+            "prompt_tokens": 2185,
+            "completion_tokens": 166
+          },
+          "verification": {
+            "calls": 3,
+            "ms": 1156.1,
+            "prompt_tokens": 1356,
+            "completion_tokens": 18
+          }
+        }
+      },
       "failures": [],
       "passed": true
     },
@@ -1229,13 +1781,61 @@
       "status": "completed",
       "chat_outcome": {
         "status": "completed",
-        "reason": "grounded_extract"
+        "reason": "grounded"
       },
       "decision": "calibrated_score",
       "assessment": "answer",
       "score": 3.8890130519866943,
       "policy_inherited": false,
-      "seconds": 21.3,
+      "seconds": 13.8,
+      "chat_latency": {
+        "rewrite_ms": 900.01,
+        "generation_ms": 4008.78,
+        "verification_ms": 280.77,
+        "total_ms": 13235.34
+      },
+      "retrieval_latency": {
+        "embedding_ms": 72.46,
+        "search_ms": 185.53,
+        "fusion_ms": 42.23,
+        "reranking_ms": 550.44,
+        "sufficiency_ms": 6487.42
+      },
+      "llm": {
+        "calls": 6,
+        "phases": {
+          "rewrite": {
+            "calls": 1,
+            "ms": 899.3,
+            "prompt_tokens": 631,
+            "completion_tokens": 26
+          },
+          "intent": {
+            "calls": 1,
+            "ms": 3560.7,
+            "prompt_tokens": 535,
+            "completion_tokens": 6
+          },
+          "assessment": {
+            "calls": 1,
+            "ms": 6485.2,
+            "prompt_tokens": 12856,
+            "completion_tokens": 96
+          },
+          "generation": {
+            "calls": 1,
+            "ms": 4008.1,
+            "prompt_tokens": 1563,
+            "completion_tokens": 141
+          },
+          "verification": {
+            "calls": 2,
+            "ms": 559.4,
+            "prompt_tokens": 914,
+            "completion_tokens": 12
+          }
+        }
+      },
       "failures": [],
       "passed": true
     },
@@ -1253,9 +1853,605 @@
       "assessment": "answer",
       "score": 6.351189613342285,
       "policy_inherited": false,
-      "seconds": 21.0,
+      "seconds": 12.1,
+      "chat_latency": {
+        "rewrite_ms": 994.23,
+        "generation_ms": 2572.7,
+        "verification_ms": 308.66,
+        "total_ms": 11675.33
+      },
+      "retrieval_latency": {
+        "embedding_ms": 87.8,
+        "search_ms": 132.63,
+        "fusion_ms": 44.45,
+        "reranking_ms": 504.38,
+        "sufficiency_ms": 5883.65
+      },
+      "llm": {
+        "calls": 6,
+        "phases": {
+          "rewrite": {
+            "calls": 1,
+            "ms": 993.4,
+            "prompt_tokens": 868,
+            "completion_tokens": 31
+          },
+          "intent": {
+            "calls": 1,
+            "ms": 3176.9,
+            "prompt_tokens": 540,
+            "completion_tokens": 6
+          },
+          "assessment": {
+            "calls": 1,
+            "ms": 5882.0,
+            "prompt_tokens": 13043,
+            "completion_tokens": 96
+          },
+          "generation": {
+            "calls": 1,
+            "ms": 2572.1,
+            "prompt_tokens": 1562,
+            "completion_tokens": 78
+          },
+          "verification": {
+            "calls": 2,
+            "ms": 589.9,
+            "prompt_tokens": 885,
+            "completion_tokens": 12
+          }
+        }
+      },
       "failures": [],
       "passed": true
+    },
+    {
+      "id": "AGN-VAL-T001",
+      "kind": "answerable",
+      "language": "fr",
+      "domain": "biología",
+      "status": "completed",
+      "chat_outcome": {
+        "status": "completed",
+        "reason": "grounded"
+      },
+      "decision": "calibrated_score",
+      "assessment": "answer",
+      "score": 6.956367492675781,
+      "policy_inherited": false,
+      "seconds": 8.5,
+      "chat_latency": {
+        "rewrite_ms": 456.13,
+        "translation_ms": 455.41,
+        "generation_ms": 984.89,
+        "verification_ms": 260.23,
+        "total_ms": 7991.19
+      },
+      "retrieval_latency": {
+        "embedding_ms": 68.53,
+        "search_ms": 131.25,
+        "fusion_ms": 44.78,
+        "reranking_ms": 495.39,
+        "sufficiency_ms": 5138.66,
+        "translation_ms": 455.41
+      },
+      "llm": {
+        "calls": 5,
+        "phases": {
+          "translation": {
+            "calls": 1,
+            "ms": 455.3,
+            "prompt_tokens": 118,
+            "completion_tokens": 10
+          },
+          "intent": {
+            "calls": 1,
+            "ms": 2983.2,
+            "prompt_tokens": 518,
+            "completion_tokens": 6
+          },
+          "assessment": {
+            "calls": 1,
+            "ms": 5136.5,
+            "prompt_tokens": 15209,
+            "completion_tokens": 57
+          },
+          "generation": {
+            "calls": 1,
+            "ms": 983.9,
+            "prompt_tokens": 895,
+            "completion_tokens": 30
+          },
+          "verification": {
+            "calls": 1,
+            "ms": 260.1,
+            "prompt_tokens": 398,
+            "completion_tokens": 6
+          }
+        }
+      },
+      "failures": [],
+      "passed": true
+    },
+    {
+      "id": "AGN-VAL-T002",
+      "kind": "answerable",
+      "language": "de",
+      "domain": "astronomía",
+      "status": "abstained",
+      "chat_outcome": {
+        "status": "abstained",
+        "reason": "calibrated_score"
+      },
+      "decision": "calibrated_score",
+      "assessment": "answer",
+      "score": -1.7649943828582764,
+      "policy_inherited": false,
+      "seconds": 7.3,
+      "chat_latency": {
+        "rewrite_ms": 495.28,
+        "translation_ms": 493.93,
+        "total_ms": 7114.99
+      },
+      "retrieval_latency": {
+        "embedding_ms": 79.11,
+        "search_ms": 247.44,
+        "fusion_ms": 221.94,
+        "reranking_ms": 518.38,
+        "sufficiency_ms": 5404.32,
+        "translation_ms": 493.93
+      },
+      "llm": {
+        "calls": 3,
+        "phases": {
+          "translation": {
+            "calls": 1,
+            "ms": 493.8,
+            "prompt_tokens": 118,
+            "completion_tokens": 13
+          },
+          "intent": {
+            "calls": 1,
+            "ms": 3282.9,
+            "prompt_tokens": 521,
+            "completion_tokens": 6
+          },
+          "assessment": {
+            "calls": 1,
+            "ms": 5400.2,
+            "prompt_tokens": 14767,
+            "completion_tokens": 59
+          }
+        }
+      },
+      "failures": [
+        "expected_answer"
+      ],
+      "passed": false
+    },
+    {
+      "id": "AGN-VAL-T003",
+      "kind": "answerable",
+      "language": "it",
+      "domain": "informática",
+      "status": "completed",
+      "chat_outcome": {
+        "status": "completed",
+        "reason": "grounded"
+      },
+      "decision": "calibrated_score",
+      "assessment": "answer",
+      "score": -0.07162560522556305,
+      "policy_inherited": false,
+      "seconds": 9.8,
+      "chat_latency": {
+        "rewrite_ms": 451.5,
+        "translation_ms": 450.86,
+        "generation_ms": 1884.52,
+        "verification_ms": 304.19,
+        "total_ms": 9740.97
+      },
+      "retrieval_latency": {
+        "embedding_ms": 40.36,
+        "search_ms": 125.27,
+        "fusion_ms": 51.11,
+        "reranking_ms": 469.97,
+        "sufficiency_ms": 6150.94,
+        "translation_ms": 450.86
+      },
+      "llm": {
+        "calls": 6,
+        "phases": {
+          "translation": {
+            "calls": 1,
+            "ms": 450.8,
+            "prompt_tokens": 117,
+            "completion_tokens": 11
+          },
+          "intent": {
+            "calls": 1,
+            "ms": 3132.1,
+            "prompt_tokens": 520,
+            "completion_tokens": 6
+          },
+          "assessment": {
+            "calls": 1,
+            "ms": 6149.0,
+            "prompt_tokens": 14277,
+            "completion_tokens": 97
+          },
+          "generation": {
+            "calls": 1,
+            "ms": 1883.8,
+            "prompt_tokens": 1472,
+            "completion_tokens": 63
+          },
+          "verification": {
+            "calls": 2,
+            "ms": 582.3,
+            "prompt_tokens": 821,
+            "completion_tokens": 12
+          }
+        }
+      },
+      "failures": [],
+      "passed": true
+    },
+    {
+      "id": "AGN-VAL-T004",
+      "kind": "answerable",
+      "language": "en",
+      "domain": "medicina",
+      "status": "completed",
+      "chat_outcome": {
+        "status": "completed",
+        "reason": "grounded"
+      },
+      "decision": "calibrated_score",
+      "assessment": "answer",
+      "score": 3.172801971435547,
+      "policy_inherited": false,
+      "seconds": 9.4,
+      "chat_latency": {
+        "rewrite_ms": 512.84,
+        "translation_ms": 512.29,
+        "generation_ms": 2471.47,
+        "verification_ms": 268.1,
+        "total_ms": 9329.36
+      },
+      "retrieval_latency": {
+        "embedding_ms": 43.06,
+        "search_ms": 126.56,
+        "fusion_ms": 96.75,
+        "reranking_ms": 473.25,
+        "sufficiency_ms": 4966.99,
+        "translation_ms": 512.29
+      },
+      "llm": {
+        "calls": 5,
+        "phases": {
+          "translation": {
+            "calls": 1,
+            "ms": 512.2,
+            "prompt_tokens": 116,
+            "completion_tokens": 14
+          },
+          "intent": {
+            "calls": 1,
+            "ms": 3074.0,
+            "prompt_tokens": 522,
+            "completion_tokens": 6
+          },
+          "assessment": {
+            "calls": 1,
+            "ms": 4965.3,
+            "prompt_tokens": 13966,
+            "completion_tokens": 59
+          },
+          "generation": {
+            "calls": 1,
+            "ms": 2470.8,
+            "prompt_tokens": 943,
+            "completion_tokens": 89
+          },
+          "verification": {
+            "calls": 1,
+            "ms": 268.0,
+            "prompt_tokens": 481,
+            "completion_tokens": 6
+          }
+        }
+      },
+      "failures": [],
+      "passed": true
+    },
+    {
+      "id": "AGN-VAL-T005",
+      "kind": "answerable",
+      "language": "fr",
+      "domain": "agroalimentación",
+      "status": "completed",
+      "chat_outcome": {
+        "status": "completed",
+        "reason": "grounded"
+      },
+      "decision": "calibrated_score",
+      "assessment": "answer",
+      "score": 7.468493938446045,
+      "policy_inherited": false,
+      "seconds": 11.9,
+      "chat_latency": {
+        "rewrite_ms": 527.96,
+        "translation_ms": 527.34,
+        "generation_ms": 2892.9,
+        "verification_ms": 376.03,
+        "total_ms": 11840.31
+      },
+      "retrieval_latency": {
+        "embedding_ms": 47.87,
+        "search_ms": 129.48,
+        "fusion_ms": 180.26,
+        "reranking_ms": 459.34,
+        "sufficiency_ms": 7062.05,
+        "translation_ms": 527.34
+      },
+      "llm": {
+        "calls": 7,
+        "phases": {
+          "translation": {
+            "calls": 1,
+            "ms": 527.3,
+            "prompt_tokens": 120,
+            "completion_tokens": 14
+          },
+          "intent": {
+            "calls": 1,
+            "ms": 3076.0,
+            "prompt_tokens": 522,
+            "completion_tokens": 6
+          },
+          "assessment": {
+            "calls": 1,
+            "ms": 7060.3,
+            "prompt_tokens": 13785,
+            "completion_tokens": 137
+          },
+          "generation": {
+            "calls": 1,
+            "ms": 2892.2,
+            "prompt_tokens": 1995,
+            "completion_tokens": 98
+          },
+          "verification": {
+            "calls": 3,
+            "ms": 1094.7,
+            "prompt_tokens": 1125,
+            "completion_tokens": 18
+          }
+        }
+      },
+      "failures": [],
+      "passed": true
+    },
+    {
+      "id": "AGN-VAL-T006",
+      "kind": "answerable",
+      "language": "de",
+      "domain": "química",
+      "status": "completed",
+      "chat_outcome": {
+        "status": "completed",
+        "reason": "grounded"
+      },
+      "decision": "calibrated_score",
+      "assessment": "answer",
+      "score": 2.2709479331970215,
+      "policy_inherited": false,
+      "seconds": 8.4,
+      "chat_latency": {
+        "rewrite_ms": 464.79,
+        "translation_ms": 464.2,
+        "generation_ms": 1512.92,
+        "verification_ms": 246.44,
+        "total_ms": 8353.84
+      },
+      "retrieval_latency": {
+        "embedding_ms": 43.44,
+        "search_ms": 177.82,
+        "fusion_ms": 86.28,
+        "reranking_ms": 477.81,
+        "sufficiency_ms": 5192.16,
+        "translation_ms": 464.2
+      },
+      "llm": {
+        "calls": 5,
+        "phases": {
+          "translation": {
+            "calls": 1,
+            "ms": 464.1,
+            "prompt_tokens": 121,
+            "completion_tokens": 12
+          },
+          "intent": {
+            "calls": 1,
+            "ms": 3089.5,
+            "prompt_tokens": 520,
+            "completion_tokens": 6
+          },
+          "assessment": {
+            "calls": 1,
+            "ms": 5190.6,
+            "prompt_tokens": 14870,
+            "completion_tokens": 59
+          },
+          "generation": {
+            "calls": 1,
+            "ms": 1512.4,
+            "prompt_tokens": 920,
+            "completion_tokens": 53
+          },
+          "verification": {
+            "calls": 1,
+            "ms": 246.3,
+            "prompt_tokens": 446,
+            "completion_tokens": 6
+          }
+        }
+      },
+      "failures": [],
+      "passed": true
+    },
+    {
+      "id": "AGN-VAL-T007",
+      "kind": "unanswerable",
+      "language": "en",
+      "domain": "—",
+      "status": "abstained",
+      "chat_outcome": {
+        "status": "abstained",
+        "reason": "evidence_assessed"
+      },
+      "decision": "evidence_assessed",
+      "assessment": "abstain",
+      "score": -3.4645676612854004,
+      "policy_inherited": null,
+      "seconds": 4.8,
+      "chat_latency": {
+        "rewrite_ms": 422.17,
+        "translation_ms": 421.61,
+        "total_ms": 4689.48
+      },
+      "retrieval_latency": {
+        "embedding_ms": 45.68,
+        "search_ms": 125.48,
+        "fusion_ms": 43.55,
+        "reranking_ms": 418.98,
+        "sufficiency_ms": 3448.18,
+        "translation_ms": 421.61
+      },
+      "llm": {
+        "calls": 3,
+        "phases": {
+          "translation": {
+            "calls": 1,
+            "ms": 421.6,
+            "prompt_tokens": 119,
+            "completion_tokens": 14
+          },
+          "intent": {
+            "calls": 1,
+            "ms": 2914.9,
+            "prompt_tokens": 522,
+            "completion_tokens": 6
+          },
+          "assessment": {
+            "calls": 1,
+            "ms": 3446.4,
+            "prompt_tokens": 12539,
+            "completion_tokens": 21
+          }
+        }
+      },
+      "failures": [],
+      "passed": true
+    },
+    {
+      "id": "AGN-VAL-T008",
+      "kind": "unanswerable",
+      "language": "de",
+      "domain": "—",
+      "status": "abstained",
+      "chat_outcome": {
+        "status": "abstained",
+        "reason": "clarification_required"
+      },
+      "decision": "ambiguous_question",
+      "assessment": "clarify",
+      "score": -5.188259124755859,
+      "policy_inherited": null,
+      "seconds": 5.3,
+      "chat_latency": {
+        "rewrite_ms": 477.34,
+        "translation_ms": 476.72,
+        "total_ms": 5190.99
+      },
+      "retrieval_latency": {
+        "embedding_ms": 41.89,
+        "search_ms": 117.19,
+        "fusion_ms": 38.43,
+        "reranking_ms": 491.46,
+        "sufficiency_ms": 3921.36,
+        "translation_ms": 476.72
+      },
+      "llm": {
+        "calls": 3,
+        "phases": {
+          "translation": {
+            "calls": 1,
+            "ms": 476.7,
+            "prompt_tokens": 120,
+            "completion_tokens": 16
+          },
+          "intent": {
+            "calls": 2,
+            "ms": 3920.4,
+            "prompt_tokens": 1152,
+            "completion_tokens": 12
+          }
+        }
+      },
+      "failures": [
+        "expected_abstain"
+      ],
+      "passed": false
     }
-  ]
+  ],
+  "latency": {
+    "all": {
+      "n": 40,
+      "p50": 8.0,
+      "p95": 13.8
+    },
+    "answers": {
+      "n": 28,
+      "p50": 8.5,
+      "p95": 14.3
+    },
+    "abstentions": {
+      "n": 12,
+      "p50": 5.0,
+      "p95": 7.3
+    },
+    "llm": {
+      "turns": 40,
+      "calls": 164,
+      "calls_per_turn": 4.1,
+      "phases": {
+        "assessment": {
+          "calls": 34,
+          "mean_ms": 5431
+        },
+        "generation": {
+          "calls": 28,
+          "mean_ms": 2269
+        },
+        "intent": {
+          "calls": 46,
+          "mean_ms": 2762
+        },
+        "rewrite": {
+          "calls": 4,
+          "mean_ms": 758
+        },
+        "translation": {
+          "calls": 10,
+          "mean_ms": 476
+        },
+        "verification": {
+          "calls": 42,
+          "mean_ms": 291
+        }
+      }
+    }
+  }
 }
