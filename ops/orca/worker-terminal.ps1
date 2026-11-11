@@ -31,4 +31,3 @@ Write-Output "OPENCODE_AGENT=$Agent"
 Write-Output "OPENCODE_WORKTREE=$worktree"
 
 & opencode --session $sessionID --auto
-

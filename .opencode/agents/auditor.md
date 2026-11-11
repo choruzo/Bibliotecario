@@ -1,7 +1,7 @@
 ---
 description: Auditor read-only del líder. Mapea el repo, detecta riesgos y cuestiona el plan sin editar.
 mode: subagent
-model: nan/deepseek-v4-flash
+model: nan/qwen3.8-flash
 permissions:
   - action: edit
     resource: "*"
@@ -38,5 +38,4 @@ Tu salida es un informe breve:
 4. Recomendación: seguir, dividir o replanificar.
 
 No propongas parches de código; solo observa y argumenta.
-
 

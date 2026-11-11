@@ -35,4 +35,3 @@ Copia esta plantilla en `task-create --spec` y rellénala. La spec debe ser **au
 
 ## Riesgos / notas
 - ...
-

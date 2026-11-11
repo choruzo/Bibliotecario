@@ -53,22 +53,78 @@ function Get-OrcaResult {
     return $Response.result
 }
 
-function Get-RunRecord {
-    # Orca 1.4 devuelve `runId`/`objective` en la raiz de run-show y run-create;
-    # el kit antiguo esperaba `result.run` con `id` y `created_at`. Acepta ambos.
+function Get-OrcaRun {
     param([Parameter(Mandatory)]$Response)
 
     $result = Get-OrcaResult $Response
-    if ($result.PSObject.Properties['run'] -and $result.run) { return $result.run }
+    $run = @($result.run | Where-Object { $_ }) | Select-Object -First 1
+    if ($run) { return $run }
 
-    $id = if ($result.PSObject.Properties['runId']) { $result.runId } else { $result.id }
-    if (-not $id) { return $null }
-
-    return [pscustomobject]@{
-        id         = $id
-        objective  = $result.objective
-        created_at = if ($result.PSObject.Properties['createdAt']) { $result.createdAt } else { $null }
+    # La CLI empaquetada con la app devuelve result.runId/objective en run-show.
+    if ($result.PSObject.Properties['runId'] -and $result.runId) {
+        return [pscustomobject]@{
+            id                 = [string]$result.runId
+            objective          = if ($result.PSObject.Properties['objective']) { [string]$result.objective } else { '' }
+            coordinator_handle = if ($result.PSObject.Properties['coordinator_handle']) { $result.coordinator_handle } else { $null }
+            created_at         = if ($result.PSObject.Properties['created_at']) { $result.created_at } else { $null }
+            updated_at         = if ($result.PSObject.Properties['updated_at']) { $result.updated_at } else { $null }
+        }
     }
+    return $null
+}
+
+function Invoke-OrcaTaskList {
+    param(
+        [Parameter(Mandatory)][string]$RunId,
+        [string]$Coordinator
+    )
+
+    $base = @('orchestration', 'task-list', '--run', $RunId, '--json')
+    if ($Coordinator) { $base += @('--from', $Coordinator) }
+
+    # La CLI nueva devuelve una vista concisa salvo con --full; la antigua no
+    # acepta --full pero ya devuelve el registro completo. Sondeamos una vez
+    # por proceso y reutilizamos la capacidad.
+    if ($null -ne $script:OrcaTaskListFull) {
+        if ($script:OrcaTaskListFull) { return Invoke-Orca @($base + '--full') }
+        return Invoke-Orca @base
+    }
+
+    $response = Invoke-Orca @($base + '--full')
+    if ($response.PSObject.Properties['ok'] -and $response.ok) {
+        $script:OrcaTaskListFull = $true
+        return $response
+    }
+    if ($response.PSObject.Properties['error']) {
+        $message = [string]$response.error.message
+        if ($message -match 'Unknown flag --full') {
+            $script:OrcaTaskListFull = $false
+            return Invoke-Orca @base
+        }
+    }
+    return $response
+}
+
+function Invoke-OrcaRunList {
+    $base = @('orchestration', 'run-list', '--json')
+    if ($null -ne $script:OrcaRunListFull) {
+        if ($script:OrcaRunListFull) { return Invoke-Orca @($base + '--full') }
+        return Invoke-Orca @base
+    }
+
+    $response = Invoke-Orca @($base + '--full')
+    if ($response.PSObject.Properties['ok'] -and $response.ok) {
+        $script:OrcaRunListFull = $true
+        return $response
+    }
+    if ($response.PSObject.Properties['error']) {
+        $message = [string]$response.error.message
+        if ($message -match 'Unknown flag --full') {
+            $script:OrcaRunListFull = $false
+            return Invoke-Orca @base
+        }
+    }
+    return $response
 }
 
 function Get-StateDir {
@@ -124,7 +180,8 @@ function Bind-Run {
     )
 
     $current = Invoke-Orca orchestration run-current --from $Coordinator --json
-    if ($current.ok -and (Get-RunRecord $current).id -eq $RunId) { return }
+    $currentRun = if ($current.ok) { Get-OrcaRun $current } else { $null }
+    if ($currentRun -and $currentRun.id -eq $RunId) { return }
 
     $used = Invoke-Orca orchestration run-use --id $RunId --from $Coordinator --json
     if (-not $used.ok) {
@@ -133,9 +190,8 @@ function Bind-Run {
 }
 
 function Get-TaskSlug {
-    param([string]$Title = '')
+    param([Parameter(Mandatory)][string]$Title)
 
-    if ([string]::IsNullOrWhiteSpace($Title)) { return 'task' }
     $slug = $Title.ToLowerInvariant() -replace '[^a-z0-9]+', '-' -replace '^-+|-+$', ''
     if ($slug.Length -gt 40) { $slug = $slug.Substring(0, 40).TrimEnd('-') }
     if (-not $slug) { $slug = 'task' }
@@ -165,4 +221,3 @@ function Read-Dispatches {
     if (-not (Test-Path $file)) { return @() }
     return @(Get-Content $file -Raw | ConvertFrom-Json)
 }
-

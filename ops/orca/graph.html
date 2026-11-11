@@ -191,6 +191,92 @@
   #loopbar.blocked .loop-hint, #loopbar.failed .loop-hint, #loopbar.interrupted .loop-hint, #loopbar.escalated .loop-hint { color: #fca5a5; }
   #loopbar.done .loop-hint { color: #86efac; }
 
+  .controlbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin: 0 20px 12px;
+    padding: 9px 12px;
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    background: var(--panel);
+  }
+  .control-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .controlbar button {
+    background: #1b2230;
+    border-color: #33415a;
+    padding: 7px 11px;
+  }
+  .controlbar button:hover { background: #243044; }
+  .controlbar button:disabled { opacity: .45; cursor: not-allowed; }
+  .controlbar button.danger { border-color: #6b2a2a; color: #fca5a5; background: #1e1212; }
+  .controlbar button.danger:hover { background: #2a1616; }
+  .loop-options { position: relative; color: var(--muted); font-size: 12px; }
+  .loop-options summary { cursor: pointer; padding: 6px 8px; border: 1px solid var(--line); border-radius: 7px; background: var(--panel-2); }
+  .loop-options[open] summary { border-color: #33415a; }
+  .loop-options label { display: inline-flex; align-items: center; gap: 5px; margin: 8px 10px 0 0; color: var(--text); }
+  .loop-options input[type="number"] { width: 62px; background: var(--panel-2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 3px 6px; font: inherit; }
+  .control-status { margin-left: auto; color: var(--muted); font-size: 12px; }
+
+  .question-panel {
+    margin: 0 20px 12px;
+    padding: 12px 14px;
+    border: 1px solid #6b5420;
+    border-radius: 9px;
+    background: #1d180d;
+  }
+  .question-panel.hidden { display: none; }
+  .question-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+  .question-head strong { color: #fbbf24; }
+  .question-meta { color: var(--muted-2); font-size: 11.5px; }
+  .question-body { margin: 7px 0 8px; white-space: pre-wrap; }
+  .question-options { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+  .question-options button { font-size: 11.5px; padding: 3px 8px; border-radius: 6px; background: var(--panel-2); border: 1px solid var(--line); color: var(--text); cursor: pointer; }
+  .question-panel textarea {
+    width: 100%;
+    resize: vertical;
+    min-height: 64px;
+    background: #12141a;
+    color: var(--text);
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    padding: 8px 10px;
+    font: inherit;
+  }
+  .question-actions { display: flex; gap: 8px; margin-top: 8px; }
+
+  dialog {
+    width: min(900px, 92vw);
+    max-height: 80vh;
+    background: #0e1015;
+    color: var(--text);
+    border: 1px solid var(--line);
+    border-radius: 11px;
+    padding: 0;
+  }
+  dialog::backdrop { background: #0009; }
+  .dialog-head { display: flex; align-items: center; justify-content: space-between; padding: 11px 14px; border-bottom: 1px solid var(--line); }
+  #logBody { margin: 0; padding: 13px 14px; overflow: auto; max-height: 68vh; font-size: 11.5px; line-height: 1.45; color: #cfd4e0; white-space: pre-wrap; }
+
+  .toast {
+    position: fixed;
+    right: 18px;
+    bottom: 18px;
+    max-width: min(560px, 90vw);
+    padding: 11px 14px;
+    border: 1px solid #33415a;
+    border-radius: 9px;
+    background: #151c28;
+    color: var(--text);
+    box-shadow: 0 10px 28px #0008;
+    z-index: 20;
+    font-size: 13px;
+    white-space: pre-wrap;
+  }
+  .toast.error { border-color: #6b2a2a; background: #1e1212; color: #fca5a5; }
+  .toast.hidden { display: none; }
+
   main {
     flex: 1;
     display: grid;
@@ -338,6 +424,49 @@
   <div id="counts" aria-label="Tareas por estado"></div>
 </div>
 
+<section id="controlbar" class="controlbar" aria-label="Control del bucle">
+  <div class="control-actions">
+    <button id="startLoop" type="button">Lanzar bucle</button>
+    <button id="stopLoop" type="button" class="danger" disabled>Parar</button>
+    <button id="retryTask" type="button" disabled>Reintentar tarea</button>
+    <button id="showLog" type="button">Ver log</button>
+  </div>
+  <details id="loopOptions" class="loop-options">
+    <summary>Opciones</summary>
+    <label><input type="checkbox" id="optAutoAnswer" checked> AutoAnswer</label>
+    <label><input type="checkbox" id="optAutoRescue" checked> AutoRescue</label>
+    <label><input type="checkbox" id="optAutoRepair"> AutoRepair</label>
+    <label><input type="checkbox" id="optAutoRecover"> Recuperar estancados</label>
+    <label>Workers <input type="number" id="optMaxWorkers" min="1" max="5" value="2"></label>
+    <label>Minutos <input type="number" id="optMaxMinutes" min="0" max="1440" value="0"></label>
+  </details>
+  <span id="controlStatus" class="control-status"></span>
+</section>
+
+<section id="questionPanel" class="question-panel hidden" aria-live="polite">
+  <div class="question-head">
+    <strong>Pregunta pendiente</strong>
+    <span id="questionMeta" class="question-meta"></span>
+  </div>
+  <p id="questionBody" class="question-body"></p>
+  <div id="questionOptions" class="question-options"></div>
+  <textarea id="questionAnswer" rows="3" placeholder="Respuesta para el worker…"></textarea>
+  <div class="question-actions">
+    <button id="sendAnswer" type="button">Responder</button>
+    <button id="sendAnswerLaunch" type="button">Responder y lanzar</button>
+  </div>
+</section>
+
+<dialog id="logDialog">
+  <div class="dialog-head">
+    <strong>Log del bucle</strong>
+    <button id="closeLog" type="button">Cerrar</button>
+  </div>
+  <pre id="logBody">Cargando…</pre>
+</dialog>
+
+<div id="toast" class="toast hidden" role="status"></div>
+
 <nav id="stages" aria-label="Fase estimada del ciclo"></nav>
 
 <div id="loopbar" class="loopbar hidden" role="status" aria-live="polite">
@@ -375,6 +504,7 @@
 const STATIC = __STATIC_MODE__;
 const REFRESH_MS = __REFRESH_MS__;
 const DEFAULT_RUN = __DEFAULT_RUN__;
+const UI_TOKEN = __UI_TOKEN__;
 const BOOTSTRAP = /*__BOOTSTRAP__*/null;
 
 const STATUS = {
@@ -414,6 +544,7 @@ let latest = null;
 let lastGoodAt = 0;
 let lastSig = '';
 let selectedId = null;
+let lastQuestionId = null;
 let prevStatus = new Map();
 let timer = null;
 let fails = 0;
@@ -477,8 +608,175 @@ async function getJSON(url, timeoutMs) {
   }
 }
 
-function showBanner(message) {
-  const banner = $('banner');
+function toast(message, isError) {
+  const node = $('toast');
+  node.textContent = message;
+  node.className = 'toast' + (isError ? ' error' : '');
+  clearTimeout(toast._timer);
+  toast._timer = setTimeout(() => node.classList.add('hidden'), 7000);
+}
+
+async function postAction(action, payload) {
+  if (STATIC || !UI_TOKEN) throw new Error('Los controles no estan disponibles en modo instantanea.');
+  const response = await fetch('/api/actions/' + action, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Orca-Token': UI_TOKEN },
+    body: JSON.stringify(payload)
+  });
+  let data = null;
+  try { data = await response.json(); } catch (error) { }
+  if (!response.ok) throw new Error((data && data.error) || ('HTTP ' + response.status));
+  if (!data || !data.ok) throw new Error((data && data.error) || (data && data.output) || 'La accion fallo');
+  return data;
+}
+
+function currentRunId() {
+  return (latest && latest.run && latest.run.id) || pinned || null;
+}
+
+function controlPayload() {
+  return {
+    runId: currentRunId(),
+    maxWorkers: parseInt($('optMaxWorkers').value, 10) || 2,
+    maxTotalWorkers: 5,
+    maxRunMinutes: parseInt($('optMaxMinutes').value, 10) || 0,
+    autoAnswer: $('optAutoAnswer').checked,
+    autoRescue: $('optAutoRescue').checked,
+    autoRepair: $('optAutoRepair').checked,
+    autoRecoverStalled: $('optAutoRecover').checked
+  };
+}
+
+function renderControl(state) {
+  if (STATIC) return;
+  const run = state && state.run;
+  const loop = state && state.loop;
+  const running = !!(loop && (loop.status === 'running' || loop.status === 'starting') && loop.alive !== false);
+  $('startLoop').disabled = !run || running;
+  $('stopLoop').disabled = !run || !running;
+  const selected = selectedId && state && state.tasks ? state.tasks.find(t => t.id === selectedId) : null;
+  $('retryTask').disabled = !run || running || !selected || !['blocked', 'failed'].includes(selected.status);
+  $('controlStatus').textContent = !run ? 'sin Run' : running ? 'bucle en marcha' : loop ? 'bucle ' + loop.status : 'sin bucle';
+}
+
+function renderQuestion(state) {
+  if (STATIC) return;
+  const question = state && state.question;
+  const panel = $('questionPanel');
+  if (!question) {
+    panel.classList.add('hidden');
+    lastQuestionId = null;
+    return;
+  }
+  panel.classList.remove('hidden');
+  $('questionBody').textContent = question.body || '(sin texto)';
+  $('questionMeta').textContent = question.capturedAt ? 'recibida ' + fmtTime(question.capturedAt) : '';
+  if (lastQuestionId !== question.id) {
+    lastQuestionId = question.id;
+    $('questionAnswer').value = '';
+  }
+  const options = $('questionOptions');
+  options.textContent = '';
+  for (const option of question.options || []) {
+    const label = typeof option === 'string' ? option : (option.label || option.value || JSON.stringify(option));
+    const button = html('button', null, String(label));
+    button.type = 'button';
+    button.addEventListener('click', () => { $('questionAnswer').value = String(label); });
+    options.appendChild(button);
+  }
+}
+
+async function startLoop() {
+  const payload = controlPayload();
+  if (!payload.runId) { toast('Selecciona un Run', true); return; }
+  try {
+    toast('Lanzando bucle...');
+    const data = await postAction('start-loop', payload);
+    toast(data.output || 'Bucle lanzado');
+    latest = null;
+    lastSig = '';
+    schedulePoll();
+  } catch (error) { toast(error.message, true); }
+}
+
+async function stopLoop() {
+  const runId = currentRunId();
+  if (!runId) { toast('Selecciona un Run', true); return; }
+  if (!confirm('¿Parar el runner? Los workers ya despachados pueden seguir hasta terminar.')) return;
+  try {
+    const data = await postAction('stop-loop', { runId });
+    toast(data.output || 'Bucle detenido');
+    latest = null;
+    lastSig = '';
+    schedulePoll();
+  } catch (error) { toast(error.message, true); }
+}
+
+async function retrySelectedTask() {
+  const runId = currentRunId();
+  if (!runId || !selectedId) { toast('Selecciona una tarea bloqueada o fallida', true); return; }
+  try {
+    const data = await postAction('retry-task', { runId, taskId: selectedId });
+    toast(data.output || 'Tarea marcada ready');
+    schedulePoll();
+  } catch (error) { toast(error.message, true); }
+}
+
+async function sendAnswer(relaunch) {
+  const runId = currentRunId();
+  const body = $('questionAnswer').value.trim();
+  if (!runId) { toast('Selecciona un Run', true); return; }
+  if (!body) { toast('Escribe una respuesta', true); return; }
+  try {
+    const data = await postAction('answer-question', { runId, body });
+    toast(data.output || 'Respuesta enviada');
+    $('questionAnswer').value = '';
+    latest = null;
+    lastSig = '';
+    schedulePoll();
+    if (relaunch) await startLoop();
+  } catch (error) { toast(error.message, true); }
+}
+
+async function showLog() {
+  const runId = currentRunId();
+  if (!runId) { toast('Selecciona un Run', true); return; }
+  try {
+    const response = await fetch('/api/log?run=' + encodeURIComponent(runId) + '&lines=300', {
+      headers: { 'X-Orca-Token': UI_TOKEN || '' }
+    });
+    const text = await response.text();
+    $('logBody').textContent = response.ok ? text : text || ('HTTP ' + response.status);
+    $('logDialog').showModal();
+  } catch (error) { toast(error.message, true); }
+}
+
+function loadOptions() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('orcaLoopOptions') || '{}');
+    if (typeof saved.autoAnswer === 'boolean') $('optAutoAnswer').checked = saved.autoAnswer;
+    if (typeof saved.autoRescue === 'boolean') $('optAutoRescue').checked = saved.autoRescue;
+    if (typeof saved.autoRepair === 'boolean') $('optAutoRepair').checked = saved.autoRepair;
+    if (typeof saved.autoRecover === 'boolean') $('optAutoRecover').checked = saved.autoRecover;
+    if (saved.maxWorkers) $('optMaxWorkers').value = saved.maxWorkers;
+    if (saved.maxMinutes !== undefined) $('optMaxMinutes').value = saved.maxMinutes;
+  } catch (error) { }
+}
+
+function saveOptions() {
+  try {
+    localStorage.setItem('orcaLoopOptions', JSON.stringify({
+      autoAnswer: $('optAutoAnswer').checked,
+      autoRescue: $('optAutoRescue').checked,
+      autoRepair: $('optAutoRepair').checked,
+      autoRecover: $('optAutoRecover').checked,
+      maxWorkers: $('optMaxWorkers').value,
+      maxMinutes: $('optMaxMinutes').value
+    }));
+  } catch (error) { }
+}
+
+function showBanner(message) {  const banner = $('banner');
   banner.textContent = message;
   banner.classList.remove('hidden');
 }
@@ -535,6 +833,7 @@ function renderLoop(loop) {
   $('loopText').textContent = info.label
     + (loop.pid ? ' · PID ' + loop.pid : '')
     + (loop.exitCode !== null && loop.exitCode !== undefined ? ' · exit ' + loop.exitCode : '')
+    + (loop.autoAnswers ? ' · auto ' + loop.autoAnswers : '')
     + ((loop.status === 'running' || loop.status === 'starting') && loop.startedAt ? ' · desde ' + fmtTime(loop.startedAt) : '');
 
   const tail = loop.lastLine || loop.error || '';
@@ -774,6 +1073,7 @@ function selectTask(id) {
   });
   const task = latest && latest.tasks ? latest.tasks.find(t => t.id === id) : null;
   renderDetail(task);
+  renderControl(latest);
 }
 
 function detailRow(dl, label, value, mono) {
@@ -887,6 +1187,8 @@ function render(state) {
   renderCounts(state.counts);
   renderStages(typeof state.stage === 'number' ? state.stage : 0);
   renderLoop(state.loop || null);
+  renderControl(state);
+  renderQuestion(state);
 
   const tasks = state.tasks || [];
   const sig = signature(state);
@@ -998,9 +1300,26 @@ function init() {
   if (STATIC) {
     $('runLabel').style.display = 'none';
     $('refreshBtn').style.display = 'none';
+    $('controlbar').style.display = 'none';
+    $('questionPanel').classList.add('hidden');
     render(BOOTSTRAP);
     return;
   }
+
+  loadOptions();
+  for (const id of ['optAutoAnswer', 'optAutoRescue', 'optAutoRepair', 'optAutoRecover', 'optMaxWorkers', 'optMaxMinutes']) {
+    $(id).addEventListener('change', saveOptions);
+  }
+  $('startLoop').addEventListener('click', startLoop);
+  $('stopLoop').addEventListener('click', stopLoop);
+  $('retryTask').addEventListener('click', retrySelectedTask);
+  $('showLog').addEventListener('click', showLog);
+  $('sendAnswer').addEventListener('click', () => sendAnswer(false));
+  $('sendAnswerLaunch').addEventListener('click', () => sendAnswer(true));
+  $('closeLog').addEventListener('click', () => $('logDialog').close());
+  $('questionAnswer').addEventListener('keydown', (event) => {
+    if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') sendAnswer(true);
+  });
 
   const select = $('runSelect');
   select.value = pinned;

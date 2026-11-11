@@ -113,3 +113,11 @@ También muestra el estado de `loop-<run>.json`: ejecutando, pregunta pendiente,
 | Check lento | Ajustar `check.ps1` o usar `ORCA_PYTEST_ARGS`/equivalente. |
 
 
+
+## Sincronizacion con el kit central
+
+Actualizado desde `C:\Users\javie\Documents\Pruebas` el 2026-11-11: grafo y
+panel de control, AutoAnswer/AutoRescue/AutoRepair, recuperacion de workers
+estancados, reanudacion de terminales muertas, presupuesto, notificaciones y
+routing de modelos. `check.ps1` y `setup-worktree.ps1` siguen siendo los
+adaptados a Bibliotecario.

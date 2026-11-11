@@ -1,8 +1,8 @@
 ---
 description: Worker de una sola tarea Orca. Ejecuta en su worktree, con subagentes, checks y report.md. No hace push ni merge.
 mode: primary
-model: nan/deepseek-v4-flash
-steps: 120
+model: nan/glm5.3-flash
+steps: 300
 permissions:
   - action: edit
     resource: "*"
@@ -18,6 +18,9 @@ permissions:
     effect: allow
   - action: subagent
     resource: worker-writer
+    effect: allow
+  - action: subagent
+    resource: advisor
     effect: allow
   - action: shell
     resource: "*"
@@ -74,13 +77,19 @@ Eres un **worker** del ciclo Orca. Ejecutas **una sola tarea** en tu worktree.
 2. Si el mensaje no trae la spec completa, lee `.orca-task/spec.md` y `.orca-task/task.json` en la raíz del worktree.
 3. Lee también `ops/orca/PROTOCOL.md` si necesitas el contrato completo.
 4. Comprueba que estás en el worktree correcto (`git rev-parse --show-toplevel`).
-5. No empieces a escribir hasta entender la aceptación. Si hay una duda bloqueante, usa `orca orchestration ask`.
+5. No empieces a escribir hasta entender la aceptación. Si tienes una duda **técnica**
+   (no de alcance), consulta al subagente `advisor` con la pregunta, la spec y el
+   diff. Si responde `DECISION: ESCALATE`, usa `orca orchestration ask`.
 
 ## Durante el trabajo
 
 - Ejecuta los pasos de la spec. No te salgas del alcance.
 - Puedes delegar en `worker-reader` (lectura, sin edición) y `worker-writer` (escritura). Máximo 3 subagentes y **un solo escritor**.
+- Para dudas técnicas, consulta a `advisor`; es read-only y no cuenta como escritor.
 - Ejecuta los checks con `pwsh ops/orca/check.ps1 -Worktree .`.
+- En trabajo largo, late cada ~10 min o al cambiar de fase:
+  `orca orchestration send --type heartbeat --subject "alive" --phase "implementing" --task-id <task_id> --dispatch-id <dispatch_id> --json`.
+- Si te quedan pocos pasos, **entrega primero**: escribe `report.md`, actualiza el estado y envía `worker_done` antes de empezar trabajo nuevo.
 - Escribe `report.md` en la raíz del worktree con: resultado, archivos, checks, decisiones, riesgos y pendientes.
 - No hagas `git push`, `git merge` ni `git rebase`. No toques otros worktrees.
 - Si el orquestador te devuelve defectos, corrige exactamente esos defectos y vuelve a reportar.
@@ -94,7 +103,5 @@ orca orchestration send --type worker_done --subject "<resumen>" --body "<3 fras
 ```
 
 Si fallas, usa `--outcome failed` y explica el bloqueo. Después de `worker_done`, detente: no empieces trabajo nuevo ni esperes en bucle.
-
-
 
 

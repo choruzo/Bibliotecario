@@ -7,6 +7,8 @@
 #   pwsh -NoProfile -File ops/orca/start-loop.ps1 -RunId run_...
 #   pwsh -NoProfile -File ops/orca/start-loop.ps1 -RunId run_... -DryRun
 #   pwsh -NoProfile -File ops/orca/start-loop.ps1 -RunId run_... -Foreground
+#   pwsh -NoProfile -File ops/orca/start-loop.ps1 -RunId run_... -AutoRescue
+#   pwsh -NoProfile -File ops/orca/start-loop.ps1 -RunId run_... -AutoAnswer
 
 param(
     [Parameter(Mandatory)][string]$RunId,
@@ -14,6 +16,16 @@ param(
     [ValidateRange(1, 10)][int]$MaxReviewRounds = 2,
     [string]$BaseBranch = 'main',
     [switch]$KeepWorktrees,
+    [switch]$AutoRescue,
+    [ValidateRange(1, 5)][int]$MaxRescueRounds = 2,
+    [switch]$AutoAnswer,
+    [ValidateRange(0, 10)][int]$MaxAutoAnswers = 3,
+    [switch]$AutoRepair,
+    [ValidateRange(0, 3)][int]$MaxRepairRounds = 1,
+    [switch]$AutoRecoverStalled,
+    [ValidateRange(0, 5)][int]$MaxStallRecoveries = 1,
+    [ValidateRange(0, 50)][int]$MaxTotalWorkers = 5,
+    [ValidateRange(0, 1440)][int]$MaxRunMinutes = 0,
     [switch]$Foreground,
     [switch]$DryRun
 )
@@ -67,21 +79,31 @@ if ($existing -and $existing.status -in @('running', 'starting')) {
     Write-Warning "El estado anterior de $RunId decia '$($existing.status)' pero el proceso ya no vive; se sobrescribe."
 }
 
-# Aviso: el tope es por bucle, no global.
+# Tope global entre Runs: suma los workers de los bucles vivos.
+$otherLoops = @()
 foreach ($file in @(Get-ChildItem $stateDir -Filter 'loop-*.json' -File -ErrorAction SilentlyContinue)) {
     if ($file.FullName -eq $metaPath) { continue }
     $other = Read-LoopMeta -Path $file.FullName
-    if (Test-LoopAlive -Meta $other) {
-        Write-Warning "Hay otro bucle en marcha ($($other.runId), PID $($other.pid)). El tope de $MaxWorkers workers es por bucle."
+    if (Test-LoopAlive -Meta $other) { $otherLoops += $other }
+}
+
+if ($otherLoops.Count -gt 0) {
+    $otherWorkers = 0
+    foreach ($other in $otherLoops) {
+        $otherWorkers += [int]$other.maxWorkers
+        Write-Warning "Hay otro bucle en marcha ($($other.runId), PID $($other.pid), $($other.maxWorkers) workers)."
+    }
+    if ($MaxTotalWorkers -gt 0 -and ($otherWorkers + $MaxWorkers) -gt $MaxTotalWorkers) {
+        throw "Tope global de $MaxTotalWorkers workers: ya hay $otherWorkers en otros bucles y este pide $MaxWorkers. Usa -MaxTotalWorkers 0 para desactivar el limite."
     }
 }
 
 # Validar Run y tareas.
 $runResponse = Invoke-Orca orchestration run-show --id $RunId --json
-$run = Get-RunRecord $runResponse
+$run = Get-OrcaRun $runResponse
 if (-not $run) { throw "No existe el Run $RunId." }
 
-$taskResponse = Invoke-Orca orchestration task-list --run $RunId --json
+$taskResponse = Invoke-OrcaTaskList -RunId $RunId
 $tasks = @((Get-OrcaResult $taskResponse).tasks)
 if ($tasks.Count -eq 0) {
     throw "El Run $RunId no tiene tareas. Crea las tareas antes de lanzar el bucle."
@@ -113,6 +135,21 @@ $runnerArgs = @(
     '-MetaPath', $metaPath
 )
 if ($KeepWorktrees) { $runnerArgs += '-KeepWorktrees' }
+if ($AutoRescue) {
+    $runnerArgs += @('-AutoRescue', '-MaxRescueRounds', "$MaxRescueRounds")
+}
+if ($AutoAnswer) {
+    $runnerArgs += @('-AutoAnswer', '-MaxAutoAnswers', "$MaxAutoAnswers")
+}
+if ($AutoRepair) {
+    $runnerArgs += @('-AutoRepair', '-MaxRepairRounds', "$MaxRepairRounds")
+}
+if ($AutoRecoverStalled) {
+    $runnerArgs += @('-StallAction', 'restart', '-MaxStallRecoveries', "$MaxStallRecoveries")
+}
+if ($MaxRunMinutes -gt 0) {
+    $runnerArgs += @('-MaxRunMinutes', "$MaxRunMinutes")
+}
 
 $pwshExe = (Get-Command pwsh -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty Source)
 if (-not $pwshExe) { throw "No se encontro pwsh en el PATH." }
@@ -124,6 +161,16 @@ if ($DryRun) {
     Write-Output "LOOP_READY=$($ready.Count)"
     Write-Output "LOOP_DISPATCHED=$($dispatched.Count)"
     Write-Output "LOOP_STATUSES=$summary"
+    Write-Output "LOOP_AUTORESCUE=$([bool]$AutoRescue)"
+    Write-Output "LOOP_MAX_RESCUE=$MaxRescueRounds"
+    Write-Output "LOOP_AUTOANSWER=$([bool]$AutoAnswer)"
+    Write-Output "LOOP_MAX_ANSWERS=$MaxAutoAnswers"
+    Write-Output "LOOP_AUTOREPAIR=$([bool]$AutoRepair)"
+    Write-Output "LOOP_MAX_REPAIRS=$MaxRepairRounds"
+    Write-Output "LOOP_AUTORECOVER_STALLED=$([bool]$AutoRecoverStalled)"
+    Write-Output "LOOP_MAX_STALL_RECOVERIES=$MaxStallRecoveries"
+    Write-Output "LOOP_MAX_TOTAL_WORKERS=$MaxTotalWorkers"
+    Write-Output "LOOP_MAX_MINUTES=$MaxRunMinutes"
     Write-Output "LOOP_COMMAND=pwsh $printable"
     Write-Output "LOOP_STATUS=dry-run"
     return
@@ -166,4 +213,3 @@ Write-Output "LOOP_DISPATCHED=$($dispatched.Count)"
 Write-Output "LOOP_LOG=$logPath"
 Write-Output "LOOP_META=$metaPath"
 Write-Output "LOOP_GRAPH=http://127.0.0.1:4599/"
-

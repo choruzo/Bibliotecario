@@ -31,4 +31,3 @@ if ($RemoveWorktree) {
 else {
     Write-Output "WORKTREE_KEPT=$($record.worktree)"
 }
-

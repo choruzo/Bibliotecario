@@ -21,4 +21,3 @@
 
 ## Commit
 <sha si existe; el worker no hace push>
-

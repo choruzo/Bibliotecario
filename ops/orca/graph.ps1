@@ -109,7 +109,7 @@ function Get-Runs {
     if ($script:RunListCache -and ((Get-Date) - $script:RunListCacheAt).TotalSeconds -lt 8) {
         return $script:RunListCache
     }
-    $response = Invoke-Orca orchestration run-list --json
+    $response = Invoke-OrcaRunList
     $runs = @((Get-OrcaResult $response).runs)
     foreach ($run in $runs) {
         $run | Add-Member -NotePropertyName createdAt -NotePropertyValue (ConvertTo-IsoString $run.created_at) -Force
@@ -137,8 +137,17 @@ function Get-RunInfo {
     param([Parameter(Mandatory)][string]$Id)
     if ($script:RunCache.ContainsKey($Id)) { return $script:RunCache[$Id] }
     $response = Invoke-Orca orchestration run-show --id $Id --json
-    $run = Get-RunRecord $response
-    if (-not $run) { return $null }
+    $run = Get-OrcaRun $response
+    if (-not $run) { throw "Orca no devolvio el Run $Id" }
+
+    if (-not $run.PSObject.Properties['created_at'] -or -not $run.created_at) {
+        try {
+            $listed = @(Get-Runs | Where-Object { $_.id -eq $Id }) | Select-Object -First 1
+            if ($listed) { $run = $listed }
+        }
+        catch { }
+    }
+
     $run | Add-Member -NotePropertyName createdAt -NotePropertyValue (ConvertTo-IsoString $run.created_at) -Force
     $run | Add-Member -NotePropertyName createdAtValue -NotePropertyValue (ConvertTo-DateTimeOffset $run.created_at) -Force
     $script:RunCache[$Id] = $run
@@ -157,6 +166,15 @@ function Resolve-Run {
     if ($runs.Count -eq 0) { throw "No hay Runs en Orca." }
 
     $locals = Get-LocalRunIds
+    $timed = @($runs | Where-Object { $_.createdAtValue })
+    if ($timed.Count -eq 0) {
+        # La CLI empaquetada no devuelve created_at en run-list; el orden de
+        # run-list es el mas reciente primero.
+        $pick = $runs[0]
+        if ($pick -and -not $locals.ContainsKey($pick.id)) { $script:AutoRunId = $pick.id }
+        return $pick
+    }
+
     $fresh = [datetimeoffset]$script:StartedAt.AddMinutes(-3)
     $eligible = @($runs | Where-Object {
             $locals.ContainsKey($_.id) -or
@@ -237,6 +255,7 @@ function Get-DashboardState {
         counts          = [ordered]@{}
         tasks           = @()
         loop            = $null
+        question        = $null
     }
 
     $run = $null
@@ -248,7 +267,7 @@ function Get-DashboardState {
             createdAt   = if ($run.createdAt) { [string]$run.createdAt } else { ConvertTo-IsoString $run.created_at }
             coordinator = [string]$run.coordinator_handle
         }
-        $response = Invoke-Orca orchestration task-list --run $run.id --json
+        $response = Invoke-OrcaTaskList -RunId $run.id
         $rawTasks = @((Get-OrcaResult $response).tasks)
     }
     catch {
@@ -303,11 +322,33 @@ function Get-DashboardState {
                 logPath         = $loopLog
                 maxWorkers      = $loopMeta.maxWorkers
                 maxReviewRounds = $loopMeta.maxReviewRounds
+                autoRescue      = $loopMeta.autoRescue
+                maxRescueRounds = $loopMeta.maxRescueRounds
+                autoAnswer      = $loopMeta.autoAnswer
+                maxAutoAnswers  = $loopMeta.maxAutoAnswers
+                autoAnswers     = $loopMeta.autoAnswers
                 baseBranch      = [string]$loopMeta.baseBranch
             }
         }
     }
     $state.loop = $loopOut
+
+    $questionFile = Join-Path $stateDir "question-$($run.id).json"
+    if (Test-Path $questionFile) {
+        try {
+            $questionData = Get-Content $questionFile -Raw -Encoding UTF8 | ConvertFrom-Json
+            $message = $questionData.message
+            if ($message) {
+                $state.question = [ordered]@{
+                    id         = [string]$message.id
+                    body       = if ($message.body) { [string]$message.body } else { [string]$message.subject }
+                    options    = @($message.options)
+                    capturedAt = ConvertTo-IsoString $questionData.capturedAt
+                }
+            }
+        }
+        catch { }
+    }
 
     $byTask = @{}
     foreach ($dispatch in $dispatches) {
@@ -412,6 +453,7 @@ function Write-StaticSnapshot {
     $html = $html.Replace('__STATIC_MODE__', 'true')
     $html = $html.Replace('__REFRESH_MS__', [string]$RefreshMs)
     $html = $html.Replace('__DEFAULT_RUN__', 'null')
+    $html = $html.Replace('__UI_TOKEN__', 'null')
     $html = $html.Replace('/*__BOOTSTRAP__*/null', $json)
 
     $name = 'sin-run'
@@ -449,6 +491,8 @@ $template = Get-Content (Join-Path $PSScriptRoot 'graph.html') -Raw -Encoding UT
 $template = $template.Replace('__STATIC_MODE__', 'false').Replace('__REFRESH_MS__', [string]$RefreshMs)
 $defaultRunJson = if ($RunId) { $RunId | ConvertTo-Json -Compress } else { 'null' }
 $template = $template.Replace('__DEFAULT_RUN__', $defaultRunJson)
+$uiToken = [guid]::NewGuid().ToString('N')
+$template = $template.Replace('__UI_TOKEN__', ($uiToken | ConvertTo-Json -Compress))
 
 @{
     pid       = $PID
@@ -463,6 +507,7 @@ function Send-Http {
     $reason = switch ($Code) {
         200 { 'OK' }
         400 { 'Bad Request' }
+        403 { 'Forbidden' }
         404 { 'Not Found' }
         405 { 'Method Not Allowed' }
         default { 'Internal Server Error' }
@@ -489,6 +534,80 @@ function Get-QueryParams {
     return $params
 }
 
+function Invoke-UiAction {
+    param(
+        [Parameter(Mandatory)][string]$Action,
+        $Payload
+    )
+
+    $runId = [string]$Payload.runId
+    if ($runId -notmatch '^run_[A-Za-z0-9_]+$') {
+        return [ordered]@{ ok = $false; error = 'runId invalido' }
+    }
+
+    switch ($Action) {
+        'start-loop' {
+            $maxWorkers = if ($Payload.maxWorkers) { [int]$Payload.maxWorkers } else { 5 }
+            if ($maxWorkers -lt 1) { $maxWorkers = 1 }
+            if ($maxWorkers -gt 5) { $maxWorkers = 5 }
+            $maxTotal = if ($null -ne $Payload.maxTotalWorkers) { [int]$Payload.maxTotalWorkers } else { 5 }
+            $startArgs = @(
+                '-NoProfile', '-File', (Join-Path $PSScriptRoot 'start-loop.ps1'),
+                '-RunId', $runId, '-MaxWorkers', "$maxWorkers", '-MaxTotalWorkers', "$maxTotal"
+            )
+            if ([bool]$Payload.autoAnswer) { $startArgs += @('-AutoAnswer', '-MaxAutoAnswers', '3') }
+            if ([bool]$Payload.autoRescue) { $startArgs += @('-AutoRescue', '-MaxRescueRounds', '2') }
+            if ([bool]$Payload.autoRepair) { $startArgs += @('-AutoRepair', '-MaxRepairRounds', '1') }
+            if ([bool]$Payload.autoRecoverStalled) { $startArgs += @('-AutoRecoverStalled', '-MaxStallRecoveries', '1') }
+            if ($Payload.maxRunMinutes -and [int]$Payload.maxRunMinutes -gt 0) {
+                $startArgs += @('-MaxRunMinutes', "$([int]$Payload.maxRunMinutes)")
+            }
+            $output = (& pwsh @startArgs 2>&1 | Out-String).Trim()
+            return [ordered]@{ ok = ($LASTEXITCODE -eq 0); output = $output }
+        }
+        'stop-loop' {
+            $stopArgs = @('-NoProfile', '-File', (Join-Path $PSScriptRoot 'stop-loop.ps1'), '-RunId', $runId)
+            $output = (& pwsh @stopArgs 2>&1 | Out-String).Trim()
+            return [ordered]@{ ok = ($LASTEXITCODE -eq 0); output = $output }
+        }
+        'answer-question' {
+            $answer = [string]$Payload.body
+            if (-not $answer.Trim()) { return [ordered]@{ ok = $false; error = 'La respuesta esta vacia' } }
+            $questionFile = Join-Path $stateDir "question-$runId.json"
+            if (-not (Test-Path $questionFile)) { return [ordered]@{ ok = $false; error = 'No hay pregunta pendiente' } }
+            try { $question = Get-Content $questionFile -Raw -Encoding UTF8 | ConvertFrom-Json } catch { return [ordered]@{ ok = $false; error = 'Pregunta ilegible' } }
+            $messageId = [string]$question.message.id
+            if (-not $messageId) { return [ordered]@{ ok = $false; error = 'La pregunta no tiene message id' } }
+            $coordinator = if ($question.coordinator) { [string]$question.coordinator } else { Get-Coordinator }
+            $reply = Invoke-Orca orchestration reply --id $messageId --body $answer --run $runId --from $coordinator --json
+            if (-not $reply.ok) { return [ordered]@{ ok = $false; error = "Orca rechazo la respuesta: $($reply.error.message)" } }
+            try {
+                $current = Get-Content $questionFile -Raw -Encoding UTF8 | ConvertFrom-Json
+                if ([string]$current.message.id -eq $messageId) { Remove-Item $questionFile -Force }
+            }
+            catch { }
+            return [ordered]@{ ok = $true; output = "Respuesta enviada a $messageId" }
+        }
+        'retry-task' {
+            $taskId = [string]$Payload.taskId
+            if ($taskId -notmatch '^task_[A-Za-z0-9_]+$') { return [ordered]@{ ok = $false; error = 'taskId invalido' } }
+            try {
+                $coordinator = Get-Coordinator
+                Bind-Run -RunId $runId -Coordinator $coordinator
+                $update = Invoke-Orca orchestration task-update --from $coordinator --run $runId --id $taskId --status ready --result 'ui_retry' --json
+            }
+            catch {
+                return [ordered]@{ ok = $false; error = $_.Exception.Message }
+            }
+            if (-not $update.ok) { return [ordered]@{ ok = $false; error = "Orca rechazo el reintento: $($update.error.message)" } }
+            return [ordered]@{ ok = $true; output = "Tarea $taskId marcada ready" }
+        }
+        default {
+            return [ordered]@{ ok = $false; error = "Accion desconocida: $Action" }
+        }
+    }
+}
+
 $url = Get-DashboardUrl $Port
 Write-Host ""
 Write-Host "  Orca - grafo de ejecucion" -ForegroundColor Cyan
@@ -507,12 +626,22 @@ try {
             $stream.ReadTimeout = 5000
             $stream.WriteTimeout = 15000
 
-            $reader = [System.IO.StreamReader]::new($stream, [System.Text.Encoding]::ASCII, $false, 1024, $true)
+            $reader = [System.IO.StreamReader]::new($stream, [System.Text.Encoding]::UTF8, $false, 1024, $true)
             $requestLine = $reader.ReadLine()
             if (-not $requestLine) { continue }
+
+            $headers = @{}
+            $contentLength = 0
             while ($true) {
                 $line = $reader.ReadLine()
                 if ($null -eq $line -or $line -eq '') { break }
+                $colon = $line.IndexOf(':')
+                if ($colon -gt 0) {
+                    $name = $line.Substring(0, $colon).Trim().ToLowerInvariant()
+                    $value = $line.Substring($colon + 1).Trim()
+                    $headers[$name] = $value
+                    if ($name -eq 'content-length') { [void][int]::TryParse($value, [ref]$contentLength) }
+                }
             }
 
             $parts = $requestLine.Split(' ')
@@ -520,7 +649,20 @@ try {
             $method = $parts[0].ToUpperInvariant()
             $rawPath = $parts[1]
 
-            if ($method -ne 'GET') {
+            $bodyText = ''
+            if ($method -eq 'POST' -and $contentLength -gt 0) {
+                $builder = [System.Text.StringBuilder]::new()
+                $bytesRead = 0
+                while ($bytesRead -lt $contentLength) {
+                    $charCode = $reader.Read()
+                    if ($charCode -lt 0) { break }
+                    [void]$builder.Append([char]$charCode)
+                    $bytesRead += [System.Text.Encoding]::UTF8.GetByteCount([string][char]$charCode)
+                }
+                $bodyText = $builder.ToString()
+            }
+
+            if ($method -notin @('GET', 'POST')) {
                 Send-Http -Stream $stream -Code 405 -ContentType 'text/plain' -Body 'Method not allowed'
                 continue
             }
@@ -532,6 +674,33 @@ try {
             if (-not $pin -and $RunId) { $pin = $RunId }
             if ($pin -and $pin -notmatch '^run_[A-Za-z0-9_]+$') {
                 Send-Http -Stream $stream -Code 400 -ContentType 'application/json' -Body '{"ok":false,"error":"run invalido"}'
+                continue
+            }
+
+            if ($method -eq 'POST') {
+                if ($uri.AbsolutePath -notmatch '^/api/actions/([a-z-]+)$') {
+                    Send-Http -Stream $stream -Code 404 -ContentType 'application/json' -Body '{"ok":false,"error":"accion desconocida"}'
+                    continue
+                }
+                $action = $Matches[1]
+                if ($headers['x-orca-token'] -ne $uiToken) {
+                    Send-Http -Stream $stream -Code 403 -ContentType 'application/json' -Body '{"ok":false,"error":"token invalido"}'
+                    continue
+                }
+                $payload = $null
+                try { $payload = $bodyText | ConvertFrom-Json } catch { $payload = $null }
+                if (-not $payload) {
+                    Send-Http -Stream $stream -Code 400 -ContentType 'application/json' -Body '{"ok":false,"error":"body invalido"}'
+                    continue
+                }
+                try {
+                    $result = Invoke-UiAction -Action $action -Payload $payload
+                }
+                catch {
+                    $result = [ordered]@{ ok = $false; error = $_.Exception.Message }
+                }
+                $body = $result | ConvertTo-Json -Depth 10
+                Send-Http -Stream $stream -Code 200 -ContentType 'application/json' -Body $body
                 continue
             }
 
@@ -554,6 +723,26 @@ try {
                     $state = Get-DashboardState -Pin $pin
                     $body = $state | ConvertTo-Json -Depth 30
                     Send-Http -Stream $stream -Code 200 -ContentType 'application/json' -Body $body
+                }
+                '/api/log' {
+                    if ($headers['x-orca-token'] -ne $uiToken) {
+                        Send-Http -Stream $stream -Code 403 -ContentType 'application/json' -Body '{"ok":false,"error":"token invalido"}'
+                        continue
+                    }
+                    if (-not $pin) {
+                        Send-Http -Stream $stream -Code 400 -ContentType 'application/json' -Body '{"ok":false,"error":"falta run"}'
+                        continue
+                    }
+                    $lineCount = if ($query.ContainsKey('lines')) { [int]$query['lines'] } else { 200 }
+                    if ($lineCount -lt 10) { $lineCount = 10 }
+                    if ($lineCount -gt 2000) { $lineCount = 2000 }
+                    $logPath = Join-Path $stateDir "loop-$pin.log"
+                    if (-not (Test-Path $logPath)) {
+                        Send-Http -Stream $stream -Code 404 -ContentType 'text/plain' -Body 'Sin log para este Run'
+                        continue
+                    }
+                    $body = (Get-Content $logPath -Tail $lineCount -Encoding UTF8 | Out-String)
+                    Send-Http -Stream $stream -Code 200 -ContentType 'text/plain' -Body $body
                 }
                 '/quit' {
                     Send-Http -Stream $stream -Code 200 -ContentType 'text/plain' -Body 'bye'
@@ -583,5 +772,4 @@ finally {
     Remove-Item $pidFile -Force -ErrorAction SilentlyContinue
     Write-Host "Dashboard detenido." -ForegroundColor DarkGray
 }
-
 

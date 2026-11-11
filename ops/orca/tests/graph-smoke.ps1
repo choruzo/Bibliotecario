@@ -43,7 +43,9 @@ Assert-True ($state.ok -eq $true) "state.ok debe ser true: $($state.error)"
 Assert-True ($state.run.id -eq $RunId) "run inesperado: $($state.run.id)"
 Assert-True ($state.tasks.Count -gt 0) "el Run no tiene tareas"
 Assert-True ((As-Iso $state.updatedAt) -match '^\d{4}-\d{2}-\d{2}T') "updatedAt no es ISO: $($state.updatedAt)"
-Assert-True ((As-Iso $state.run.createdAt) -match '^\d{4}-\d{2}-\d{2}T') "run.createdAt no es ISO: $($state.run.createdAt)"
+if ($state.run.createdAt) {
+    Assert-True ((As-Iso $state.run.createdAt) -match '^\d{4}-\d{2}-\d{2}T') "run.createdAt no es ISO: $($state.run.createdAt)"
+}
 Assert-True ($null -ne $state.PSObject.Properties['loop']) "falta state.loop"
 
 foreach ($task in $state.tasks) {
@@ -94,4 +96,3 @@ finally {
     }
     Remove-Item (Join-Path $stateDir "graph-$Port.json") -Force -ErrorAction SilentlyContinue
 }
-

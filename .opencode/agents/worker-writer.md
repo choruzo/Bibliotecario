@@ -1,7 +1,7 @@
 ---
 description: Subagente escritor del worker. Implementa una parte acotada del worktree. Solo puede haber uno activo.
 mode: subagent
-model: nan/deepseek-v4-flash
+model: nan/glm5.3-flash
 permissions:
   - action: edit
     resource: "*"
@@ -44,5 +44,4 @@ Eres el **único escritor** permitido del worker. Implementas una parte acotada 
 - No hagas push, merge ni rebase.
 - No ejecutes tests que compartan puertos/DB con otros subagentes sin coordinarlo.
 - Devuelve al worker: qué cambiaste, qué checks pasaron y qué queda pendiente.
-
 

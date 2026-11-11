@@ -9,4 +9,3 @@ param(
 $coordinator = Get-Coordinator
 $response = Invoke-Orca orchestration check --terminal $coordinator --run $RunId --wait --types $Types --timeout-ms $TimeoutMs --json
 $response | ConvertTo-Json -Depth 40
-

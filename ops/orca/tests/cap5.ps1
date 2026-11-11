@@ -21,13 +21,13 @@ for ($i = 1; $i -le 6; $i++) {
     Write-Output "TASK_CAP${i}=$($created.result.task.id)"
 }
 
-$before = (Get-OrcaResult (Invoke-Orca orchestration task-list --from $coordinator --run $runId --json)).tasks
+$before = (Get-OrcaResult (Invoke-OrcaTaskList -Coordinator $coordinator -RunId $runId)).tasks
 Write-Output "BEFORE_READY=$(@($before | Where-Object { $_.status -eq 'ready' }).Count)"
 
 $dispatchOutput = & pwsh -NoProfile -File (Join-Path $PSScriptRoot '..\dispatch.ps1') -RunId $runId -MaxWorkers 5
 $dispatchOutput | ForEach-Object { Write-Output $_ }
 
-$after = (Get-OrcaResult (Invoke-Orca orchestration task-list --from $coordinator --run $runId --json)).tasks
+$after = (Get-OrcaResult (Invoke-OrcaTaskList -Coordinator $coordinator -RunId $runId)).tasks
 $active = @($after | Where-Object { $_.status -eq 'dispatched' }).Count
 $ready = @($after | Where-Object { $_.status -eq 'ready' }).Count
 Write-Output "CAP_ACTIVE=$active CAP_READY=$ready"
@@ -42,11 +42,10 @@ $loopOutput | ForEach-Object { Write-Output $_ }
 $loopExit = $LASTEXITCODE
 if ($loopExit -ne 0) { throw "orchestrate.ps1 terminó con $loopExit" }
 
-$final = (Get-OrcaResult (Invoke-Orca orchestration task-list --from $coordinator --run $runId --json)).tasks
+$final = (Get-OrcaResult (Invoke-OrcaTaskList -Coordinator $coordinator -RunId $runId)).tasks
 $completed = @($final | Where-Object { $_.status -eq 'completed' }).Count
 Write-Output "FINAL_COMPLETED=$completed"
 if ($completed -ne 6) { throw "Se esperaban 6 tareas completadas; hay $completed" }
 
 Write-Output "CAP_TEST_RUN=$runId"
 Write-Output '=== CAP5 TEST PASS ==='
-

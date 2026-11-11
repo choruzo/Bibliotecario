@@ -41,4 +41,3 @@ Revisa:
 
 Devuelve un veredicto `ACEPTADO | CAMBIOS | ESCALADO` y una lista de defectos accionables con archivo y línea. No aceptes «tests OK» sin evidencia.
 
-

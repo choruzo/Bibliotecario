@@ -76,16 +76,37 @@ pwsh -NoProfile -File ops/orca/start-loop.ps1 -RunId run_... -MaxWorkers 2
 - `worker_done` se envia una sola vez; el worker se detiene despues.
 - Sin push/merge/rebase en workers. El push del lider requiere aprobacion.
 - `LOOP=QUESTION` (3): responder con `reply` y relanzar. `LOOP=BLOCKED` o
-  `ESCALATION` (2): decidir con la evidencia. No hay `stop-loop.ps1`: cerrar el
-  runner no cancela workers ya despachados.
+  `ESCALATION` (2): decidir con la evidencia. `stop-loop.ps1` detiene el runner y su arbol de procesos, pero no cancela
+workers ya despachados. `LOOP=QUESTION` puede resolverse con `-AutoAnswer`; si
+el asesor escala, se responde desde el panel o con `reply`.
+
+## Panel y recuperacion
+
+- Panel local en `http://127.0.0.1:4599/`: lanzar/parar el bucle, responder
+  preguntas, reintentar tareas y ver el log. Los POST exigen el token local que
+  inyecta la pagina.
+- Flags del bucle: `-AutoAnswer`, `-AutoRescue`, `-AutoRepair`,
+  `-AutoRecoverStalled`, `-MaxTotalWorkers` (5) y `-MaxRunMinutes`.
+- `stop-loop.ps1` para el runner; no cancela workers ya despachados.
+- `-AutoRepair` usa `worker-repair` con `glm5.3`; `advisor` usa `qwen3.8-max`.
+- `notify.ps1` avisa en `done`, `question`, `blocked`, `escalated`, `failed` y
+  `stopped`; webhook opcional en `ORCA_NOTIFY_WEBHOOK`.
 
 ## Modelos y claves
 
-- Los 6 agentes usan `nan/deepseek-v4-flash` en `opencode.jsonc` y en
-  `.opencode/agents/*.md`.
+| Rol | Modelo |
+|---|---|
+| `lider` | `nan/deepseek-v4-flash` |
+| `auditor` | `nan/qwen3.8-flash` |
+| `reviewer` | `nan/deepseek-v4-flash` |
+| `worker` / `worker-reader` / `worker-writer` | `nan/glm5.3-flash` |
+| `advisor` | `nan/qwen3.8-max` |
+| `worker-repair` | `nan/glm5.3` |
+
+- `opencode.jsonc` mantiene el modelo global del lider; cada agente lo
+  sobreescribe.
 - `NAN_API_KEY` debe estar en el entorno del proceso de Orca, no solo en tu
   shell: los workers heredan el de la app.
-
 ## Registro en Orca
 
 Con el runtime en marcha (`orca status --json` -> `runtime.state = ready`):

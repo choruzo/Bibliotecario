@@ -34,6 +34,8 @@ Si hay timeout, la pregunta queda pendiente. Reanuda con el `message_id`; no la 
 orca orchestration send --type heartbeat --subject "alive" --phase "implementing" --task-id <task_id> --dispatch-id <dispatch_id> --json
 ```
 
+Envía uno cada ~10 min o al cambiar de fase. No sustituye a `worker_done`.
+
 ### Terminar
 
 ```bash
@@ -92,4 +94,3 @@ orca orchestration send --type worker_done \
 - Falla de test: corrige si está en el alcance; si no, pregunta.
 - Conflicto de integración: no lo resuelvas por tu cuenta; escala.
 - Push/merge: no lo intentes; el permiso está denegado.
-

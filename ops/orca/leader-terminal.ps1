@@ -50,4 +50,3 @@ if (-not $NoDashboard) {
 }
 
 & opencode --session $sessionID
-

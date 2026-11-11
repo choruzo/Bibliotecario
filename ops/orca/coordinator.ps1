@@ -4,4 +4,3 @@ param([switch]$Recreate)
 
 $handle = Get-Coordinator -Recreate:$Recreate
 Write-Output "ORCA_COORDINATOR=$handle"
-
