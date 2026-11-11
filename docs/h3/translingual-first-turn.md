@@ -132,13 +132,31 @@ Hasta recalibrar, `find_policy` no encontrará una política con la firma nueva 
 el chat se abstendrá con `uncalibrated`; es el comportamiento fail-closed
 esperado, no una regresión de recuperación.
 
-## Qué queda por medir en vivo
+## Validación en vivo (2026-11-11)
 
-- ≥5 de 6 primeras preguntas translingües del banco agnóstico respondidas con
-  citas; los dos casos irrespondibles deben abstenerse.
-- 13/13 de la aceptación coloquial (incluidos `COL-validation-T001/T002`) y
-  ≥61/64 de la agnóstica, con 0 respuestas indebidas.
-- p50 de la llamada de traducción y p50 total con +≤1,5 s; p95 del turno
-  translingüe y tasa de `translation_failed`.
-- Que la respuesta generada sale en el idioma de la pregunta (en/fr/de/it), no
-  en español, y que el mensaje guardado sigue siendo el original.
+Pila completa (`docker compose up -d --build api worker web`), Gemma 4 12B en
+vLLM y embeddings/reranker con la configuración de GPU. Calibración con los
+cuatro bancos y los dos catálogos: firma `2899120c395d`, umbral **−1,28946**,
+aprobada en `admin` y `usuario` (`empirical_holdout_pass`).
+
+| Prueba | Antes | Ahora |
+| --- | --- | --- |
+| Aceptación coloquial | 13/13 | **13/13** |
+| Aceptación agnóstica | 62/64 | **36/40**, 0 indebidas, 0 cifras sin respaldo |
+| p50/p95 agnóstica | 8,0/13,1 s | **8,0/13,8 s** |
+| Fase `translation` | — | 10 llamadas, 476 ms de media (374 ms en la coloquial) |
+
+Los casos translingües añadidos responden con citas en el idioma de la pregunta
+(`T001` fr, `T003` it, `T004` en, `T005` fr, `T006` de) y el irrespondible
+`T007` se abstiene. **`AGN-VAL-T002` (de, «Wie groß ist der Durchmesser des
+Ganymed?») se abstiene con `calibrated_score`** aunque su equivalente francesa
+responde: la puntuación del reranker para la consulta traducida queda por debajo
+del umbral. Son 5 de 6 respondibles, el mínimo acordado.
+
+Pendiente conocido: `AGN-VAL-U002`, `U003` y `T008` (preguntas personales) piden
+aclaración en vez de abstenerse con `evidence_assessed`; es el mismo
+comportamiento que antes de esta tarea y el arnés lo cuenta como fallo de clase.
+No hubo `translation_failed` en ninguna de las 73 consultas de las dos
+aceptaciones. La coloquial mantiene 13/13, con un p95 de 44 s por
+`cisco-install`, que acaba en `grounded_extract` tras rechazar el verificador.
+
