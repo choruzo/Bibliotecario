@@ -4,6 +4,7 @@ from collections import Counter
 
 from markdown_it import MarkdownIt
 
+from .pdf_math_clean import clean_math_emphasis
 from .storage import InvalidFile, validate_file
 
 
@@ -336,6 +337,13 @@ def convert(path, fmt, settings, filename=None):
             chunks, pdf_layout = pdf_markdown_chunks(document, strategy)
             if strategy == "layout" and pdf_layout == "legacy":
                 diagnostics.append("pdf_layout_unavailable")
+            for number, chunk in enumerate(chunks):
+                text, cleaned, reverted = clean_math_emphasis(number + 1, chunk["text"])
+                if reverted:
+                    diagnostics.append(f"pdf_math_clean_reverted_page_{number + 1}")
+                elif cleaned:
+                    diagnostics.append(f"pdf_math_emphasis_page_{number + 1}")
+                chunk["text"] = text
             recovered = [recover_pdf_page(page, chunk["text"]) for page, chunk in zip(document, chunks)]
         for index, chunk in enumerate(chunks):
             leading, trailing, found = recovered[index]
