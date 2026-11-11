@@ -40,10 +40,13 @@ Detalles de implementación:
 ## Entorno
 
 - `pymupdf 1.28.2`, `pymupdf4llm 0.3.4`, Python 3.12.12 (`.venv` compartido).
-- `pymupdf-layout 1.28.2` ya estaba instalado en el `.venv` compartido al
-  empezar la tarea. Se comprobó antes y después con `uv pip list` y
-  `uv pip install --dry-run pymupdf_layout`: no había cambios pendientes y no
-  se movió ninguna versión de `pymupdf`/`pymupdf4llm`.
+- **`pymupdf-layout` NO está instalado** en el `.venv` compartido (comprobado
+  en la tarea de baseline, `docs/h3/pdf-baseline.md`, con `uv pip list` antes y
+  después). Las columnas `layout`/`tables-lines` de este documento **no son
+  reproducibles** hoy: con `BIB_PDF_LAYOUT=layout` la conversión cae a `legacy`
+  con el diagnóstico `pdf_layout_unavailable`. El dry-run de la tarea de
+  baseline confirma que instalar el extra no movería `pymupdf` ni
+  `pymupdf4llm`; no se instaló.
 - El paquete de distribución se llama `pymupdf-layout`; el módulo que se
   importa es `pymupdf.layout`.
 
@@ -64,7 +67,9 @@ este worktree (no el editable del checkout principal) y mide, por PDF:
 El script fija `PYTHONHASHSEED=0` con un re-exec para reducir la dependencia del
 orden de hashing de PyMuPDF. Aun así, `wiki-Copa_Mundial_de_Fútbol.pdf` oscila
 entre dos Markdown de 254.200 y 254.203 bytes (3 bytes, ya observado en la tarea
-`pdf-conv-baseline`); el resto de archivos es estable.
+`pdf-conv-baseline`); el resto de archivos es estable dentro de un proceso.
+Desde la tarea del censo de pérdida el arnés añade el bloque `content_audit`
+(auditoría de pérdida real vs artefactos, `docs/h3/pdf-two-column-loss.md`).
 
 ## Resultados por archivo
 
@@ -146,12 +151,14 @@ cambio también alteraría el corpus indexado sin reindexado.
 ## Reproducción
 
 ```powershell
-# Estrategia por defecto (debe reproducir el Markdown canónico de pdf-conv-baseline)
+# Estrategia por defecto (debe reproducir el baseline versionado:
+# evaluation/h3/pdf-legacy-baseline.json)
 .venv/Scripts/python.exe scripts/h3/pdf_conversion_report.py `
   --corpus D:/Archivos/Javier/Proyectos/Bibliotecario/.artifacts/agnostic-corpus `
   --layout legacy --json .orca-task/results-legacy.json
 
-# Nueva estrategia de maquetación
+# Nueva estrategia de maquetación (requiere el extra `layout`; sin él cae a legacy
+# con pdf_layout_unavailable, ver Entorno)
 .venv/Scripts/python.exe scripts/h3/pdf_conversion_report.py `
   --corpus D:/Archivos/Javier/Proyectos/Bibliotecario/.artifacts/agnostic-corpus `
   --layout layout --json .orca-task/results-layout.json
@@ -160,22 +167,35 @@ cambio también alteraría el corpus indexado sin reindexado.
 .venv/Scripts/python.exe scripts/h3/pdf_conversion_report.py `
   --corpus D:/Archivos/Javier/Proyectos/Bibliotecario/.artifacts/agnostic-corpus `
   --layout tables-lines --json .orca-task/results-tables-lines.json
+
+# Censo de pérdida real vs artefactos (bloque content_audit; censo completo con
+# --audit-json; --no-audit para medir sin la auditoría)
+.venv/Scripts/python.exe scripts/h3/pdf_conversion_report.py `
+  --corpus D:/Archivos/Javier/Proyectos/Bibliotecario/.artifacts/agnostic-corpus `
+  --layout legacy --json .orca-task/results-legacy.json `
+  --audit-json .orca-task/results-content-audit.json
 ```
 
 Para iterar sobre pocos archivos, añadir `--files nombre1.pdf,nombre2.pdf`.
 
 ## Identidad del comportamiento por defecto
 
-Con `BIB_PDF_LAYOUT=legacy` (o sin la variable) el SHA-256 del Markdown coincide
-con el registrado en `pdf-conv-baseline` para los 17 archivos en la pasada
-canónica (`--layout legacy`, `.orca-task/final-legacy.json`), incluidos los
-mismos diagnósticos. `wiki-Copa_Mundial_de_Fútbol.pdf` es el único archivo
-inestable: en algunas pasadas produce 254.203 bytes frente a los 254.200
-canónicos (3 bytes, oscilación ya documentada en `pdf-conv-baseline`); ejecutado
-solo vuelve siempre al SHA-256 canónico
-`14342a0f822d99170fef20c28e9c38454741ccdb3b03910a8de106f871f82c77`, y una
-segunda pasada completa también lo reprodujo. Los demás 16 archivos son
-estables byte a byte entre pasadas.
+La referencia versionada del comportamiento `legacy` es el baseline de la tarea
+`pdf-env-baseline` (`evaluation/h3/pdf-legacy-baseline.json`, método en
+`docs/h3/pdf-baseline.md`): dos pasadas completas en procesos separados con
+`PYTHONHASHSEED=0` produjeron Markdown **byte-idéntico en 17/17 archivos**, y
+esos SHA-256 son la referencia de no regresión.
+
+Observaciones posteriores sobre el mismo corpus:
+
+- `wiki-Copa_Mundial_de_Fútbol.pdf` sigue oscilando entre 254.200 (canónico,
+  SHA `14342a0f822d99170fef20c28e9c38454741ccdb3b03910a8de106f871f82c77`,
+  reproducido ejecutándolo solo) y 254.203 bytes en pasadas completas.
+- `arxiv-bert-en.pdf` tiene variantes entre procesos (69.809/69.813/69.815
+  bytes observados) según el estado global de PyMuPDF arrastrado por los
+  archivos previos; la conversión aislada reproduce el SHA del baseline
+  (`3740d86f…`). Es la inestabilidad intra-proceso ya documentada en la tarea
+  del baseline.
 
 ## Tests
 
