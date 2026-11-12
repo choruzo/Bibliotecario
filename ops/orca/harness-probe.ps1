@@ -152,10 +152,10 @@ if ($DryRun) {
 }
 
 # Auditoria de evidencia (opcional): fail fast antes de gastar workers.
-$script:evidenceAudit = $null
+$script:evidenceAuditPath = $null
 if ($EvidenceAudit) {
-    $script:evidenceAudit = (Resolve-Path $EvidenceAudit -ErrorAction SilentlyContinue).Path
-    if (-not $script:evidenceAudit -or -not (Test-Path $script:evidenceAudit)) { throw "No existe el auditor de evidencia: $EvidenceAudit" }
+    $script:evidenceAuditPath = (Resolve-Path $EvidenceAudit -ErrorAction SilentlyContinue).Path
+    if (-not $script:evidenceAuditPath -or -not (Test-Path $script:evidenceAuditPath)) { throw "No existe el auditor de evidencia: $EvidenceAudit" }
 }
 $script:specFileResolved = (Resolve-Path $SpecFile).Path
 $script:pythonExe = $null
@@ -165,8 +165,8 @@ else {
     $cmd = Get-Command python -ErrorAction SilentlyContinue
     if ($cmd) { $script:pythonExe = $cmd.Source }
 }
-if ($script:evidenceAudit -and -not $script:pythonExe) { throw 'Se pidio auditoria de evidencia pero no hay python disponible.' }
-if ($script:evidenceAudit) { Write-Host "[probe] auditor de evidencia activo: $($script:evidenceAudit)" }
+if ($script:evidenceAuditPath -and -not $script:pythonExe) { throw 'Se pidio auditoria de evidencia pero no hay python disponible.' }
+if ($script:evidenceAuditPath) { Write-Host "[probe] auditor de evidencia activo: $($script:evidenceAuditPath)" }
 # El A/B exige que los dos lados ejecuten la MISMA spec: sellamos su contenido.
 Write-Output "PROBE_SPEC_SHA256=$((Get-FileHash $script:specFileResolved -Algorithm SHA256).Hash.ToLower())"
 
@@ -204,7 +204,7 @@ try {
     $variantDirForHook = $script:variantDirResolved
     # Autocomprobacion: enlaza TODOS los parametros de Get-ProbeSideResult antes
     # de gastar workers (el binding de param() falla aqui y no a mitad de probe).
-    $precheck = Get-ProbeSideResult -Record $null -Side 'a' -ArtifactsDir $null -AuditScript $script:evidenceAudit -SpecPath $script:specFileResolved -PythonExe $script:pythonExe
+    $precheck = Get-ProbeSideResult -Record $null -Side 'a' -ArtifactsDir $null -AuditScript $script:evidenceAuditPath -SpecPath $script:specFileResolved -PythonExe $script:pythonExe
     if (-not $precheck) { throw 'Get-ProbeSideResult no devuelve el registro vacio de arranque' }
     Write-Output 'BINDING_SELFCHECK_OK'
     Write-Host '[probe] binding de Get-ProbeSideResult verificado'
@@ -247,8 +247,8 @@ try {
     # los defectos del gate como dato; el review nunca vuelve vacio el turno.
     $noteProbe = if ($budgetExhausted) { 'presupuesto agotado; review ejecutado sobre lo entregado' } else { '' }
     $harnessDir = Join-Path (Join-Path (Join-Path (Get-LibraryRoot) $Domain) 'harnesses') $script:probeLabel
-    $baseResult = Get-ProbeSideResult -Record $recA -Side 'a' -ArtifactsDir (Join-Path $harnessDir 'side-base') -AuditScript $script:evidenceAudit -SpecPath $script:specFileResolved -PythonExe $script:pythonExe
-    $variantResult = Get-ProbeSideResult -Record $recB -Side 'b' -ArtifactsDir (Join-Path $harnessDir 'side-variant') -AuditScript $script:evidenceAudit -SpecPath $script:specFileResolved -PythonExe $script:pythonExe
+    $baseResult = Get-ProbeSideResult -Record $recA -Side 'a' -ArtifactsDir (Join-Path $harnessDir 'side-base') -AuditScript $script:evidenceAuditPath -SpecPath $script:specFileResolved -PythonExe $script:pythonExe
+    $variantResult = Get-ProbeSideResult -Record $recB -Side 'b' -ArtifactsDir (Join-Path $harnessDir 'side-variant') -AuditScript $script:evidenceAuditPath -SpecPath $script:specFileResolved -PythonExe $script:pythonExe
     $decision = Test-HarnessContrast -Base $baseResult -Variant $variantResult
 
     [void](Write-ProbeResultDir -Dir $harnessDir -BaseResult $baseResult -VariantResult $variantResult -Decision $decision -SpecText $specText -RunId $script:probeRun -Label $script:probeLabel -VariantDir $script:variantDirResolved -BaseBranch $BaseBranch -TaskBase $taskA -TaskVariant $taskB -RepoRoot $repoRoot -Note $noteProbe)
