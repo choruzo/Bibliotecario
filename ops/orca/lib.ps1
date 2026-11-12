@@ -439,6 +439,13 @@ function Test-HarnessVariant {
         if ($raw -notmatch 'git commit \*') { $issues += 'worker.md de la variante pierde la denegacion de git commit' }
         if ($raw -notmatch 'orca orchestration task-update \*') { $issues += 'worker.md de la variante pierde la denegacion de task-update' }
     }
+    # RATIONALE.md es metadato no materializable, pero forma parte del contrato
+    # del editor: si existe debe tener contenido (un RATIONALE vacio no valida).
+    $rationalePath = Join-Path $variantRoot 'RATIONALE.md'
+    if (Test-Path $rationalePath) {
+        $rationale = (Get-Content $rationalePath -Raw -Encoding UTF8).Trim()
+        if (-not $rationale) { $issues += 'RATIONALE.md en la raiz esta vacio' }
+    }
     return $issues
 }
 
@@ -548,8 +555,8 @@ function Write-ProbeResultDir {
         '',
         '| Lado | Terminada | Veredicto | Defectos | Archivos | Evidencia |',
         '|---|---|---|---|---|---|',
-        ("| base | $([bool]$BaseResult.finished) | $($BaseResult.verdict) | $(@($BaseResult.defects).Count) | $(@($BaseResult.files).Count) | $(if ($null -eq $BaseResult.evidenceMissing) { 'sin medir' } else { "MISSING=$($BaseResult.evidenceMissing)" }) |"),
-        ("| variante | $([bool]$VariantResult.finished) | $($VariantResult.verdict) | $(@($VariantResult.defects).Count) | $(@($VariantResult.files).Count) | $(if ($null -eq $VariantResult.evidenceMissing) { 'sin medir' } else { "MISSING=$($VariantResult.evidenceMissing)" }) |"),
+        ("| base | $([bool]$BaseResult.finished) | $($BaseResult.verdict) | $(@($BaseResult.defects).Count) | $(@($BaseResult.files).Count) ($($BaseResult.filesExclHarness) sin harness) | $(if ($null -eq $BaseResult.evidenceMissing) { 'sin medir' } else { "MISSING=$($BaseResult.evidenceMissing)" }) |"),
+        ("| variante | $([bool]$VariantResult.finished) | $($VariantResult.verdict) | $(@($VariantResult.defects).Count) | $(@($VariantResult.files).Count) ($($VariantResult.filesExclHarness) sin harness) | $(if ($null -eq $VariantResult.evidenceMissing) { 'sin medir' } else { "MISSING=$($VariantResult.evidenceMissing)" }) |"),
         '',
         'La columna Evidencia cuenta needles MISSING segun el auditor offline aplicado igual a los dos lados; `sin medir` = no se pidio auditoria. Los artefactos de cada lado (`report.md`, `review.json`) quedan en `side-base/` y `side-variant/` junto a este fichero.',
         '',

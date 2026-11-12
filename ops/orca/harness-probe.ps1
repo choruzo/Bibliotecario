@@ -26,6 +26,10 @@ param(
     # se aplica IGUAL a base y variante contra su report.md. Espera exit 0 (todo
     # capturado) o 1 (faltan needles) y cuenta las lineas 'MISSING'.
     [string]$EvidenceAudit,
+    # Import de integridad del entorno (RF2.3 del lider): el probe lo comprueba
+    # con el python del repo antes de despachar y despues del cleanup. Si falla
+    # antes, aborta con PROBE_VENV_BROKEN sin gastar workers.
+    [string]$SanityImport,
     [switch]$Keep,
     [switch]$DryRun
 )
@@ -54,7 +58,7 @@ function Get-ProbeSideResult {
     # (trayectoria completa: sin esto, el cleanup destruye la evidencia).
     param($Record, [Parameter(Mandatory)][string]$Side, [string]$ArtifactsDir)
 
-    $empty = @{ finished = $false; verdict = 'CAMBIOS'; defects = @(); files = @(); reviewFile = ''; evidenceMissing = $null }
+    $empty = @{ finished = $false; verdict = 'CAMBIOS'; defects = @(); files = @(); filesExclHarness = 0; reviewFile = ''; evidenceMissing = $null }
     if (-not $Record -or -not $Record.worktree -or -not (Test-Path $Record.worktree)) { return $empty }
 
     $reviewOutput = (& pwsh -NoProfile -File (Join-Path $PSScriptRoot 'review.ps1') -RunId $script:probeRun -TaskId $Record.taskId -Worktree $Record.worktree -BaseBranch $BaseBranch 2>&1 | Out-String)
@@ -72,6 +76,9 @@ function Get-ProbeSideResult {
         if ($review.PSObject.Properties['defects']) { $defects = @($review.defects | Where-Object { $_ }) }
         if ($review.PSObject.Properties['files']) { $files = @($review.files | Where-Object { $_ }) }
     }
+    # Comparacion de entrega sin el overlay del harness: los ficheros que la
+    # variante materializo (.opencode/...) no cuentan como trabajo del worker.
+    $filesExclHarness = @($files | Where-Object { $script:harnessOverlay -notcontains $_ }).Count
 
     # Preservar la evidencia del lado antes de que el cleanup borre el worktree.
     if ($ArtifactsDir) {
@@ -92,12 +99,13 @@ function Get-ProbeSideResult {
 
     if (-not $verdict) { return $empty }
     return @{
-        finished        = $true
-        verdict         = $verdict
-        defects         = $defects
-        files           = $files
-        reviewFile      = $reviewFile
-        evidenceMissing = $evidenceMissing
+        finished         = $true
+        verdict          = $verdict
+        defects          = $defects
+        files            = $files
+        filesExclHarness = $filesExclHarness
+        reviewFile       = $reviewFile
+        evidenceMissing  = $evidenceMissing
     }
 }
 
@@ -139,12 +147,31 @@ else {
 }
 if ($script:evidenceAudit -and -not $script:pythonExe) { throw 'Se pidio auditoria de evidencia pero no hay python disponible.' }
 
+function Test-VenvSanity {
+    # Integridad del entorno del repo (parametro -SanityImport del lider):
+    # import de una dependencia critica con el python del checkout. $null si no
+    # se pidio comprobacion.
+    if (-not $SanityImport) { return $null }
+    try {
+        [void](& $script:pythonExe -c "import $SanityImport" 2>$null)
+        return ($LASTEXITCODE -eq 0)
+    }
+    catch { return $false }
+}
+
 try {
     $newRun = (& pwsh -NoProfile -File (Join-Path $PSScriptRoot 'new-run.ps1') -Objective "ORCA HARNESS PROBE $($script:probeLabel)" | Out-String)
     $script:probeRun = [regex]::Match($newRun, '(?m)^RUN=(run_[A-Za-z0-9_]+)').Groups[1].Value
     $script:probeCoord = [regex]::Match($newRun, '(?m)^COORDINATOR=(term_[A-Za-z0-9-]+)').Groups[1].Value
     if (-not $script:probeRun -or -not $script:probeCoord) { throw "new-run no devolvio RUN/COORDINATOR:`n$newRun" }
     Write-Audit -RunId $script:probeRun -Actor 'probe' -Action 'probe-start' -Reason "variante=$($script:variantDirResolved) base=$BaseBranch label=$($script:probeLabel)"
+
+    $script:probeLabels = @()
+    if ($SanityImport) {
+        Write-Host '[probe] venv sanity (antes del dispatch)...'
+        if (-not (Test-VenvSanity)) { throw 'PROBE_VENV_BROKEN: el entorno del checkout principal no pasa la asercion de integridad antes del dispatch.' }
+        Write-Host '[probe] venv sanity OK'
+    }
 
     $taskA = New-ProbeTask -Coordinator $script:probeCoord -RunId $script:probeRun -Side 'a' -Spec $specText
     $taskB = New-ProbeTask -Coordinator $script:probeCoord -RunId $script:probeRun -Side 'b' -Spec $specText
@@ -156,6 +183,7 @@ try {
         param([string]$WorktreePath, [string]$TaskTitle)
         if ($TaskTitle -match '^probe-b-') {
             $applied = Copy-HarnessVariant -VariantDir $variantDirForHook -Worktree $WorktreePath
+            $script:harnessOverlay = @($applied)
             Write-Host "[probe] variante materializada en ${WorktreePath}: $($applied -join ', ')"
         }
     }
@@ -241,4 +269,13 @@ finally {
         }
     }
     if ($script:probeCoord) { [void](Close-OrcaTerminal -Handle $script:probeCoord -Quiet) }
+    if ($SanityImport) {
+        # Integridad del entorno principal tras tocar worktrees compartidos.
+        Write-Host '[probe] venv sanity (tras cleanup)...'
+        if (-not (Test-VenvSanity)) {
+            Write-Host '[probe] PROBE_VENV_BROKEN: el entorno del checkout principal quedo danado tras el cleanup'
+            Write-Audit -RunId ([string]$script:probeRun) -Actor 'probe' -Action 'venv-broken' -Reason "sanity import $SanityImport fallo tras cleanup"
+        }
+        else { Write-Host '[probe] venv sanity OK tras cleanup' }
+    }
 }
