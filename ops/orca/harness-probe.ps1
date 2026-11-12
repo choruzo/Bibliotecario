@@ -222,8 +222,18 @@ finally {
         catch { }
     }
     if (-not $Keep) {
+        # La eliminacion del worktree es siempre del kit: cleanup.ps1 sabe
+        # desmontar los enlaces compartidos (.venv/node_modules por junction);
+        # un git worktree remove --force crudo los atraviesa y destruye el
+        # .venv real del checkout principal (leido por las carcasas de hoy).
         foreach ($rec in @($script:probeRecords)) {
-            if ($rec.worktree) { try { & git -C $repoRoot worktree remove --force $rec.worktree 2>$null } catch { } }
+            $cleanupArgs = @('-NoProfile', '-File', (Join-Path $PSScriptRoot 'cleanup.ps1'), '-RunId', $script:probeRun, '-TaskId', $rec.taskId, '-RemoveWorktree', '-Force')
+            $out = (& pwsh @cleanupArgs 2>&1 | Out-String)
+            if ($out -match 'WORKTREE_LOCKED|No se pudo quitar el worktree') {
+                Write-Host "[probe] worktree quedo bloqueado (carcasa inofensiva): $($rec.worktree)"
+            }
+        }
+        foreach ($rec in @($script:probeRecords)) {
             if ($rec.branch) {
                 $branchName = ([string]$rec.branch) -replace '^refs/heads/', ''
                 if ($branchName) { try { & git -C $repoRoot branch -D $branchName 2>$null } catch { } }
