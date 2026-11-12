@@ -81,20 +81,22 @@ function Get-ProbeSideResult {
     $filesExclHarness = @($files | Where-Object { $script:harnessOverlay -notcontains $_ }).Count
 
     # Preservar la evidencia del lado antes de que el cleanup borre el worktree.
+    $reportPath = Join-Path $Record.worktree 'report.md'
     if ($ArtifactsDir) {
         New-Item -ItemType Directory -Force -Path $ArtifactsDir | Out-Null
-        $reportPath = Join-Path $Record.worktree 'report.md'
         if (Test-Path $reportPath) { Copy-Item $reportPath (Join-Path $ArtifactsDir 'report.md') -Force }
         if ($reviewFile -and (Test-Path $reviewFile)) { Copy-Item $reviewFile (Join-Path $ArtifactsDir 'review.json') -Force }
     }
 
+    # Metrica de cobertura de evidencia: instrumento neutral aplicado igual a los
+    # dos lados; parametrizacion explicita para que un fallo no sea silencioso.
     $evidenceMissing = $null
-    if ($script:evidenceAudit) {
-        $reportPath = Join-Path $Record.worktree 'report.md'
-        if (Test-Path $reportPath) {
-            $evidenceMissing = Measure-EvidenceCoverage -AuditScript $script:evidenceAudit -SpecPath $script:specFileResolved -ReportPath $reportPath -Python $script:pythonExe
-            Write-Host ("[probe] evidencia lado {0}: MISSING={1}" -f $Side, $(if ($null -eq $evidenceMissing) { 'sin medir' } else { $evidenceMissing }))
-        }
+    if ($AuditScript -and $PythonExe -and (Test-Path $reportPath)) {
+        $evidenceMissing = Measure-EvidenceCoverage -AuditScript $AuditScript -SpecPath $SpecPath -ReportPath $reportPath -Python $PythonExe
+        Write-Host ("[probe] evidencia lado {0}: MISSING={1}" -f $Side, $(if ($null -eq $evidenceMissing) { 'sin medir (auditor fallo)' } else { $evidenceMissing }))
+    }
+    elseif ($AuditScript) {
+        Write-Host "[probe] evidencia lado ${Side}: sin medir (report.md no existe en el worktree)"
     }
 
     if (-not $verdict) { return $empty }
@@ -146,6 +148,7 @@ else {
     if ($cmd) { $script:pythonExe = $cmd.Source }
 }
 if ($script:evidenceAudit -and -not $script:pythonExe) { throw 'Se pidio auditoria de evidencia pero no hay python disponible.' }
+if ($script:evidenceAudit) { Write-Host "[probe] auditor de evidencia activo: $($script:evidenceAudit)" }
 
 function Test-VenvSanity {
     # Integridad del entorno del repo (parametro -SanityImport del lider):
@@ -213,8 +216,8 @@ try {
     }
 
     $harnessDir = Join-Path (Join-Path (Join-Path (Get-LibraryRoot) $Domain) 'harnesses') $script:probeLabel
-    $baseResult = Get-ProbeSideResult -Record $recA -Side 'a' -ArtifactsDir (Join-Path $harnessDir 'side-base')
-    $variantResult = Get-ProbeSideResult -Record $recB -Side 'b' -ArtifactsDir (Join-Path $harnessDir 'side-variant')
+    $baseResult = Get-ProbeSideResult -Record $recA -Side 'a' -ArtifactsDir (Join-Path $harnessDir 'side-base') -AuditScript $script:evidenceAudit -SpecPath $script:specFileResolved -PythonExe $script:pythonExe
+    $variantResult = Get-ProbeSideResult -Record $recB -Side 'b' -ArtifactsDir (Join-Path $harnessDir 'side-variant') -AuditScript $script:evidenceAudit -SpecPath $script:specFileResolved -PythonExe $script:pythonExe
     $decision = Test-HarnessContrast -Base $baseResult -Variant $variantResult
 
     [void](Write-ProbeResultDir -Dir $harnessDir -BaseResult $baseResult -VariantResult $variantResult -Decision $decision -SpecText $specText -RunId $script:probeRun -Label $script:probeLabel -VariantDir $script:variantDirResolved -BaseBranch $BaseBranch -TaskBase $taskA -TaskVariant $taskB -RepoRoot $repoRoot)
