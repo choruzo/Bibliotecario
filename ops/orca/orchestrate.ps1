@@ -39,6 +39,14 @@ function Get-Tasks {
     return @((Get-OrcaResult $response).tasks)
 }
 
+function Get-TaskSnapshot {
+    param([string]$TaskId)
+    try {
+        return @((Get-Tasks) | Where-Object { $_.id -eq $TaskId }) | Select-Object -First 1
+    }
+    catch { return $null }
+}
+
 function Get-Record {
     param([string]$TaskId)
     $items = @($script:Dispatches) | Where-Object { $_.taskId -eq $TaskId } | Select-Object -Last 1
@@ -280,6 +288,71 @@ function Send-ToWorker {
     return $true
 }
 
+function Test-OrcaTerminalLive {
+    param([string]$Handle)
+
+    if (-not $Handle) { return $false }
+    try {
+        $show = Invoke-Orca terminal show --terminal $Handle --json
+        if (-not $show.ok) { return $false }
+        $terminal = $show.result.terminal
+        return [bool]($terminal -and $terminal.connected -eq $true -and $terminal.orphaned -ne $true)
+    }
+    catch { return $false }
+}
+
+function New-OrcaTaskWorkerTerminal {
+    param(
+        $Record,
+        [string]$Agent = 'worker'
+    )
+
+    $slug = Get-TaskSlug -Title ([string]$Record.taskTitle)
+    $short = Get-TaskShortId -TaskId ([string]$Record.taskId)
+    $name = "$slug-$short"
+    $wrapper = Join-Path $PSScriptRoot 'worker-terminal.ps1'
+    $command = "pwsh -NoProfile -File `"$wrapper`" -TaskTitle `"$name`" -Agent $Agent"
+
+    $response = Invoke-Orca terminal create --worktree "path:$($Record.worktree)" --title "worker:$name" --command $command --json
+    if (-not $response.ok) {
+        Write-Warning "No se pudo crear un terminal nuevo para $($Record.taskId): $($response.error.message)"
+        return $null
+    }
+    $handle = (Get-OrcaResult $response).terminal.handle
+    if (-not $handle) {
+        Write-Warning "Orca no devolvio handle para el terminal de $($Record.taskId)"
+        return $null
+    }
+
+    $wait = Invoke-Orca terminal wait --terminal $handle --for tui-idle --timeout-ms 180000 --json
+    if (-not $wait.ok) {
+        Write-Warning "El terminal nuevo de $($Record.taskId) no llego a tui-idle: $($wait.error.message)"
+        [void](Close-OrcaTerminal -Handle $handle -Quiet)
+        return $null
+    }
+
+    return [pscustomobject]@{ Handle = $handle; Terminal = "worker:$name" }
+}
+
+function Ensure-WorkerTerminal {
+    param(
+        $Record,
+        [string]$Agent = 'worker'
+    )
+
+    if (Test-OrcaTerminalLive -Handle $Record.workerHandle) { return [string]$Record.workerHandle }
+
+    $created = New-OrcaTaskWorkerTerminal -Record $Record -Agent $Agent
+    if (-not $created) { return $null }
+
+    Set-RecordValue -Record $Record -Name 'workerHandle' -Value $created.Handle
+    Set-RecordValue -Record $Record -Name 'terminal' -Value $created.Terminal
+    Save-Record -Record $Record
+    Write-Output "[loop] TERMINAL_RECREATED task=$($Record.taskId) handle=$($created.Handle)"
+    Write-Audit -RunId $RunId -Actor 'loop' -Action 'worker-terminal-recreated' -TaskId $Record.taskId -DispatchId $Record.dispatchId -Terminal $created.Handle -Reason 'stale-handle'
+    return [string]$created.Handle
+}
+
 function Test-RecordSettled {
     param($Record)
     if (-not $Record) { return $false }
@@ -469,10 +542,27 @@ function Request-Changes {
             return Request-Repair -Record $Record -Defects $defects -TaskId $TaskId -Round $Round
         }
         $update = Invoke-Orca orchestration task-update --from $coordinator --run $RunId --id $TaskId --status blocked --result "review_round=$Round max=$MaxReviewRounds" --json
-        if (-not $update.ok) { Write-Warning $update.error.message }
+        if (-not $update.ok) {
+            Write-Warning $update.error.message
+            $script:IntegrityBlocked = $true
+        }
         Set-RecordValue -Record $Record -Name 'status' -Value 'escalated'
         Save-Record -Record $Record
         Write-Host "[loop] ESCALATED $TaskId after $MaxReviewRounds defect rounds"
+        return 'STOP'
+    }
+
+    $workerHandle = Ensure-WorkerTerminal -Record $Record -Agent 'worker'
+    if (-not $workerHandle) {
+        $result = 'worker_terminal_unavailable'
+        $update = Invoke-Orca orchestration task-update --from $coordinator --run $RunId --id $TaskId --status blocked --result $result --json
+        if (-not $update.ok) {
+            Write-Warning $update.error.message
+            $script:IntegrityBlocked = $true
+        }
+        Set-RecordValue -Record $Record -Name 'status' -Value 'blocked'
+        Save-Record -Record $Record
+        Write-Audit -RunId $RunId -Actor 'loop' -Action 'blocked' -TaskId $TaskId -DispatchId $Record.dispatchId -Reason $result
         return 'STOP'
     }
 
@@ -484,7 +574,7 @@ function Request-Changes {
         return 'STOP'
     }
 
-    $dispatch = Invoke-Orca orchestration dispatch --from $coordinator --run $RunId --task $TaskId --to $Record.workerHandle --return-preamble --json
+    $dispatch = Invoke-Orca orchestration dispatch --from $coordinator --run $RunId --task $TaskId --to $workerHandle --return-preamble --json
     if (-not $dispatch.ok) {
         Write-Warning "No se pudo re-despachar ${TaskId}: $($dispatch.error.message)"
         Set-RecordValue -Record $Record -Name 'status' -Value 'blocked'
@@ -531,6 +621,7 @@ function Request-Repair {    param(
         Write-Warning "No se pudo reabrir ${TaskId} para reparacion: $($update.error.message)"
         Set-RecordValue -Record $Record -Name 'status' -Value 'blocked'
         Save-Record -Record $Record
+        $script:IntegrityBlocked = $true
         return 'STOP'
     }
 
@@ -646,10 +737,27 @@ function Request-Rescue {
 
     if ($Round -gt $MaxRescueRounds) {
         $update = Invoke-Orca orchestration task-update --from $coordinator --run $RunId --id $TaskId --status blocked --result "merge_conflict max=$MaxRescueRounds" --json
-        if (-not $update.ok) { Write-Warning $update.error.message }
+        if (-not $update.ok) {
+            Write-Warning $update.error.message
+            $script:IntegrityBlocked = $true
+        }
         Set-RecordValue -Record $Record -Name 'status' -Value 'blocked'
         Save-Record -Record $Record
         Write-Host "[loop] ESCALATED $TaskId after $MaxRescueRounds rescue rounds"
+        return 'STOP'
+    }
+
+    $workerHandle = Ensure-WorkerTerminal -Record $Record -Agent 'worker'
+    if (-not $workerHandle) {
+        $result = 'worker_terminal_unavailable'
+        $update = Invoke-Orca orchestration task-update --from $coordinator --run $RunId --id $TaskId --status blocked --result $result --json
+        if (-not $update.ok) {
+            Write-Warning $update.error.message
+            $script:IntegrityBlocked = $true
+        }
+        Set-RecordValue -Record $Record -Name 'status' -Value 'blocked'
+        Save-Record -Record $Record
+        Write-Audit -RunId $RunId -Actor 'loop' -Action 'blocked' -TaskId $TaskId -DispatchId $Record.dispatchId -Reason $result
         return 'STOP'
     }
 
@@ -661,7 +769,7 @@ function Request-Rescue {
         return 'STOP'
     }
 
-    $dispatch = Invoke-Orca orchestration dispatch --from $coordinator --run $RunId --task $TaskId --to $Record.workerHandle --return-preamble --json
+    $dispatch = Invoke-Orca orchestration dispatch --from $coordinator --run $RunId --task $TaskId --to $workerHandle --return-preamble --json
     if (-not $dispatch.ok) {
         Write-Warning "No se pudo re-despachar ${TaskId}: $($dispatch.error.message)"
         Set-RecordValue -Record $Record -Name 'status' -Value 'blocked'
@@ -711,6 +819,29 @@ Reglas:
     return 'CONTINUE'
 }
 
+function Invoke-ArchiveAndCleanup {
+    param($Record, [string]$TaskId)
+
+    & pwsh -NoProfile -File $archiveScript -RunId $RunId -TaskId $TaskId -Worktree $Record.worktree | Out-Host
+
+    $cleanupArgs = @('-NoProfile', '-File', $cleanupScript, '-RunId', $RunId, '-TaskId', $TaskId)
+    if (-not $KeepWorktrees) { $cleanupArgs += @('-RemoveWorktree', '-Force') }
+    $cleanupOutput = (& pwsh @cleanupArgs 2>&1 | Out-String)
+    if ($cleanupOutput.Trim()) { Write-Host $cleanupOutput.TrimEnd() }
+}
+
+function Set-TaskCompletedIfNeeded {
+    param([string]$TaskId, [string]$IntegrationSha)
+
+    $current = Get-TaskSnapshot -TaskId $TaskId
+    if ($current -and $current.status -ne 'completed') {
+        $update = Invoke-Orca orchestration task-update --from $coordinator --run $RunId --id $TaskId --status completed --result "integrated=$IntegrationSha" --json
+        if (-not $update.ok) {
+            Write-Warning "No se pudo marcar ${TaskId} como completed: $($update.error.message)"
+        }
+    }
+}
+
 function Invoke-TaskDelivery {
     param(
         [Parameter(Mandatory)][string]$TaskId,
@@ -726,6 +857,19 @@ function Invoke-TaskDelivery {
         Write-Output "[loop] DELIVERY_SKIP $TaskId ya integrada"
         return 'CONTINUE'
     }
+
+    $current = Get-TaskSnapshot -TaskId $TaskId
+    if (-not $current) {
+        Write-Warning "DELIVERY_STALE $TaskId no existe en Orca"
+        Write-Audit -RunId $RunId -Actor 'loop' -Action 'worker-done-stale' -TaskId $TaskId -DispatchId $Record.dispatchId -Reason 'task-missing'
+        return 'CONTINUE'
+    }
+    if (-not (Test-TaskDeliverable -Status $current.status)) {
+        Write-Output "[loop] DELIVERY_STALE $TaskId status=$($current.status)"
+        Write-Audit -RunId $RunId -Actor 'loop' -Action 'worker-done-stale' -TaskId $TaskId -DispatchId $Record.dispatchId -Reason "status=$($current.status)"
+        return 'CONTINUE'
+    }
+
     if (-not $Record.worktree -or -not (Test-Path $Record.worktree)) {
         $result = 'completed_sin_worktree'
         $update = Invoke-Orca orchestration task-update --from $coordinator --run $RunId --id $TaskId --status blocked --result $result --json
@@ -757,8 +901,31 @@ function Invoke-TaskDelivery {
 
     $files = @($review.files) | Where-Object { $_ }
     if ($files.Count -eq 0) {
-        $review = [pscustomobject]@{ defects = @('El review acepto pero no declaro archivos para commitear.') }
-        return Request-Changes -Record $Record -Review $review -Round $round -TaskId $TaskId
+        $branchName = ([string]$Record.branch) -replace '^refs/heads/', ''
+        if ($branchName -and (Test-BranchAncestor -Worktree $Record.worktree -Branch $branchName -Ancestor $BaseBranch)) {
+            $baseSha = (& git -C $Record.worktree rev-parse $BaseBranch).Trim()
+            Set-RecordValue -Record $Record -Name 'status' -Value 'integrated'
+            Set-RecordValue -Record $Record -Name 'commitSha' -Value $baseSha
+            Set-RecordValue -Record $Record -Name 'integrationSha' -Value $baseSha
+            Save-Record -Record $Record
+            Write-Host "[loop] ALREADY_INTEGRATED $TaskId $baseSha"
+            Write-Audit -RunId $RunId -Actor 'loop' -Action 'already-integrated' -TaskId $TaskId -DispatchId $Record.dispatchId -Reason $baseSha
+            Set-TaskCompletedIfNeeded -TaskId $TaskId -IntegrationSha $baseSha
+            Invoke-ArchiveAndCleanup -Record $Record -TaskId $TaskId
+            return 'CONTINUE'
+        }
+
+        # Sin diff y sin rama integrada no hay nada que commitear: reabrir y
+        # re-despachar solo crea tareas fantasma. Se bloquea y se corta.
+        $result = 'review_sin_ficheros'
+        $update = Invoke-Orca orchestration task-update --from $coordinator --run $RunId --id $TaskId --status blocked --result $result --json
+        if (-not $update.ok) { Write-Warning $update.error.message }
+        Set-RecordValue -Record $Record -Name 'status' -Value 'blocked'
+        Save-Record -Record $Record
+        $script:IntegrityBlocked = $true
+        Write-Host "[loop] BLOCKED $TaskId $result"
+        Write-Audit -RunId $RunId -Actor 'loop' -Action 'blocked' -TaskId $TaskId -DispatchId $Record.dispatchId -Reason $result
+        return 'STOP'
     }
 
     $commitOutput = (& pwsh -NoProfile -File $commitScript -Worktree $Record.worktree -TaskId $TaskId -FilesCsv ($files -join ',') -Message "task($TaskId): review round $round" -BaseBranch $BaseBranch 2>&1 | Out-String)
@@ -828,25 +995,8 @@ function Invoke-TaskDelivery {
     Save-Record -Record $Record
     Write-Audit -RunId $RunId -Actor 'loop' -Action 'integrated' -TaskId $TaskId -DispatchId $Record.dispatchId -Reason $integrationSha
 
-    # Red de seguridad: Orca marca completed al recibir worker_done. Solo lo
-    # forzamos si la tarea siguiera en otro estado, para no pisar el result que
-    # guarda el informe del worker.
-    $current = $null
-    try { $current = @((Get-Tasks) | Where-Object { $_.id -eq $TaskId }) | Select-Object -First 1 } catch { $current = $null }
-    if ($current -and $current.status -ne 'completed') {
-        $update = Invoke-Orca orchestration task-update --from $coordinator --run $RunId --id $TaskId --status completed --result "integrated=$integrationSha" --json
-        if (-not $update.ok) {
-            Write-Warning "No se pudo marcar ${TaskId} como completed: $($update.error.message)"
-        }
-    }
-
-    & pwsh -NoProfile -File $archiveScript -RunId $RunId -TaskId $TaskId -Worktree $Record.worktree | Out-Host
-
-    $cleanupArgs = @('-NoProfile', '-File', $cleanupScript, '-RunId', $RunId, '-TaskId', $TaskId)
-    if (-not $KeepWorktrees) { $cleanupArgs += @('-RemoveWorktree', '-Force') }
-    $cleanupOutput = (& pwsh @cleanupArgs 2>&1 | Out-String)
-    if ($cleanupOutput.Trim()) { Write-Host $cleanupOutput.TrimEnd() }
-
+    Set-TaskCompletedIfNeeded -TaskId $TaskId -IntegrationSha $integrationSha
+    Invoke-ArchiveAndCleanup -Record $Record -TaskId $TaskId
     return 'CONTINUE'
 }
 
@@ -862,10 +1012,37 @@ function Handle-Done {
 
     $taskId = $context.TaskId
     $record = $context.Record
-    if (-not $record) { $record = Get-Record -TaskId $taskId }
+    $latestRecord = Get-Record -TaskId $taskId
+    if ($latestRecord) {
+        if ($context.DispatchId -and $latestRecord.dispatchId -and $context.DispatchId -ne $latestRecord.dispatchId) {
+            Write-Output "[loop] WORKER_DONE_STALE $taskId dispatch=$($context.DispatchId) latest=$($latestRecord.dispatchId)"
+            Write-Audit -RunId $RunId -Actor 'worker' -Action 'worker-done-stale' -TaskId $taskId -DispatchId $context.DispatchId -Reason "dispatch-not-latest latest=$($latestRecord.dispatchId)"
+            return 'CONTINUE'
+        }
+        $record = $latestRecord
+    }
     if (-not $record) {
         Write-Warning "No hay mapping local para $taskId"
         Write-Audit -RunId $RunId -Actor 'worker' -Action 'worker-done-sin-record' -TaskId $taskId
+        return 'CONTINUE'
+    }
+
+    # Un worker_done puede sobrevivir al runtime y llegar cuando la tarea ya
+    # esta blocked/failed/ready. No se entrega: el estado vigente manda.
+    $current = Get-TaskSnapshot -TaskId $taskId
+    if (-not $current) {
+        Write-Output "[loop] WORKER_DONE_STALE $taskId reason=task-missing"
+        Write-Audit -RunId $RunId -Actor 'worker' -Action 'worker-done-stale' -TaskId $taskId -DispatchId $record.dispatchId -Reason 'task-missing'
+        return 'CONTINUE'
+    }
+    if (-not (Test-TaskDeliverable -Status $current.status)) {
+        Write-Output "[loop] WORKER_DONE_STALE $taskId status=$($current.status)"
+        Write-Audit -RunId $RunId -Actor 'worker' -Action 'worker-done-stale' -TaskId $taskId -DispatchId $record.dispatchId -Reason "status=$($current.status)"
+        return 'CONTINUE'
+    }
+    if ($context.DispatchId -and $record.dispatchId -and $context.DispatchId -ne $record.dispatchId) {
+        Write-Output "[loop] WORKER_DONE_STALE $taskId dispatch=$($context.DispatchId) record=$($record.dispatchId)"
+        Write-Audit -RunId $RunId -Actor 'worker' -Action 'worker-done-stale' -TaskId $taskId -DispatchId $context.DispatchId -Reason "dispatch-mismatch record=$($record.dispatchId)"
         return 'CONTINUE'
     }
 

@@ -117,6 +117,10 @@ el asesor escala, se responde desde el panel o con `reply`.
 - `integrate.ps1` usa `setup-worktree.ps1`, pide `-Full` solo si el Run toca
   `apps/web` y avanza `main` por fast-forward (`BASE_ADVANCED`).
 
+- Un `worker_done` rancio se descarta si la tarea esta `blocked/failed/ready` o su dispatch no es el ultimo; no hay review/commit/integrate.
+- Un review con `FILES=` vacio no reabre: `ALREADY_INTEGRATED` si la rama esta en la base, `review_sin_ficheros` si no.
+- El re-despacho valida el terminal y lo recrea si el handle esta stale.
+
 ## Modelos y claves
 
 | Rol | Modelo |

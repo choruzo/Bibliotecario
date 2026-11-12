@@ -280,6 +280,32 @@ function Get-OrcaWorkerShow {
     return $null
 }
 
+function Test-BranchAncestor {
+    param(
+        [Parameter(Mandatory)][string]$Worktree,
+        [Parameter(Mandatory)][string]$Branch,
+        [Parameter(Mandatory)][string]$Ancestor
+    )
+
+    if (-not $Worktree -or -not (Test-Path $Worktree)) { return $false }
+    if (-not $Branch -or -not $Ancestor -or $Branch -eq $Ancestor) { return $false }
+
+    & git -C $Worktree rev-parse --verify -q $Branch *> $null
+    if ($LASTEXITCODE -ne 0) { return $false }
+    & git -C $Worktree rev-parse --verify -q $Ancestor *> $null
+    if ($LASTEXITCODE -ne 0) { return $false }
+
+    & git -C $Worktree merge-base --is-ancestor $Branch $Ancestor 2>$null
+    return ($LASTEXITCODE -eq 0)
+}
+
+function Test-TaskDeliverable {
+    param([string]$Status)
+
+    if (-not $Status) { return $false }
+    return ($Status -notin @('blocked', 'failed', 'cancelled', 'ready', 'pending'))
+}
+
 function Get-LatestWriteUtc {
     param([string]$Worktree)
 

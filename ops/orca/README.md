@@ -130,3 +130,13 @@ commit, coordinador por Run, escalaciones cualificadas con `worker-show`,
 watchdog con evidencia, `integrate.ps1` con `setup-worktree`/`-Full`
 condicional/fast-forward y `cleanup.ps1` con reintentos y `-Settled`.
 `check.ps1` y `setup-worktree.ps1` siguen siendo los adaptados a Bibliotecario.
+
+## Sincronizacion 2026-11-12 (2)
+
+Cierre de D1-D3: `worker_done` rancio descartado por estado y por dispatch no
+ultimo (`WORKER_DONE_STALE`); review aceptado con `FILES=` vacio comprueba si
+la rama ya esta en la base (`ALREADY_INTEGRATED`) o bloquea
+(`review_sin_ficheros`); el re-despacho valida el terminal y lo recrea si el
+handle esta stale (`TERMINAL_RECREATED`). Tests: `Test-TaskDeliverable` y
+`Test-BranchAncestor` en `lib.ps1`, cubiertos por `delivery-commit.ps1` y
+`kit-regression.ps1`.

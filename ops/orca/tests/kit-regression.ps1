@@ -23,6 +23,13 @@ Assert-Contains (Join-Path $orcaDir 'orchestrate.ps1') 'ESCALATION_IGNORED' 'fal
 Assert-Contains (Join-Path $orcaDir 'orchestrate.ps1') 'WATCHDOG_NO_PROOF' 'el watchdog debe exigir prueba'
 Assert-Contains (Join-Path $orcaDir 'orchestrate.ps1') 'Get-Coordinator -RunId' 'el bucle debe usar coordinador por Run'
 Assert-Contains (Join-Path $orcaDir 'orchestrate.ps1') 'Settle-SettledDispatches' 'faltan cierres de terminales asentados'
+Assert-Contains (Join-Path $orcaDir 'orchestrate.ps1') 'worker-done-stale' 'falta el descarte de worker_done rancios'
+Assert-Contains (Join-Path $orcaDir 'orchestrate.ps1') 'review_sin_ficheros' 'review vacio no debe reabrir la tarea'
+Assert-Contains (Join-Path $orcaDir 'orchestrate.ps1') 'Ensure-WorkerTerminal' 'el re-despacho debe validar o recrear el terminal'
+Assert-Contains (Join-Path $orcaDir 'orchestrate.ps1') 'TERMINAL_RECREATED' 'falta la auditoria de terminal recreado'
+Assert-Contains (Join-Path $orcaDir 'orchestrate.ps1') 'ALREADY_INTEGRATED' 'falta el camino de rama ya integrada'
+Assert-Contains (Join-Path $orcaDir 'lib.ps1') 'Test-BranchAncestor' 'falta la comprobacion de rama ya integrada'
+Assert-Contains (Join-Path $orcaDir 'lib.ps1') 'Test-TaskDeliverable' 'falta la guardia de estado entregable'
 
 Assert-Contains (Join-Path $orcaDir 'integrate.ps1') "-split ','" 'integrate debe partir -Branches por comas'
 Assert-Contains (Join-Path $orcaDir 'integrate.ps1') 'BASE_ADVANCED' 'integrate debe avanzar la rama base'
