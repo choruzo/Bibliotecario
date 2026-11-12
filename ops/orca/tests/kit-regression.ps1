@@ -99,6 +99,12 @@ Assert-Contains (Join-Path $orcaDir 'dispatch.ps1') 'task-create' 'dispatch debe
 Assert-Contains (Join-Path $orcaDir 'orchestrate.ps1') 'PAIR_DECISION' 'el bucle debe arbitrar el par al integrar'
 Assert-Contains (Join-Path $orcaDir 'orchestrate.ps1') 'probe-loser' 'la perdedora del par debe cerrarse sin integrar'
 Assert-NotContains (Join-Path $orcaDir 'orchestrate.ps1') "status -eq 'integrated'\) \{ continue \}" 'los guards de reconciliacion deben excluir lost tambien'
+
+# Auto-probe presupuestado (P4): decisor, nunca lanzador.
+Assert-Contains (Join-Path $orcaDir 'harnessing-budget.ps1') 'BLOCK reason=daily_cap' 'el presupuesto debe toparse por dia'
+Assert-Contains (Join-Path $orcaDir 'harnessing-budget.ps1') 'BLOCK reason=cooldown' 'el presupuesto debe respetar el cooldown'
+Assert-Contains (Join-Path $orcaDir 'harnessing-budget.ps1') 'BLOCK reason=no_briefing' 'sin briefing de retro no hay probe'
+Assert-Contains (Join-Path $orcaDir 'harnessing-budget.ps1') 'PROCEED domain=' 'el decisor debe devolver PROCEED con dominio'
 Assert-Contains (Join-Path $orcaDir 'harness-probe.ps1') "Action 'lesson-candidate'" 'el probe debe dejar marca para el flujo de lecciones'
 Assert-Contains (Join-Path $orcaDir 'harness-probe.ps1') 'review\.ps1' 'el contraste debe venir del verificador existente'
 $editor = Join-Path $repoRoot '.opencode\agents\harness-editor.md'
