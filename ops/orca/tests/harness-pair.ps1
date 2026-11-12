@@ -53,26 +53,39 @@ try {
     $wtB1 = New-WorktreeWithReview -Name 'b-aceptada' -Verdict 'ACEPTADO' -Defects @()
     $a1 = New-PairRecord -TaskId 'task_a' -Side 'a' -Status 'completed' -Worktree $wtA1
     $b1 = New-PairRecord -TaskId 'task_b' -Side 'b' -Status 'completed' -Worktree $wtB1
-    $d = Resolve-HarnessPairWinner -Record $a1 -Sibling $b1
+    $d = Resolve-HarnessPairWinner -Record $a1 -Sibling $b1 -SelfStatus 'completed' -SiblingStatus 'completed'
     if ($d.winner -ne 'variant') { throw "Variante aceptada deberia ganar: $($d.winner) ($($d.reason))" }
 
     # 5. Empate -> base (nunca sin integracion).
     $wtA2 = New-WorktreeWithReview -Name 'a-aceptada' -Verdict 'ACEPTADO' -Defects @()
     $wtB2 = New-WorktreeWithReview -Name 'b-aceptada2' -Verdict 'ACEPTADO' -Defects @()
-    $a2 = New-PairRecord -TaskId 'task_a' -Side 'a' -Status 'completed' -Worktree $wtA2
-    $b2 = New-PairRecord -TaskId 'task_b' -Side 'b' -Status 'completed' -Worktree $wtB2
-    $d2 = Resolve-HarnessPairWinner -Record $a2 -Sibling $b2
+    $a2 = New-PairRecord -TaskId 'task_a' -Side 'a' -Status 'dispatched' -Worktree $wtA2
+    $b2 = New-PairRecord -TaskId 'task_b' -Side 'b' -Status 'dispatched' -Worktree $wtB2
+    $d2 = Resolve-HarnessPairWinner -Record $a2 -Sibling $b2 -SelfStatus 'completed' -SiblingStatus 'completed'
     if ($d2.winner -ne 'base') { throw "Empate deberia integrar la base: $($d2.winner)" }
 
-    # 6. Variante fallida -> base.
-    $a3 = New-PairRecord -TaskId 'task_a' -Side 'a' -Status 'completed' -Worktree $wtA2
-    $b3 = New-PairRecord -TaskId 'task_b' -Side 'b' -Status 'failed' -Worktree $null
-    $d3 = Resolve-HarnessPairWinner -Record $a3 -Sibling $b3
-    if ($d3.winner -ne 'base') { throw "Variante fallida deberia integrar la base: $($d3.winner)" }
+    # 5b. CRITICO (bug visto en vivo): records con status rancio 'dispatched'
+    # pero estados frescos terminales y reviews reales -> el veredicto manda.
+    $wtA3 = New-WorktreeWithReview -Name 'a-cambios-rancio' -Verdict 'CAMBIOS' -Defects @('x')
+    $wtB3 = New-WorktreeWithReview -Name 'b-aceptada-rancio' -Verdict 'ACEPTADO' -Defects @()
+    $a3 = New-PairRecord -TaskId 'task_a' -Side 'a' -Status 'dispatched' -Worktree $wtA3
+    $b3 = New-PairRecord -TaskId 'task_b' -Side 'b' -Status 'dispatched' -Worktree $wtB3
+    $d3 = Resolve-HarnessPairWinner -Record $a3 -Sibling $b3 -SelfStatus 'completed' -SiblingStatus 'completed'
+    if ($d3.winner -ne 'variant') { throw "Con records rancios el veredicto debe mandar: $($d3.winner) ($($d3.reason))" }
+
+    # 6. Variante fallida (estado fresco failed) -> base.
+    $a4 = New-PairRecord -TaskId 'task_a' -Side 'a' -Status 'dispatched' -Worktree $wtA2
+    $b4 = New-PairRecord -TaskId 'task_b' -Side 'b' -Status 'dispatched' -Worktree $null
+    $d4 = Resolve-HarnessPairWinner -Record $a4 -Sibling $b4 -SelfStatus 'completed' -SiblingStatus 'failed'
+    if ($d4.winner -ne 'base') { throw "Variante fallida deberia integrar la base: $($d4.winner)" }
 
     # 7. La vista no depende de que lado sea el record actual.
-    $d4 = Resolve-HarnessPairWinner -Record $b1 -Sibling $a1
-    if ($d4.winner -ne 'variant') { throw "El arbitraje no debe depender del lado consultado: $($d4.winner)" }
+    $d5 = Resolve-HarnessPairWinner -Record $b1 -Sibling $a1 -SelfStatus 'completed' -SiblingStatus 'completed'
+    if ($d5.winner -ne 'variant') { throw "El arbitraje no debe depender del lado consultado: $($d5.winner)" }
+
+    # 8. Estados no terminales frescos: sin decision (el llamador espera).
+    $d6 = Resolve-HarnessPairWinner -Record $a3 -Sibling $b3 -SelfStatus 'dispatched' -SiblingStatus 'dispatched'
+    if ($d6.winner -ne 'base' -or $d6.reason -notmatch 'incompletas') { throw "Estados en vuelo deberian dar empate incompleto: $($d6.winner) ($($d6.reason))" }
 
     Write-Output 'PAIR_TEST_OK'
 }

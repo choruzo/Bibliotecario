@@ -517,16 +517,20 @@ function Test-HarnessPairReady {
 
 function Resolve-HarnessPairWinner {
     # Arbitraje del par con el verificador existente. Lee review.json del
-    # worktree de cada lado (ya lo escribio el review) y aplica el mismo
-    # contraste que el probe offline. Devuelve @{ winner='base'|'variant'|'none';
-    # reason } donde 'none' significa empate -> se integra la base.
-    param($Record, $Sibling)
+    # worktree de cada lado y aplica el mismo contraste que el probe offline.
+    # Los estados terminales vienen FRESCOS de Orca (parametros): el record
+    # local queda rancio hasta la entrega y envenenaria el gate (bug visto:
+    # decidia "ambas incompletas" con ambos lados ACEPTADO).
+    # Devuelve @{ winner='base'|'variant'|'none'; reason } donde 'none' significa
+    # empate -> se integra la base.
+    param($Record, $Sibling, [string]$SelfStatus, [string]$SiblingStatus)
 
     function Get-SideOutcome {
-        param($Rec)
+        param($Rec, [string]$FreshStatus)
         $outcome = @{ finished = $false; verdict = 'CAMBIOS'; defects = @(); files = @(); evidenceMissing = $null }
-        if (-not $Rec -or $Rec.status -notin @('completed', 'integrated', 'failed', 'blocked')) { return $outcome }
-        if ($Rec.status -eq 'failed') { return $outcome }
+        if (-not $Rec) { return $outcome }
+        if ($FreshStatus -notin @('completed', 'integrated', 'failed', 'blocked')) { return $outcome }
+        if ($FreshStatus -eq 'failed') { return $outcome }
         $reviewFile = if ($Rec.worktree) { Join-Path $Rec.worktree '.orca-task\review.json' } else { $null }
         if ($reviewFile -and (Test-Path $reviewFile)) {
             try {
@@ -546,7 +550,9 @@ function Resolve-HarnessPairWinner {
     $variantSide = if ([string]$Record.side -eq 'b') { $Record } else { $Sibling }
     if (-not $baseSide -or -not $variantSide) { return @{ winner = 'none'; reason = 'par incompleto' } }
 
-    $decision = Test-HarnessContrast -Base (Get-SideOutcome $baseSide) -Variant (Get-SideOutcome $variantSide)
+    $baseStatus = if ([string]$Record.side -eq 'b') { $SiblingStatus } else { $SelfStatus }
+    $variantStatus = if ([string]$Record.side -eq 'b') { $SelfStatus } else { $SiblingStatus }
+    $decision = Test-HarnessContrast -Base (Get-SideOutcome $baseSide $baseStatus) -Variant (Get-SideOutcome $variantSide $variantStatus)
     if ($decision.winner -eq 'none') { $decision.winner = 'base'; $decision.reason = "empate: $($decision.reason); se integra la base" }
     return $decision
 }
