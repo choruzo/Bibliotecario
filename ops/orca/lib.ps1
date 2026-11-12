@@ -561,7 +561,8 @@ function Write-ProbeResultDir {
         [Parameter(Mandatory)][string]$BaseBranch,
         [Parameter(Mandatory)][string]$TaskBase,
         [Parameter(Mandatory)][string]$TaskVariant,
-        [Parameter(Mandatory)][string]$RepoRoot
+        [Parameter(Mandatory)][string]$RepoRoot,
+        [string]$Note = ''
     )
 
     New-Item -ItemType Directory -Force -Path $Dir | Out-Null
@@ -573,6 +574,10 @@ function Write-ProbeResultDir {
         "- Variante: ``$VariantDir``",
         "- Tareas: base ``$TaskBase`` / variante ``$TaskVariant``",
         "- Decision: **$($Decision.winner)** - $($Decision.reason)",
+        "- Nota: $(if ($Note) { $Note } else { '-' })",
+        '',
+        ('- ``side=base`` delivered={0} started_at={1} ended_at={2}' -f ([bool]$BaseResult.finished), $BaseResult.startedAt, $BaseResult.endedAt),
+        ('- ``side=variante`` delivered={0} started_at={1} ended_at={2}' -f ([bool]$VariantResult.finished), $VariantResult.startedAt, $VariantResult.endedAt),
         '',
         '| Lado | Terminada | Veredicto | Defectos | Archivos | Evidencia |',
         '|---|---|---|---|---|---|',

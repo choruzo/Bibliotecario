@@ -69,6 +69,7 @@ function Get-ProbeSideResult {
     if (-not $Record -or -not $Record.worktree -or -not (Test-Path $Record.worktree)) { return $empty }
 
     $reviewOutput = (& pwsh -NoProfile -File (Join-Path $PSScriptRoot 'review.ps1') -RunId $script:probeRun -TaskId $Record.taskId -Worktree $Record.worktree -BaseBranch $BaseBranch 2>&1 | Out-String)
+    $endedAt = (Get-Date).ToUniversalTime().ToString('o')
     Write-Host ("[probe] review lado {0}: {1}" -f $Side, ([regex]::Match($reviewOutput, 'REVIEW=(ACEPTADO|CAMBIOS)').Groups[1].Value))
 
     $verdict = [regex]::Match($reviewOutput, 'REVIEW=(ACEPTADO|CAMBIOS)').Groups[1].Value
@@ -87,12 +88,20 @@ function Get-ProbeSideResult {
     # variante materializo (.opencode/...) no cuentan como trabajo del worker.
     $filesExclHarness = @($files | Where-Object { $script:harnessOverlay -notcontains $_ }).Count
 
-    # Preservar la evidencia del lado antes de que el cleanup borre el worktree.
+    # Preservar la evidencia del lado antes de que el cleanup borre el worktree:
+    # report.md, review.json y el estado parcial (porcelain + diff) para que un
+    # timeout tambien deje rastro auditable.
     $reportPath = Join-Path $Record.worktree 'report.md'
     if ($ArtifactsDir) {
         New-Item -ItemType Directory -Force -Path $ArtifactsDir | Out-Null
         if (Test-Path $reportPath) { Copy-Item $reportPath (Join-Path $ArtifactsDir 'report.md') -Force }
         if ($reviewFile -and (Test-Path $reviewFile)) { Copy-Item $reviewFile (Join-Path $ArtifactsDir 'review.json') -Force }
+        try {
+            $status = (& git -C $Record.worktree status --porcelain 2>$null | Out-String)
+            $diff = (& git -C $Record.worktree diff --stat 2>$null | Out-String)
+            Set-Content -Path (Join-Path $ArtifactsDir 'state.txt') -Value ("-- git status --porcelain`r`n" + $status + "`r`n-- git diff --stat`r`n" + $diff) -Encoding UTF8
+        }
+        catch { }
     }
 
     # Metrica de cobertura de evidencia: instrumento neutral aplicado igual a los
@@ -115,6 +124,8 @@ function Get-ProbeSideResult {
         filesExclHarness = $filesExclHarness
         reviewFile       = $reviewFile
         evidenceMissing  = $evidenceMissing
+        startedAt        = if ($Record.createdAt) { [string]$Record.createdAt } else { '' }
+        endedAt          = $endedAt
     }
 }
 
@@ -195,6 +206,8 @@ try {
     # de gastar workers (el binding de param() falla aqui y no a mitad de probe).
     $precheck = Get-ProbeSideResult -Record $null -Side 'a' -ArtifactsDir $null -AuditScript $script:evidenceAudit -SpecPath $script:specFileResolved -PythonExe $script:pythonExe
     if (-not $precheck) { throw 'Get-ProbeSideResult no devuelve el registro vacio de arranque' }
+    Write-Output 'BINDING_SELFCHECK_OK'
+    Write-Host '[probe] binding de Get-ProbeSideResult verificado'
     $prepare = {
         param([string]$WorktreePath, [string]$TaskTitle)
         if ($TaskTitle -match '^probe-b-') {
@@ -212,6 +225,7 @@ try {
     if (-not $recA -or -not $recB) { throw 'No se despacharon las dos variantes; abortando el probe.' }
 
     # Espera a que ambas tareas alcancen estado terminal o se acabe el presupuesto.
+    $budgetExhausted = $false
     $deadline = (Get-Date).AddMinutes($MaxProbeMinutes)
     while ((Get-Date) -lt $deadline) {
         Start-Sleep -Seconds 15
@@ -222,18 +236,22 @@ try {
         if ($done.Count -ge 2) { break }
     }
     if ((Get-Date) -ge $deadline) {
+        $budgetExhausted = $true
         Write-Host '[probe] presupuesto agotado; marcando incompletas'
         foreach ($rec in @($recA, $recB)) {
             if ($rec.dispatchId) { try { Invoke-Orca orchestration worker-stop --dispatch $rec.dispatchId --json | Out-Null } catch { } }
         }
     }
 
+    # Review en el deadline pase lo que pase: un lado incompleto da CAMBIOS con
+    # los defectos del gate como dato; el review nunca vuelve vacio el turno.
+    $noteProbe = if ($budgetExhausted) { 'presupuesto agotado; review ejecutado sobre lo entregado' } else { '' }
     $harnessDir = Join-Path (Join-Path (Join-Path (Get-LibraryRoot) $Domain) 'harnesses') $script:probeLabel
     $baseResult = Get-ProbeSideResult -Record $recA -Side 'a' -ArtifactsDir (Join-Path $harnessDir 'side-base') -AuditScript $script:evidenceAudit -SpecPath $script:specFileResolved -PythonExe $script:pythonExe
     $variantResult = Get-ProbeSideResult -Record $recB -Side 'b' -ArtifactsDir (Join-Path $harnessDir 'side-variant') -AuditScript $script:evidenceAudit -SpecPath $script:specFileResolved -PythonExe $script:pythonExe
     $decision = Test-HarnessContrast -Base $baseResult -Variant $variantResult
 
-    [void](Write-ProbeResultDir -Dir $harnessDir -BaseResult $baseResult -VariantResult $variantResult -Decision $decision -SpecText $specText -RunId $script:probeRun -Label $script:probeLabel -VariantDir $script:variantDirResolved -BaseBranch $BaseBranch -TaskBase $taskA -TaskVariant $taskB -RepoRoot $repoRoot)
+    [void](Write-ProbeResultDir -Dir $harnessDir -BaseResult $baseResult -VariantResult $variantResult -Decision $decision -SpecText $specText -RunId $script:probeRun -Label $script:probeLabel -VariantDir $script:variantDirResolved -BaseBranch $BaseBranch -TaskBase $taskA -TaskVariant $taskB -RepoRoot $repoRoot -Note $noteProbe)
 
     Write-Audit -RunId $script:probeRun -Actor 'probe' -Action 'probe-result' -TaskId $taskA -DispatchId $recA.dispatchId -Reason "decision=$($decision.winner) motivo=$($decision.reason)"
     Write-Audit -RunId $script:probeRun -Actor 'probe' -Action 'probe-result' -TaskId $taskB -DispatchId $recB.dispatchId -Reason "decision=$($decision.winner) motivo=$($decision.reason)"
