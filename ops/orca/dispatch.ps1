@@ -7,6 +7,10 @@ param(
     # sesion del worker (pruebas A/B, ver harness-probe.ps1). Recibe
     # -WorktreePath y -TaskTitle; no altera el comportamiento si no se pasa.
     [scriptblock]$PrepareWorktree,
+    # Variante candidata para tareas marcadas con [HARNESS-PROBE]: la tarea se
+    # despacha dos veces (base + hermana clonada con la variante materializada)
+    # y el bucle arbitra con el verificador al integrar (RF1.1).
+    [string]$VariantDir,
     [switch]$DryRun
 )
 
@@ -35,18 +39,22 @@ if ($ready.Count -eq 0) {
     return
 }
 
-foreach ($task in $ready) {
-    $slug = Get-TaskSlug -Title $task.task_title
-    $shortId = Get-TaskShortId -TaskId $task.id
-    $name = "$slug-$shortId"
+function Invoke-WorkerDispatch {
+    # Despacha una tarea y devuelve su registro (o $null). $Side 'b' anade el
+    # sufijo -var al nombre y materializa $VariantDir en el worktree.
+    param($Task, [string]$Side, [string]$PairId, [string]$VariantDir)
 
-    Write-Output "DISPATCHING=$($task.id) NAME=$name"
+    $slug = Get-TaskSlug -Title $Task.task_title
+    $shortId = Get-TaskShortId -TaskId $Task.id
+    $name = "$slug-$shortId$(if ($Side -eq 'b') { '-var' } else { '' })"
 
-    if ($DryRun) { continue }
+    Write-Output "DISPATCHING=$($Task.id) NAME=$name SIDE=$Side"
 
-    if ([string]::IsNullOrWhiteSpace($task.spec)) {
-        Write-Warning "La tarea $($task.id) no tiene spec; se omite"
-        continue
+    if ($DryRun) { return $null }
+
+    if ([string]::IsNullOrWhiteSpace($Task.spec)) {
+        Write-Warning "La tarea $($Task.id) no tiene spec; se omite"
+        return $null
     }
 
     try {
@@ -67,13 +75,17 @@ foreach ($task in $ready) {
         if ($LASTEXITCODE -ne 0) { throw "Setup falló para $worktreePath" }
 
         if ($PrepareWorktree) {
-            & $PrepareWorktree -WorktreePath $worktreePath -TaskTitle $task.task_title
+            & $PrepareWorktree -WorktreePath $worktreePath -TaskTitle $Task.task_title
+        }
+        if ($Side -eq 'b' -and $VariantDir) {
+            $applied = @(Copy-HarnessVariant -VariantDir $VariantDir -Worktree $worktreePath)
+            Write-Output "VARIANT_APPLIED=$($applied -join ',')"
         }
 
         $taskDir = Join-Path $worktreePath '.orca-task'
         New-Item -ItemType Directory -Force -Path $taskDir | Out-Null
-        Set-Content -Path (Join-Path $taskDir 'spec.md') -Value $task.spec -Encoding UTF8
-        $task | ConvertTo-Json -Depth 20 | Set-Content -Path (Join-Path $taskDir 'task.json') -Encoding UTF8
+        Set-Content -Path (Join-Path $taskDir 'spec.md') -Value $Task.spec -Encoding UTF8
+        $Task | ConvertTo-Json -Depth 20 | Set-Content -Path (Join-Path $taskDir 'task.json') -Encoding UTF8
 
         $wrapper = Join-Path $PSScriptRoot 'worker-terminal.ps1'
         $command = "pwsh -NoProfile -File `"$wrapper`" -TaskTitle $name -Agent $WorkerAgent"
@@ -88,10 +100,10 @@ foreach ($task in $ready) {
 
         # Dispatch de bajo nivel: Orca devuelve el preamble completo (incluye la spec).
         # Lo entregamos con terminal send para no depender de la detección de agente.
-        $dispatchResponse = Invoke-Orca orchestration dispatch --from $coordinator --run $RunId --task $task.id --to $workerHandle --return-preamble --json
+        $dispatchResponse = Invoke-Orca orchestration dispatch --from $coordinator --run $RunId --task $Task.id --to $workerHandle --return-preamble --json
         $dispatchResult = Get-OrcaResult $dispatchResponse
         $preamble = $dispatchResult.preamble
-        if (-not $preamble) { throw "Orca no devolvió preamble para $($task.id)" }
+        if (-not $preamble) { throw "Orca no devolvió preamble para $($Task.id)" }
 
         # Puntero a la libreria de lecciones (PRD docs/08-prd-harnessing.md).
         $libraryPointer = Get-LibraryPointer
@@ -108,8 +120,8 @@ foreach ($task in $ready) {
 
         $record = [pscustomobject]@{
             runId        = $RunId
-            taskId       = $task.id
-            taskTitle    = $task.task_title
+            taskId       = $Task.id
+            taskTitle    = $Task.task_title
             dispatchId   = $dispatchId
             workerHandle = $workerHandle
             worktree     = $worktree.path
@@ -118,14 +130,54 @@ foreach ($task in $ready) {
             status       = 'dispatched'
             baseBranch   = $BaseBranch
             createdAt    = (Get-Date).ToString('o')
+            side         = $Side
+            pairId       = $PairId
+            variantDir   = $VariantDir
         }
-        $dispatches += $record
-        Save-Dispatches -RunId $RunId -Dispatches $dispatches | Out-Null
-
-        Write-Output "DISPATCHED=$($task.id) DISPATCH_ID=$dispatchId WORKER=$workerHandle WORKTREE=$($worktree.path)"
+        Write-Output "DISPATCHED=$($Task.id) DISPATCH_ID=$dispatchId WORKER=$workerHandle WORKTREE=$($worktree.path)"
+        return $record
     }
     catch {
-        Write-Error "Falló el dispatch de $($task.id): $($_.Exception.Message)"
+        Write-Error "Falló el dispatch de $($Task.id): $($_.Exception.Message)"
+        return $null
+    }
+}
+
+foreach ($task in $ready) {
+    # Pares [HARNESS-PROBE]: la tarea se despacha dos veces (base + hermana
+    # clonada con la variante) y el bucle arbitra al integrar (RF1.1).
+    $pairId = $null
+    $variantDir = $null
+    $siblingTask = $null
+    if (Test-HarnessProbeSpec -Spec $task.spec) {
+        if ($VariantDir -and (Test-Path $VariantDir)) {
+            $pairId = "pair-$($task.id)"
+            $variantDir = (Resolve-Path $VariantDir).Path
+            Write-Output "PROBE_PAIR=$($task.id) VARIANT=$variantDir"
+            if (-not $DryRun) {
+                $cloneResponse = Invoke-Orca orchestration task-create --from $coordinator --run $RunId --task-title "$($task.task_title)-var" --spec $task.spec --json
+                $cloneResult = Get-OrcaResult $cloneResponse
+                $siblingTaskId = $null
+                if ($cloneResult.PSObject.Properties['taskId'] -and $cloneResult.taskId) { $siblingTaskId = [string]$cloneResult.taskId }
+                elseif ($cloneResult.PSObject.Properties['task'] -and $cloneResult.task.id) { $siblingTaskId = [string]$cloneResult.task.id }
+                if (-not $siblingTaskId) { throw "task-create no devolvio taskId para la hermana de $($task.id)" }
+                $siblingTask = [pscustomobject]@{ id = $siblingTaskId; task_title = "$($task.task_title)-var"; spec = $task.spec }
+            }
+        }
+        else {
+            Write-Warning "Tarea probe $($task.id) sin -VariantDir; despacho normal"
+        }
+    }
+
+    $record = Invoke-WorkerDispatch -Task $task -Side 'a' -PairId $pairId -VariantDir $variantDir
+    if ($record) { $dispatches += $record }
+
+    if ($siblingTask) {
+        $recordB = Invoke-WorkerDispatch -Task $siblingTask -Side 'b' -PairId $pairId -VariantDir $variantDir
+        if ($recordB) { $dispatches += $recordB }
+    }
+    if ($record -or $recordB) {
+        Save-Dispatches -RunId $RunId -Dispatches $dispatches | Out-Null
     }
 }
 

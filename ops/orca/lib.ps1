@@ -487,8 +487,71 @@ function Remove-SharedLinks {
     return $detached
 }
 
-function Measure-EvidenceCoverage {
-    # Metrica de cobertura de evidencia para probes A/B (RF1.6 refinado): ejecuta
+# --- In-run harness probing (RF1.1, PRD docs/08-prd-harnessing.md) ---
+
+function Test-HarnessProbeSpec {
+    # Las tareas marcadas con el token [HARNESS-PROBE] en su spec se despachan
+    # dos veces (base y variante) y el verificador arbitra al integrar.
+    param([string]$Spec)
+
+    return ($Spec -and $Spec.Contains('[HARNESS-PROBE]'))
+}
+
+function Get-PairSibling {
+    # Devuelve el record hermano de una tarea de probe (mismo pairId, lado opuesto).
+    param([Parameter(Mandatory)][array]$Records, [Parameter(Mandatory)]$Record)
+
+    if (-not $Record.pairId) { return $null }
+    return @($Records | Where-Object { $_.pairId -eq $Record.pairId -and $_.taskId -ne $Record.taskId }) | Select-Object -Last 1
+}
+
+function Test-HarnessPairReady {
+    # El arbitraje solo procede cuando ambos lados dejan de estar en vuelo.
+    param($Record, $Sibling)
+
+    if (-not $Sibling) { return $false }
+    $statuses = @([string]$Record.status, [string]$Sibling.status)
+    $inFlight = $statuses | Where-Object { $_ -in @('dispatched', 'ready') }
+    return (-not $inFlight)
+}
+
+function Resolve-HarnessPairWinner {
+    # Arbitraje del par con el verificador existente. Lee review.json del
+    # worktree de cada lado (ya lo escribio el review) y aplica el mismo
+    # contraste que el probe offline. Devuelve @{ winner='base'|'variant'|'none';
+    # reason } donde 'none' significa empate -> se integra la base.
+    param($Record, $Sibling)
+
+    function Get-SideOutcome {
+        param($Rec)
+        $outcome = @{ finished = $false; verdict = 'CAMBIOS'; defects = @(); files = @(); evidenceMissing = $null }
+        if (-not $Rec -or $Rec.status -notin @('completed', 'integrated', 'failed', 'blocked')) { return $outcome }
+        if ($Rec.status -eq 'failed') { return $outcome }
+        $reviewFile = if ($Rec.worktree) { Join-Path $Rec.worktree '.orca-task\review.json' } else { $null }
+        if ($reviewFile -and (Test-Path $reviewFile)) {
+            try {
+                $review = Get-Content $reviewFile -Raw -Encoding UTF8 | ConvertFrom-Json
+                $outcome.finished = $true
+                $outcome.verdict = [string]$review.verdict
+                if ($review.PSObject.Properties['defects']) { $outcome.defects = @($review.defects | Where-Object { $_ }) }
+                if ($review.PSObject.Properties['files']) { $outcome.files = @($review.files | Where-Object { $_ }) }
+            }
+            catch { }
+        }
+        return $outcome
+    }
+
+    # side 'a' = base (la tarea original), side 'b' = variante (la hermana clonada).
+    $baseSide = if ([string]$Record.side -eq 'b') { $Sibling } else { $Record }
+    $variantSide = if ([string]$Record.side -eq 'b') { $Record } else { $Sibling }
+    if (-not $baseSide -or -not $variantSide) { return @{ winner = 'none'; reason = 'par incompleto' } }
+
+    $decision = Test-HarnessContrast -Base (Get-SideOutcome $baseSide) -Variant (Get-SideOutcome $variantSide)
+    if ($decision.winner -eq 'none') { $decision.winner = 'base'; $decision.reason = "empate: $($decision.reason); se integra la base" }
+    return $decision
+}
+
+function Measure-EvidenceCoverage {    # Metrica de cobertura de evidencia para probes A/B (RF1.6 refinado): ejecuta
     # un auditorOffline (p. ej. el evidence_audit.py de la variante) contra el
     # report de un lado y cuenta los needles MISSING. Es un instrumento neutro:
     # se aplica IGUAL a base y variante. Devuelve el numero de MISSING, o $null

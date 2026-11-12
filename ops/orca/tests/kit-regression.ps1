@@ -90,6 +90,15 @@ Assert-Contains (Join-Path $orcaDir 'harnessing-retro.ps1') 'RETRO_BRIEF' 'la re
 Assert-Contains (Join-Path $orcaDir 'harnessing-retro.ps1') 'CommissionEditor' 'la comision del editor debe ser opt-in'
 Assert-Contains (Join-Path $orcaDir 'lesson.ps1') 'if \(\$Confidence\) \{ \$childArgs' 'el scaffold multi-candidato no puede pasar -Confidence vacio (ValidateSet lo rechaza)'
 Assert-Contains (Join-Path $repoRoot '.opencode\agents\lider.md') 'harnessing-retro\.ps1' 'el lider debe ejecutar la retro al cierre del bucle'
+
+# Par in-run (RF1.1): token, arbitraje y estado lost nunca re-entregado.
+Assert-Contains (Join-Path $orcaDir 'lib.ps1') 'function Resolve-HarnessPairWinner' 'falta el arbitraje del par in-run'
+Assert-Contains (Join-Path $orcaDir 'lib.ps1') 'Test-HarnessProbeSpec' 'falta el detector del token [HARNESS-PROBE]'
+Assert-Contains (Join-Path $orcaDir 'dispatch.ps1') 'Test-HarnessProbeSpec' 'dispatch debe detectar las tareas probe'
+Assert-Contains (Join-Path $orcaDir 'dispatch.ps1') 'task-create' 'dispatch debe clonar la tarea hermana del par'
+Assert-Contains (Join-Path $orcaDir 'orchestrate.ps1') 'PAIR_DECISION' 'el bucle debe arbitrar el par al integrar'
+Assert-Contains (Join-Path $orcaDir 'orchestrate.ps1') 'probe-loser' 'la perdedora del par debe cerrarse sin integrar'
+Assert-NotContains (Join-Path $orcaDir 'orchestrate.ps1') "status -eq 'integrated'\) \{ continue \}" 'los guards de reconciliacion deben excluir lost tambien'
 Assert-Contains (Join-Path $orcaDir 'harness-probe.ps1') "Action 'lesson-candidate'" 'el probe debe dejar marca para el flujo de lecciones'
 Assert-Contains (Join-Path $orcaDir 'harness-probe.ps1') 'review\.ps1' 'el contraste debe venir del verificador existente'
 $editor = Join-Path $repoRoot '.opencode\agents\harness-editor.md'

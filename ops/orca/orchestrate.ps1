@@ -175,8 +175,8 @@ function Resolve-Escalation {
 
     $context = Resolve-MessageContext -Message $Message
     $record = $context.Record
-    if ($record -and ($record.integrationSha -or $record.status -eq 'integrated')) {
-        return [pscustomobject]@{ Action = 'ignore'; Reason = 'dispatch ya integrado'; Context = $context }
+    if ($record -and ($record.integrationSha -or $record.status -in @('integrated', 'lost'))) {
+        return [pscustomobject]@{ Action = 'ignore'; Reason = 'dispatch ya integrado o perdido por su par'; Context = $context }
     }
 
     $dispatchId = if ($context.DispatchId) { [string]$context.DispatchId } elseif ($record) { [string]$record.dispatchId } else { $null }
@@ -358,7 +358,7 @@ function Test-RecordSettled {
     param($Record)
     if (-not $Record) { return $false }
     if ($Record.integrationSha) { return $true }
-    return ($Record.status -in @('integrated', 'completed', 'failed'))
+    return ($Record.status -in @('integrated', 'completed', 'failed', 'lost'))
 }
 
 function Get-WorkerEvidence {
@@ -876,6 +876,57 @@ function Invoke-TaskDelivery {
         return 'CONTINUE'
     }
 
+    # Arbitraje de pares [HARNESS-PROBE] (RF1.1): esperar a la hermana y decidir
+    # con el verificador existente. La perdedora se cierra sin integrar; la
+    # ganadora sigue el flujo normal de entrega debajo.
+    if ($Record.PSObject.Properties['pairId'] -and $Record.pairId) {
+        $sibling = Get-PairSibling -Records @($script:Dispatches) -Record $Record
+        if (-not $sibling) {
+            Write-Warning "Tarea probe $($Record.taskId) sin hermana en el registro; despacho normal"
+        }
+        elseif (-not (Test-HarnessPairReady -Record $Record -Sibling $sibling)) {
+            Write-Host "[loop] PAIR_WAIT $($Record.taskId) hermana=$($sibling.taskId) status=$($sibling.status)"
+            return 'CONTINUE'
+        }
+        else {
+            $decision = Resolve-HarnessPairWinner -Record $Record -Sibling $sibling
+            $variantRec = if ([string]$Record.side -eq 'b') { $Record } else { $sibling }
+            $baseRec = if ([string]$Record.side -eq 'b') { $sibling } else { $Record }
+            $winnerRec = if ($decision.winner -eq 'variant') { $variantRec } else { $baseRec }
+            $loserRec = if ($decision.winner -eq 'variant') { $baseRec } else { $variantRec }
+            Write-Host "[loop] PAIR_DECISION pair=$($Record.pairId) winner=$($winnerRec.taskId) loser=$($loserRec.taskId) motivo=$($decision.reason)"
+            Write-Audit -RunId $RunId -Actor 'loop' -Action 'probe-pair-decision' -TaskId $winnerRec.taskId -DispatchId $winnerRec.dispatchId -Reason "pair=$($Record.pairId) loser=$($loserRec.taskId) motivo=$($decision.reason)"
+            if ($loserRec.taskId -eq $Record.taskId) {
+                # La actual es la perdedora: se cierra aqui y no integra.
+                $loserUpdate = Invoke-Orca orchestration task-update --from $coordinator --run $RunId --id $Record.taskId --status failed --result "probe-loser: $($decision.reason)" --json
+                if (-not $loserUpdate.ok) { Write-Warning $loserUpdate.error.message }
+                Set-RecordValue -Record $Record -Name 'status' -Value 'lost'
+                Save-Record -Record $Record
+                Write-Audit -RunId $RunId -Actor 'loop' -Action 'probe-loser' -TaskId $Record.taskId -DispatchId $Record.dispatchId -Reason $decision.reason
+                Invoke-ArchiveAndCleanup -Record $Record -TaskId $Record.taskId
+                try {
+                    $branchName = ([string]$Record.branch) -replace '^refs/heads/', ''
+                    if ($branchName) { & git -C (Get-RepoRoot) branch -D $branchName 2>$null }
+                }
+                catch { }
+                return 'CONTINUE'
+            }
+            # La perdedora no es la actual: se cierra ahora y la actual (ganadora)
+            # prosigue con el flujo normal.
+            $loserUpdate = Invoke-Orca orchestration task-update --from $coordinator --run $RunId --id $loserRec.taskId --status failed --result "probe-loser: $($decision.reason)" --json
+            if (-not $loserUpdate.ok) { Write-Warning $loserUpdate.error.message }
+            Set-RecordValue -Record $loserRec -Name 'status' -Value 'lost'
+            Save-Record -Record $loserRec
+            Write-Audit -RunId $RunId -Actor 'loop' -Action 'probe-loser' -TaskId $loserRec.taskId -DispatchId $loserRec.dispatchId -Reason $decision.reason
+            Invoke-ArchiveAndCleanup -Record $loserRec -TaskId $loserRec.taskId
+            try {
+                $branchName = ([string]$loserRec.branch) -replace '^refs/heads/', ''
+                if ($branchName) { & git -C (Get-RepoRoot) branch -D $branchName 2>$null }
+            }
+            catch { }
+        }
+    }
+
     $current = Get-TaskSnapshot -TaskId $TaskId
     if (-not $current) {
         Write-Warning "DELIVERY_STALE $TaskId no existe en Orca"
@@ -1111,7 +1162,7 @@ function Reconcile-CompletedTasks {
             Write-Audit -RunId $RunId -Actor 'loop' -Action 'blocked' -TaskId $task.id -Reason 'completed_sin_dispatch_local'
             continue
         }
-        if ($record.integrationSha -or $record.status -eq 'integrated') { continue }
+        if ($record.integrationSha -or $record.status -in @('integrated', 'lost')) { continue }
 
         Write-Host "[loop] RECONCILE task=$($task.id) completed sin integrar"
         Write-Audit -RunId $RunId -Actor 'loop' -Action 'reconcile' -TaskId $task.id -DispatchId $record.dispatchId -Reason 'completed_sin_integracion'
