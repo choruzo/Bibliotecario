@@ -1,0 +1,14 @@
+-- git status --porcelain
+ M .opencode/agents/worker.md
+ M report.md
+?? .opencode/skills/
+?? .orca-task/
+?? docs/h3/pdf-regression.md
+?? scripts/h3/pdf_regression.py
+?? tests/test_pdf_regression.py
+
+-- git diff --stat
+ .opencode/agents/worker.md |  27 ++-
+ report.md                  | 432 ++++++++++++++++++++++++---------------------
+ 2 files changed, 259 insertions(+), 200 deletions(-)
+

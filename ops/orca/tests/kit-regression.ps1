@@ -40,6 +40,8 @@ Assert-NotContains (Join-Path $orcaDir 'integrate.ps1') 'New-Item -ItemType Junc
 
 Assert-Contains (Join-Path $orcaDir 'cleanup.ps1') 'WORKTREE_LOCKED' 'cleanup debe reportar worktrees bloqueados'
 Assert-Contains (Join-Path $orcaDir 'cleanup.ps1') 'terminal close --worktree' 'cleanup debe cerrar terminales del workspace'
+Assert-Contains (Join-Path $orcaDir 'cleanup.ps1') 'Remove-SharedLinks' 'cleanup debe desmontar las junctions compartidas antes de borrar'
+Assert-Contains (Join-Path $orcaDir 'lib.ps1') 'function Remove-SharedLinks' 'falta el desmontador seguro de junctions (incidencia del .venv)'
 
 Assert-Contains (Join-Path $orcaDir 'review.ps1') 'BaseBranch' 'review debe comparar contra la rama base'
 Assert-Contains (Join-Path $orcaDir 'review.ps1') 'git diff --name-only HEAD' 'review debe ver staged y unstaged'
@@ -66,6 +68,11 @@ Assert-Contains (Join-Path $orcaDir 'dispatch.ps1') 'PrepareWorktree' 'dispatch 
 Assert-Contains (Join-Path $orcaDir 'harness-probe.ps1') 'Test-HarnessVariant' 'el probe debe validar la variante antes de gastar workers'
 Assert-Contains (Join-Path $orcaDir 'lib.ps1') 'proposal\.diff' 'la adopcion debe producir un diff de propuesta para una persona'
 Assert-Contains (Join-Path $orcaDir 'harness-probe.ps1') 'Write-ProbeResultDir' 'el probe debe componer la evidencia en la libreria'
+# Colision case-insensitive: $script:evidenceAudit pisaba el param $EvidenceAudit
+# (v2-v4 midieron siempre "sin medir"). El nombre renombrado debe existir y el
+# viejo no puede volver.
+Assert-Contains (Join-Path $orcaDir 'harness-probe.ps1') 'evidenceAuditPath' 'la metrica de evidencia usa el nombre renombrado'
+Assert-NotContains (Join-Path $orcaDir 'harness-probe.ps1') '\$script:evidenceAudit(?![A-Za-z])' 'no se puede reintroducir script:evidenceAudit (colision con el param)'
 Assert-Contains (Join-Path $orcaDir 'harness-probe.ps1') "Action 'lesson-candidate'" 'el probe debe dejar marca para el flujo de lecciones'
 Assert-Contains (Join-Path $orcaDir 'harness-probe.ps1') 'review\.ps1' 'el contraste debe venir del verificador existente'
 $editor = Join-Path $repoRoot '.opencode\agents\harness-editor.md'

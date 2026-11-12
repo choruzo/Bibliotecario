@@ -1,0 +1,34 @@
+{
+  "taskId": "task_8075c3c937cc",
+  "runId": "run_b9b0ccdd5773",
+  "dispatchId": "",
+  "round": 1,
+  "verdict": "ACEPTADO",
+  "files": [
+    ".opencode/agents/worker.md",
+    ".opencode/skills/evidence-gate/scripts/evidence_audit.py",
+    ".opencode/skills/evidence-gate/SKILL.md",
+    "docs/h3/pdf-regression.md",
+    "scripts/h3/pdf_regression.py",
+    "tests/test_pdf_regression.py"
+  ],
+  "defects": [],
+  "checkOutput": [
+    "warning: in the working copy of '.opencode/agents/worker.md', LF will be replaced by CRLF the next time Git touches it",
+    "warning: in the working copy of 'report.md', LF will be replaced by CRLF the next time Git touches it",
+    "........................................................................ [ 33%]",
+    ".........................................................s.............. [ 67%]",
+    ".....................................................................    [100%]",
+    "============================== warnings summary ===============================",
+    "..\\..\\.venv\\Lib\\site-packages\\fastapi\\testclient.py:1",
+    "  C:\\Users\\javie\\orca\\workspaces\\Bibliotecario\\probe-b-evidence-gate-v4-20261112-202143-8075c3\\.venv\\Lib\\site-packages\\fastapi\\testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.",
+    "    from starlette.testclient import TestClient as TestClient  # noqa",
+    "-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html",
+    "212 passed, 1 skipped, 1 warning in 42.02s",
+    "H0_SKIP=corpus docs/*.md no presente en el worktree (0 archivos)",
+    "> bibliotecario-web@0.1.0 typecheck",
+    "> tsc --noEmit",
+    "CHECK_OK=C:\\Users\\javie\\orca\\workspaces\\Bibliotecario\\probe-b-evidence-gate-v4-20261112-202143-8075c3"
+  ],
+  "at": "2026-11-12T21:39:39.7079893+01:00"
+}

@@ -1,0 +1,11 @@
+-- git status --porcelain
+ M report.md
+?? .orca-task/
+?? docs/h3/pdf-regression.md
+?? scripts/h3/pdf_regression.py
+?? tests/test_pdf_regression.py
+
+-- git diff --stat
+ report.md | 295 ++++++++++++++++++--------------------------------------------
+ 1 file changed, 86 insertions(+), 209 deletions(-)
+
