@@ -414,7 +414,11 @@ function Test-HarnessVariant {
         '^\.opencode/skills/[^/]+/scripts/[^/]+$',
         '^AGENTS\.md$'
     )
-    $files = @(Get-ChildItem $VariantDir -Recurse -File | ForEach-Object { $_.FullName.Substring($VariantDir.Length + 1) -replace '\\', '/' })
+    $variantRoot = (Resolve-Path $VariantDir).Path
+    # RATIONALE.md en la raiz es metadato de la propuesta (contrato del agente
+    # harness-editor), no superficie del harness: se ignora al validar y nunca
+    # se materializa.
+    $files = @(Get-ChildItem $VariantDir -Recurse -File | Where-Object { -not ($_.Name -eq 'RATIONALE.md' -and $_.DirectoryName -eq $variantRoot) } | ForEach-Object { $_.FullName.Substring($VariantDir.Length + 1) -replace '\\', '/' })
     if (-not $files.Count) { return @('la variante esta vacia') }
     foreach ($rel in $files) {
         $ok = $false
@@ -444,7 +448,8 @@ function Copy-HarnessVariant {
     param([Parameter(Mandatory)][string]$VariantDir, [Parameter(Mandatory)][string]$Worktree)
 
     $applied = @()
-    foreach ($file in (Get-ChildItem $VariantDir -Recurse -File)) {
+    $skipRoot = (Resolve-Path $VariantDir).Path
+    foreach ($file in (Get-ChildItem $VariantDir -Recurse -File | Where-Object { -not ($_.Name -eq 'RATIONALE.md' -and $_.DirectoryName -eq $skipRoot) })) {
         $rel = $file.FullName.Substring($VariantDir.Length + 1)
         $target = Join-Path $Worktree $rel
         New-Item -ItemType Directory -Force -Path (Split-Path $target -Parent) | Out-Null

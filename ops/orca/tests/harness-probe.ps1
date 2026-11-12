@@ -48,6 +48,13 @@ try {
     $issues = @(Test-HarnessVariant -VariantDir $void)
     if (-not ($issues | Where-Object { $_ -match 'vacia' })) { throw 'Una variante vacia deberia invalidarse' }
 
+    # 5b. RATIONALE.md en la raiz es metadato: se ignora al validar y no se materializa.
+    Set-Content -Path (Join-Path $variant 'RATIONALE.md') -Value 'rationale de prueba' -Encoding UTF8
+    $issues = @(Test-HarnessVariant -VariantDir $variant)
+    if ($issues.Count) { throw "RATIONALE.md en la raiz no deberia invalidar la variante: $($issues -join '; ')" }
+    $applied = @(Copy-HarnessVariant -VariantDir $variant -Worktree $worktree)
+    if ($applied -contains 'RATIONALE.md') { throw 'RATIONALE.md no debe materializarse en el worktree' }
+
     # 6. Materializacion: sobrescribe lo incluido, hereda lo ausente.
     Set-Content -Path (Join-Path $worktree 'AGENTS.md') -Value 'heredado' -Encoding UTF8
     $applied = @(Copy-HarnessVariant -VariantDir $variant -Worktree $worktree)
