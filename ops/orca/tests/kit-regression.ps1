@@ -77,6 +77,13 @@ Assert-NotContains (Join-Path $orcaDir 'harness-probe.ps1') '\$script:evidenceAu
 # vuelo, el resultado se marca invalido (condicion de archivo del lider).
 Assert-Contains (Join-Path $orcaDir 'harness-probe.ps1') 'PROBE_EVIDENCE_METRIC_NOT_RUN' 'la metrica de evidencia no ejecutada debe invalidar el resultado'
 Assert-Contains (Join-Path $orcaDir 'lib.ps1') 'metric_status=' 'RESULT.md debe llevar metric_status y metric_reason'
+
+# La palanca esta en la especificacion (hallazgo del ciclo v1-v4): la plantilla
+# de tareas codifica la seccion Evidencia y el worker sabe que es obligatoria.
+Assert-Contains (Join-Path $repoRoot 'ops\orca\task-template.md') '## Evidencia' 'task-template debe codificar la seccion Evidencia (hallazgo del experimento)'
+Assert-Contains (Join-Path $repoRoot 'ops\orca\task-template.md') 'no cumple' 'la regla de evidencia debe ser explicita en la plantilla'
+Assert-Contains (Join-Path $repoRoot 'ops\orca\report-template.md') '## Evidencia' 'report-template debe tener el hueco para la evidencia'
+Assert-Contains (Join-Path $repoRoot '.opencode\agents\worker.md') '## Evidencia' 'worker debe saber que la seccion Evidencia es obligatoria'
 Assert-Contains (Join-Path $orcaDir 'harness-probe.ps1') "Action 'lesson-candidate'" 'el probe debe dejar marca para el flujo de lecciones'
 Assert-Contains (Join-Path $orcaDir 'harness-probe.ps1') 'review\.ps1' 'el contraste debe venir del verificador existente'
 $editor = Join-Path $repoRoot '.opencode\agents\harness-editor.md'

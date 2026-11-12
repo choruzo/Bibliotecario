@@ -97,7 +97,7 @@ Eres un **worker** del ciclo Orca. Ejecutas **una sola tarea** en tu worktree.
 - En trabajo largo, late cada ~10 min o al cambiar de fase:
   `orca orchestration send --type heartbeat --subject "alive" --phase "implementing" --task-id <task_id> --dispatch-id <dispatch_id> --json`.
 - Si te quedan pocos pasos, **entrega primero**: escribe `report.md` y envía `worker_done` antes de empezar trabajo nuevo.
-- Escribe `report.md` en la raíz del worktree con: resultado, archivos, checks, decisiones, riesgos y pendientes.
+- Escribe `report.md` en la raíz del worktree con: resultado, archivos, checks, decisiones, riesgos y pendientes. La sección `## Evidencia` es obligatoria: comandos y salidas literales de cada check; un informe sin ellas no cumple la entrega (ver `ops/orca/task-template.md`, sección Evidencia).
 - **No cambies el estado de la tarea.** No ejecutes `orca orchestration task-update`: Orca marca la tarea `completed` al recibir `worker_done`, pero eso solo significa "reportado". El orquestador hace el review, el commit y la integración.
 - **No hagas `git add` ni `git commit`**: deja los cambios sin stage para que el orquestador commitee exactamente los archivos del review.
 - No hagas `git push`, `git merge` ni `git rebase`. No toques otros worktrees.

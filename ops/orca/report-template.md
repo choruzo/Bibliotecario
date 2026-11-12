@@ -13,6 +13,11 @@
 | Unit | `...` | PASS |
 | Lint | `...` | PASS |
 
+## Evidencia
+
+Comandos exactos y salidas literales de cada check. Un check sin salida aquí no
+está demostrado; si no se ejecutó, dilo con el motivo.
+
 ## Decisiones
 - ...
 
