@@ -73,6 +73,10 @@ Assert-Contains (Join-Path $orcaDir 'harness-probe.ps1') 'Write-ProbeResultDir' 
 # viejo no puede volver.
 Assert-Contains (Join-Path $orcaDir 'harness-probe.ps1') 'evidenceAuditPath' 'la metrica de evidencia usa el nombre renombrado'
 Assert-NotContains (Join-Path $orcaDir 'harness-probe.ps1') '\$script:evidenceAudit(?![A-Za-z])' 'no se puede reintroducir script:evidenceAudit (colision con el param)'
+# La metrica no puede fallar en silencio: si se pidio auditor y no corrio en
+# vuelo, el resultado se marca invalido (condicion de archivo del lider).
+Assert-Contains (Join-Path $orcaDir 'harness-probe.ps1') 'PROBE_EVIDENCE_METRIC_NOT_RUN' 'la metrica de evidencia no ejecutada debe invalidar el resultado'
+Assert-Contains (Join-Path $orcaDir 'lib.ps1') 'metric_status=' 'RESULT.md debe llevar metric_status y metric_reason'
 Assert-Contains (Join-Path $orcaDir 'harness-probe.ps1') "Action 'lesson-candidate'" 'el probe debe dejar marca para el flujo de lecciones'
 Assert-Contains (Join-Path $orcaDir 'harness-probe.ps1') 'review\.ps1' 'el contraste debe venir del verificador existente'
 $editor = Join-Path $repoRoot '.opencode\agents\harness-editor.md'

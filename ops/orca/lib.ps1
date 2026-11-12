@@ -562,7 +562,9 @@ function Write-ProbeResultDir {
         [Parameter(Mandatory)][string]$TaskBase,
         [Parameter(Mandatory)][string]$TaskVariant,
         [Parameter(Mandatory)][string]$RepoRoot,
-        [string]$Note = ''
+        [string]$Note = '',
+        [string]$MetricStatus = 'not_run',
+        [string]$MetricReason = ''
     )
 
     New-Item -ItemType Directory -Force -Path $Dir | Out-Null
@@ -578,6 +580,7 @@ function Write-ProbeResultDir {
         '',
         ('- ``side=base`` delivered={0} started_at={1} ended_at={2}' -f ([bool]$BaseResult.finished), $BaseResult.startedAt, $BaseResult.endedAt),
         ('- ``side=variante`` delivered={0} started_at={1} ended_at={2}' -f ([bool]$VariantResult.finished), $VariantResult.startedAt, $VariantResult.endedAt),
+        "- Metrica de evidencia: ``metric_status=$MetricStatus`` ``metric_reason=$MetricReason``",
         '',
         '| Lado | Terminada | Veredicto | Defectos | Archivos | Evidencia |',
         '|---|---|---|---|---|---|',

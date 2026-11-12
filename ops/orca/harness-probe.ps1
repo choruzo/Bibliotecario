@@ -251,7 +251,25 @@ try {
     $variantResult = Get-ProbeSideResult -Record $recB -Side 'b' -ArtifactsDir (Join-Path $harnessDir 'side-variant') -AuditScript $script:evidenceAuditPath -SpecPath $script:specFileResolved -PythonExe $script:pythonExe
     $decision = Test-HarnessContrast -Base $baseResult -Variant $variantResult
 
-    [void](Write-ProbeResultDir -Dir $harnessDir -BaseResult $baseResult -VariantResult $variantResult -Decision $decision -SpecText $specText -RunId $script:probeRun -Label $script:probeLabel -VariantDir $script:variantDirResolved -BaseBranch $BaseBranch -TaskBase $taskA -TaskVariant $taskB -RepoRoot $repoRoot -Note $noteProbe)
+    # La metrica no puede fallar en silencio (condicion de archivo del lider):
+    # si se pidio auditor y no se ejecuto en vuelo, el resultado es invalido
+    # hasta que se recupere offline desde los artefactos.
+    $metricStatus = 'not_run'
+    $metricReason = 'no se pidio auditoria de evidencia'
+    if ($script:evidenceAuditPath) {
+        if ($null -ne $baseResult.evidenceMissing -and $null -ne $variantResult.evidenceMissing) {
+            $metricStatus = 'in_probe_fired'
+            $metricReason = 'auditor ejecutado en vuelo en ambos lados'
+        }
+        else {
+            $metricStatus = 'not_run'
+            $metricReason = 'el auditor no se ejecuto en vuelo; recuperable offline desde side-base/ y side-variant/'
+            Write-Host '[probe] PROBE_EVIDENCE_METRIC_NOT_RUN'
+            $decision = @{ winner = 'invalid'; reason = 'metrica de evidencia pedida pero no ejecutada; resultado invalido hasta medicion offline' }
+        }
+    }
+
+    [void](Write-ProbeResultDir -Dir $harnessDir -BaseResult $baseResult -VariantResult $variantResult -Decision $decision -SpecText $specText -RunId $script:probeRun -Label $script:probeLabel -VariantDir $script:variantDirResolved -BaseBranch $BaseBranch -TaskBase $taskA -TaskVariant $taskB -RepoRoot $repoRoot -Note $noteProbe -MetricStatus $metricStatus -MetricReason $metricReason)
 
     Write-Audit -RunId $script:probeRun -Actor 'probe' -Action 'probe-result' -TaskId $taskA -DispatchId $recA.dispatchId -Reason "decision=$($decision.winner) motivo=$($decision.reason)"
     Write-Audit -RunId $script:probeRun -Actor 'probe' -Action 'probe-result' -TaskId $taskB -DispatchId $recB.dispatchId -Reason "decision=$($decision.winner) motivo=$($decision.reason)"
@@ -263,6 +281,7 @@ try {
     Write-Output "PROBE_VARIANT verdict=$($variantResult.verdict) defects=$(@($variantResult.defects).Count) finished=$([bool]$variantResult.finished) evidence=$(if ($null -eq $variantResult.evidenceMissing) { '-' } else { $variantResult.evidenceMissing })"
     Write-Output "PROBE_WINNER=$($decision.winner)"
     Write-Output "PROBE_REASON=$($decision.reason)"
+    Write-Output "PROBE_METRIC_STATUS=$metricStatus"
     Write-Output "PROBE_ADOPTED=$(if ($decision.winner -eq 'variant') { (Join-Path $harnessDir 'variant') } else { '-' })"
     Write-Output "PROBE_DIR=$harnessDir"
 }

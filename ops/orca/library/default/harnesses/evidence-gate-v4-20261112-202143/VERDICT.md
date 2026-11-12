@@ -17,3 +17,4 @@
   `$EvidenceAudit`. Corregido renombrando a `evidenceAuditPath` con guard de
   regresion en kit-regression. La medicion de v4 se recupero post-hoc desde
   los artefactos preservados de este directorio.
+- metric_status=offline_recovered - metric_reason=colision de nombres case-insensitive impidio el disparo en vuelo; medicion offline identica desde los artefactos preservados de este directorio
