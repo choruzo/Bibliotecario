@@ -462,11 +462,49 @@ archivo arXiv y la varianza del baseline lo supera.
 3. El énfasis de prosa (autores, etiquetas) y el resto de limitaciones de
    T2d/T2e se conservan sin cambio.
 
-### Paso T3 pendiente (fuera de esta tarea)
+### T3 ejecutado (2026-11-12)
 
-Republicar los 2 documentos arXiv (su SHA cambia) y recalibrar la ventana de
-corpus (`agnostic-calibration-v1.jsonl`, `agnostic-validation-v1.jsonl` y
-`agnostic_corpus_catalog.json`). Los otros 15 no requieren republicación.
+Repúblicados los 2 arXiv desde el código de `bb77a7a` (imagen `api`/`worker`
+reconstruida) subiendo una **versión nueva** del mismo PDF: `publish_agnostic.py`
+empareja por SHA-256 del PDF y se habría saltado los documentos ya publicados.
+AGN-016 quedó en la versión `fc37eb59` y AGN-017 en `d60fe931`; los dos
+publicados. El markdown publicado se comprobó: `selfattention` ausente y
+`self-attention` presente; diagnósticos de conversión 30 y 56 (los `pdf_math_*`
+del port, esperados en documentos con matemáticas). Se mantiene una única
+versión publicada por fuente, que es el preflight de `calibrate_library.py`.
+
+Censo completo sobre los 2 documentos (`.artifacts/t3-census-after.json`):
+
+| documento | énfasis | junction | compuestos |
+|---|---|---|---|
+| attention | 59 → **0** | 2 → **0** | 2 → **0** |
+| bert | 20 → **0** | 0 → 0 | 38 → **0** |
+
+Recalibración con los cuatro bancos y los dos catálogos, ámbitos `admin` y
+`usuario`: **aprobada** en ambos (`empirical_holdout_pass`), umbral sin cambio
+`-1.2894607782363892`, `model_signature` sin cambio `2899120c…` y
+`corpus_signature` de `8cdbe255…` a `54c394a7…` por la reconversión de los 2
+arXiv. Holdout `admin`: tp 53, fp 0, fn 1, tn 19, `improper_answer_rate 0`.
+
+Aceptación en vivo con la política nueva:
+
+- `colloquial_acceptance.py`: **13/13**.
+- `agnostic_acceptance.py` (banco de 40): **36/40**, 0 respuestas indebidas, 0
+  cifras sin respaldo, 26 `grounded` + 2 `grounded_extract`; por tipo,
+  answerable 21/22, unanswerable 5/8, ambiguous 3/3, conversation 7/7. Los
+  cuatro fallos son los mismos del 11-11 y no son regresión de este cambio:
+  `AGN-VAL-T002` (alemán, Ganímedes) se abstiene por puntuación y `T008`,
+  `U002` y `U003` piden aclaración en vez de abstenerse. El script termina con
+  `exit=1` cuando algún caso falla; es su comportamiento normal.
+- Latencia: p50 16,7 s / p95 27,2 s (n=40) medidos con la máquina cargada justo
+  después de las dos calibraciones; la fase `assessment` suma 34 llamadas y
+  11,5 s de media. No es comparable con los 8,0/13,8 s del 11-11 y **no es un
+  criterio de este cambio** (el criterio de conversión es el tiempo del arnés,
+  −21,4 %). Si se quiere citar una cifra de latencia, hay que repetir la
+  aceptación con la pila en reposo.
+
+Los otros 15 PDF no se republicaron: su SHA-256 sigue siendo el del baseline
+T0.
 
 ### Tests añadidos (31 en total)
 

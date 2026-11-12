@@ -168,3 +168,64 @@ defensa, el diff en un mismo proceso da 16/17 archivos byte-idénticos.
 | `.orca-task/report.md` | copia del informe (ruta pedida por el enunciado) |
 
 Sin `git add` ni `git commit`: los cambios quedan sin stage para el orquestador.
+
+
+---
+
+# T3 - Informe de cierre: republicación y recalibración tras el port
+
+Fecha: 2026-11-12 · base `main` en `bb77a7a` · sin tarea de Orca asociada (paso del líder con la pila viva)
+
+## Resultado
+
+**Cierre aceptado.** Los 2 documentos arXiv se republicaron con la conversión de
+`bb77a7a` (AGN-016 versión `fc37eb59`, AGN-017 `d60fe931`) y la política se
+recalibró en `admin` y `usuario`: aprobada en ambos, umbral sin cambio
+(`-1.2894607782363892`), `model_signature` sin cambio y `corpus_signature`
+`8cdbe255…` → `54c394a7…`. La aceptación en vivo queda 13/13 en coloquial y
+36/40 en agnóstica, con 0 respuestas indebidas y 0 cifras sin respaldo; los
+cuatro fallos son los mismos del 11-11 (`T002`, `T008`, `U002`, `U003`) y se
+aceptan como no-regresión.
+
+## Archivos
+
+| archivo | cambio |
+|---|---|
+| `evaluation/h3/library-calibration-admin.json` | recalibración aprobada, `corpus_signature` nueva |
+| `evaluation/h3/library-calibration-usuario.json` | ídem |
+| `evaluation/h3/agnostic-acceptance-admin.json` | aceptación del banco de 40 tras republicar |
+| `evaluation/h3/colloquial-acceptance-*.json` | aceptación coloquial 13/13 |
+| `docs/h3/pdf-two-column-format.md` | sección «T3 ejecutado» con SHAs, censo, calibración y aceptación |
+| `report.md` | este cierre |
+
+## Checks
+
+| Check | Comando | Resultado |
+|---|---|---|
+| Republicación | `.artifacts/t3-republish.py` | 2 versiones publicadas, `selfattention` ausente, `self-attention` presente |
+| Censo | `scripts/h3/pdf_math_census.py --corpus … --files arxiv-…,arxiv-…` | 59/2/2 y 20/0/38 → 0 |
+| Calibración admin | `scripts/h3/calibrate_library.py --scope admin --calibration-bank …` | aprobada, umbral idéntico |
+| Calibración usuario | ídem `--scope usuario` | aprobada, umbral idéntico |
+| Aceptación coloquial | `scripts/h4/colloquial_acceptance.py` | 13/13 |
+| Aceptación agnóstica | `scripts/h4/agnostic_acceptance.py` | 36/40, 0 indebidas, 0 cifras sin respaldo, exit 1 esperado |
+
+## Decisiones
+
+- Se republica como **versión nueva** del mismo documento y no con
+  `publish_agnostic.py`: ese script empareja por SHA del PDF y habría
+  respondido «ya publicado».
+- Los cuatro fallos de aceptación no se tocan: son la política de suficiencia y
+  la puntuación del reranker sobre la consulta traducida, decisiones de
+  producto ajenas a la conversión.
+- No se cita la latencia como resultado: se midió con la pila cargada tras dos
+  calibraciones.
+
+## Riesgos / pendientes
+
+- El informe del port vive en
+  `.orca-run/runs/run_ab6870b4c625/artifacts/task_e58422eca6e3/report.md`; su
+  commit (`eec48c1`) no incluyó `report.md`. Este cierre lo resume.
+- Latencia sin medición limpia: si se necesita la cifra, repetir
+  `agnostic_acceptance.py` con la pila en reposo y anotar `latency.all.p50`.
+- Sigue pendiente T2f (reconstrucción de sub/superíndices) y la decisión de
+  producto sobre `T002`/`T008`/`U002`/`U003`.
