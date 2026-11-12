@@ -550,6 +550,8 @@ function Request-Changes {
         Set-RecordValue -Record $Record -Name 'status' -Value 'escalated'
         Save-Record -Record $Record
         Write-Host "[loop] ESCALATED $TaskId after $MaxReviewRounds defect rounds"
+        Write-Audit -RunId $RunId -Actor 'loop' -Action 'lesson-candidate' -TaskId $TaskId -DispatchId $Record.dispatchId -Reason "escalada tras $MaxReviewRounds rondas de defectos"
+        Write-Host "[loop] LESSON_PENDING task=$TaskId evidence=audit-$RunId.jsonl"
         return 'STOP'
     }
 
@@ -745,6 +747,8 @@ function Request-Rescue {
         Set-RecordValue -Record $Record -Name 'status' -Value 'blocked'
         Save-Record -Record $Record
         Write-Host "[loop] ESCALATED $TaskId after $MaxRescueRounds rescue rounds"
+        Write-Audit -RunId $RunId -Actor 'loop' -Action 'lesson-candidate' -TaskId $TaskId -DispatchId $Record.dispatchId -Reason "escalada tras $MaxRescueRounds rondas de rescate"
+        Write-Host "[loop] LESSON_PENDING task=$TaskId evidence=audit-$RunId.jsonl"
         return 'STOP'
     }
 
@@ -911,6 +915,8 @@ function Invoke-TaskDelivery {
             Save-Record -Record $Record
             Write-Host "[loop] ALREADY_INTEGRATED $TaskId $baseSha"
             Write-Audit -RunId $RunId -Actor 'loop' -Action 'already-integrated' -TaskId $TaskId -DispatchId $Record.dispatchId -Reason $baseSha
+            Write-Audit -RunId $RunId -Actor 'loop' -Action 'lesson-candidate' -TaskId $TaskId -DispatchId $Record.dispatchId -Reason "rama ya integrada $baseSha"
+            Write-Host "[loop] LESSON_PENDING task=$TaskId evidence=audit-$RunId.jsonl"
             Set-TaskCompletedIfNeeded -TaskId $TaskId -IntegrationSha $baseSha
             Invoke-ArchiveAndCleanup -Record $Record -TaskId $TaskId
             return 'CONTINUE'
@@ -995,6 +1001,10 @@ function Invoke-TaskDelivery {
     Set-RecordValue -Record $Record -Name 'integrationSha' -Value $integrationSha
     Save-Record -Record $Record
     Write-Audit -RunId $RunId -Actor 'loop' -Action 'integrated' -TaskId $TaskId -DispatchId $Record.dispatchId -Reason $integrationSha
+
+    # Evidencia para la libreria de lecciones (PRD docs/08-prd-harnessing.md).
+    Write-Audit -RunId $RunId -Actor 'loop' -Action 'lesson-candidate' -TaskId $TaskId -DispatchId $Record.dispatchId -Reason "integrada $integrationSha"
+    Write-Host "[loop] LESSON_PENDING task=$TaskId evidence=audit-$RunId.jsonl"
 
     Set-TaskCompletedIfNeeded -TaskId $TaskId -IntegrationSha $integrationSha
     Invoke-ArchiveAndCleanup -Record $Record -TaskId $TaskId

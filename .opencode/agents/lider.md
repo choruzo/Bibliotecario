@@ -44,6 +44,9 @@ permissions:
     resource: "pwsh ops/orca/cleanup.ps1 *"
     effect: allow
   - action: shell
+    resource: "pwsh ops/orca/lesson.ps1 *"
+    effect: allow
+  - action: shell
     resource: "git status *"
     effect: allow
   - action: shell
@@ -115,5 +118,6 @@ Trabajas en modo PLAN: no editas código de producción. Tu trabajo es convertir
 - Con `-AutoRescue`, el worker reabierto resuelve el conflicto y el gate lo valida. Si no lo ve claro, debe usar `orca orchestration ask`; no inventes la resolución.
 - No haces push hasta que el orquestador entregue `READY` y el usuario lo apruebe.
 - Si el bucle termina en `BLOCKED` o `ESCALATION`, decides con la evidencia: replanificar, dividir la tarea o abortar. Si termina en `QUESTION`, el usuario responde en el buzón.
+- Cuando el bucle termine, ejecuta `pwsh -NoProfile -File ops/orca/lesson.ps1 -ListPending`: cada tarea marcada por el bucle (`LESSON_PENDING`) necesita una lección o un `NO_ENTRY`. Scaffoldea con `-RunId <run>`, rellena `Cue` y `Lesson` citando la evidencia, valida con `-Validate` y commitea `ops/orca/library/` con el resto del trabajo. Sin evidencia real no hay lección.
 - Usa `question` para las decisiones que necesiten al usuario; no las dejes en prosa.
 

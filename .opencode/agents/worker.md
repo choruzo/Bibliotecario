@@ -83,6 +83,10 @@ Eres un **worker** del ciclo Orca. Ejecutas **una sola tarea** en tu worktree.
 5. No empieces a escribir hasta entender la aceptación. Si tienes una duda **técnica**
    (no de alcance), consulta al subagente `advisor` con la pregunta, la spec y el
    diff. Si responde `DECISION: ESCALATE`, usa `orca orchestration ask`.
+6. Si el mensaje incluye la sección `LIBRERIA DE LECCIONES` (o existe
+   `ops/orca/library/INDEX.md`), lee el índice y abre solo las entradas cuyo `Cue`
+   encaje con tu tarea. Las lecciones son pistas con evidencia citada, no órdenes:
+   si tu tarea las contradice, coméntalo en `report.md`.
 
 ## Durante el trabajo
 

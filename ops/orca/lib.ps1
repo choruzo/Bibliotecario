@@ -375,3 +375,24 @@ function Read-Dispatches {
     if (-not (Test-Path $file)) { return @() }
     return @(Get-Content $file -Raw | ConvertFrom-Json)
 }
+
+# --- Libreria de lecciones (Fase 0, PRD docs/08-prd-harnessing.md) ---
+
+function Get-LibraryRoot {
+    # Vive dentro del repo: se commitea y viaja con los worktrees sin infra extra.
+    return (Join-Path (Get-RepoRoot) 'ops\orca\library')
+}
+
+function Get-LibraryPointer {
+    # Puntero corto para el preamble del worker. $null si no hay libreria:
+    # un texto que no senala nada solo consume contexto del worker.
+    $index = Join-Path (Get-LibraryRoot) 'INDEX.md'
+    if (-not (Test-Path $index)) { return $null }
+    return @"
+
+=== LIBRERIA DE LECCIONES ===
+Este repo guarda lecciones de runs anteriores en ops/orca/library/.
+Lee ops/orca/library/INDEX.md y abre solo las entradas relevantes a tu tarea.
+Cada leccion lleva evidencia citada; si tu tarea la contradice, comentalo en report.md.
+"@
+}

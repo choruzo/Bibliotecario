@@ -47,6 +47,18 @@ Assert-Contains (Join-Path $orcaDir 'commit.ps1') 'COMMIT_EXISTING' 'commit debe
 Assert-Contains (Join-Path $orcaDir 'lib.ps1') 'Close-OrcaTerminal' 'falta el cierre verificado de terminal'
 Assert-Contains (Join-Path $orcaDir 'graph.ps1') 'Test-LoopRunningForRun' 'retry-task no debe robar el binding a un bucle vivo'
 
+# Libreria de lecciones (Fase 0, PRD docs/08-prd-harnessing.md).
+Assert-Contains (Join-Path $orcaDir 'lib.ps1') 'function Get-LibraryPointer' 'falta el puntero de la libreria'
+Assert-Contains (Join-Path $orcaDir 'dispatch.ps1') 'Get-LibraryPointer' 'el dispatch debe inyectar el puntero de la libreria en el preamble'
+Assert-Contains (Join-Path $orcaDir 'lesson.ps1') 'NO_ENTRY' 'lesson.ps1 debe registrar NO_ENTRY sin evidencia'
+Assert-Contains (Join-Path $orcaDir 'lesson.ps1') 'EXPERIENCE\.md' 'lesson.ps1 debe escribir EXPERIENCE.md'
+Assert-Contains (Join-Path $orcaDir 'lesson.ps1') 'Update-LibraryIndex' 'INDEX.md debe regenerarse desde disco'
+Assert-Contains (Join-Path $orcaDir 'orchestrate.ps1') 'LESSON_PENDING' 'el bucle debe marcar tareas candidatas a leccion'
+Assert-Contains (Join-Path $orcaDir 'orchestrate.ps1') "Action 'lesson-candidate'" 'la marca de leccion debe quedar en la auditoria'
+Assert-Contains (Join-Path $repoRoot '.opencode\agents\worker.md') 'ops/orca/library/INDEX\.md' 'worker debe saber consultar la libreria de lecciones'
+Assert-Contains (Join-Path $repoRoot '.opencode\agents\lider.md') 'lesson\.ps1 -ListPending' 'el lider debe recoger las lecciones pendientes al terminar el bucle'
+Assert-Contains (Join-Path $repoRoot 'ops\orca\library\README.md') 'Evidencia o nada' 'la regla de evidencia debe estar documentada en la libreria'
+
 $worker = Join-Path $repoRoot '.opencode\agents\worker.md'
 Assert-Contains $worker 'orca orchestration task-update \*' 'worker debe denegar task-update'
 Assert-Contains $worker 'git commit \*' 'worker debe denegar git commit'

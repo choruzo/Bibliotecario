@@ -85,6 +85,10 @@ foreach ($task in $ready) {
         $preamble = $dispatchResult.preamble
         if (-not $preamble) { throw "Orca no devolvió preamble para $($task.id)" }
 
+        # Puntero a la libreria de lecciones (PRD docs/08-prd-harnessing.md).
+        $libraryPointer = Get-LibraryPointer
+        if ($libraryPointer) { $preamble += $libraryPointer }
+
         $sendResponse = Invoke-Orca terminal send --terminal $workerHandle --text $preamble --enter --json
         if (-not $sendResponse.ok) {
             throw "No se pudo entregar el preamble al worker: $($sendResponse.error.message)"
