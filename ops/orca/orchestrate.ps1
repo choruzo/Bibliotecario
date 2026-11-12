@@ -898,6 +898,17 @@ function Invoke-TaskDelivery {
                 Write-Host "[loop] PAIR_WAIT $($Record.taskId) hermana=$($sibling.taskId) status=$siblingStatus"
                 return 'CONTINUE'
             }
+            # El arbitraje necesita el veredicto REAL de ambos lados: si un lado
+            # espero en PAIR_WAIT nunca llego a review, se revisa ahora.
+            foreach ($sideRec in @($Record, $sibling)) {
+                if (-not $sideRec.worktree -or -not (Test-Path $sideRec.worktree)) { continue }
+                $sideReviewFile = Join-Path $sideRec.worktree '.orca-task\review.json'
+                if (-not (Test-Path $sideReviewFile)) {
+                    Write-Host "[loop] PAIR_REVIEW $($sideRec.taskId) (pendiente de review)"
+                    $pairReviewOut = (& pwsh -NoProfile -File (Join-Path $PSScriptRoot 'review.ps1') -RunId $RunId -TaskId $sideRec.taskId -Worktree $sideRec.worktree -BaseBranch $BaseBranch 2>&1 | Out-String)
+                    Write-Host ("[loop] PAIR_REVIEW {0}: {1}" -f $sideRec.taskId, ([regex]::Match($pairReviewOut, 'REVIEW=(ACEPTADO|CAMBIOS)').Groups[1].Value))
+                }
+            }
             $decision = Resolve-HarnessPairWinner -Record $Record -Sibling $sibling
             $variantRec = if ([string]$Record.side -eq 'b') { $Record } else { $sibling }
             $baseRec = if ([string]$Record.side -eq 'b') { $sibling } else { $Record }
@@ -1334,9 +1345,13 @@ while (-not $stopReason) {
     $active = @($tasks | Where-Object { $_.status -eq 'dispatched' }).Count
     $ready = @($tasks | Where-Object { $_.status -eq 'ready' })
     $completed = @($tasks | Where-Object { $_.status -eq 'completed' })
-    $blocked = @($tasks | Where-Object { $_.status -in @('blocked', 'failed') })
+    # Las perdedoras de pares (estado local lost, tarea failed en Orca) son el
+    # desenlace esperado, no un bloqueo del bucle.
+    $lostIds = @(@($script:Dispatches) | Where-Object { $_.status -eq 'lost' } | ForEach-Object { [string]$_.taskId })
+    $blocked = @($tasks | Where-Object { $_.status -in @('blocked', 'failed') -and $lostIds -notcontains [string]$_.id })
+    $resolvedExtra = @($lostIds | Where-Object { $tasks | Where-Object { [string]$_.id -eq $_ } }).Count
 
-    Write-Output "[loop] tasks=$($tasks.Count) active=$active ready=$($ready.Count) completed=$($completed.Count) blocked=$($blocked.Count)"
+    Write-Output "[loop] tasks=$($tasks.Count) active=$active ready=$($ready.Count) completed=$($completed.Count) blocked=$($blocked.Count) lost=$($lostIds.Count)"
 
     # Pares [HARNESS-PROBE] pendientes de arbitraje: mantienen el bucle vivo
     # aunque ambas tareas esten completed (el arbitraje ocurre en la entrega).
@@ -1344,7 +1359,7 @@ while (-not $stopReason) {
         $_.pairId -and -not $_.integrationSha -and $_.status -notin @('integrated', 'lost', 'failed')
     })
 
-    if ($completed.Count -eq $tasks.Count -and $pendingPairs.Count -eq 0) { $stopReason = 'DONE'; break }
+    if ($completed.Count + $resolvedExtra -eq $tasks.Count -and $pendingPairs.Count -eq 0) { $stopReason = 'DONE'; break }
 
     if ($active -eq 0 -and $ready.Count -eq 0) {
         $stopReason = if ($blocked.Count -gt 0) { 'BLOCKED' } else { 'DONE' }
