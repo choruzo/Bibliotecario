@@ -56,7 +56,14 @@ function Get-ProbeSideResult {
     # el registro comparable: @{ finished; verdict; defects; files; reviewFile;
     # evidenceMissing }. Preserva report.md y review.json en -ArtifactsDir
     # (trayectoria completa: sin esto, el cleanup destruye la evidencia).
-    param($Record, [Parameter(Mandatory)][string]$Side, [string]$ArtifactsDir)
+    param(
+        $Record,
+        [Parameter(Mandatory)][string]$Side,
+        [string]$ArtifactsDir,
+        [string]$AuditScript,
+        [string]$SpecPath,
+        [string]$PythonExe
+    )
 
     $empty = @{ finished = $false; verdict = 'CAMBIOS'; defects = @(); files = @(); filesExclHarness = 0; reviewFile = ''; evidenceMissing = $null }
     if (-not $Record -or -not $Record.worktree -or -not (Test-Path $Record.worktree)) { return $empty }
@@ -184,6 +191,10 @@ try {
     Write-Host "[probe] tareas: base=$taskA variante=$taskB"
 
     $variantDirForHook = $script:variantDirResolved
+    # Autocomprobacion: enlaza TODOS los parametros de Get-ProbeSideResult antes
+    # de gastar workers (el binding de param() falla aqui y no a mitad de probe).
+    $precheck = Get-ProbeSideResult -Record $null -Side 'a' -ArtifactsDir $null -AuditScript $script:evidenceAudit -SpecPath $script:specFileResolved -PythonExe $script:pythonExe
+    if (-not $precheck) { throw 'Get-ProbeSideResult no devuelve el registro vacio de arranque' }
     $prepare = {
         param([string]$WorktreePath, [string]$TaskTitle)
         if ($TaskTitle -match '^probe-b-') {
