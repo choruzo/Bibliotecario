@@ -55,6 +55,9 @@ $tmp = "$metaPath.tmp"
 $meta | ConvertTo-Json -Depth 10 | Set-Content $tmp -Encoding UTF8
 Move-Item $tmp $metaPath -Force
 
+$auditReason = if ($stoppedPid) { "runner=$stoppedPid" } else { 'sin runner vivo; meta actualizado' }
+Write-Audit -RunId $RunId -Actor 'panel' -Action 'stop-loop' -Reason $auditReason
+
 $notify = Join-Path $PSScriptRoot 'notify.ps1'
 if (Test-Path $notify) {
     & pwsh -NoProfile -File $notify -RunId $RunId -Status 'stopped' -Message 'Detenido desde el panel de control' | Out-Host

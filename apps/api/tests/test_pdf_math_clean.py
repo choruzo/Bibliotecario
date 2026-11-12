@@ -68,6 +68,107 @@ def test_table_heading_bullet_indented_and_code_lines_are_never_touched():
     assert (after, changed) == (before, 0)
 
 
+def test_multiline_formula_continuations_are_cleaned_across_blank_lines():
+    before = "\n".join([
+        "Attention( _Q, K, V_ ) = softmax( _[QK]_ ~~_V_~~ _[T]_",
+        "",
+        "_dk_",
+        "",
+        "",
+        ") _V_ (1)",
+    ]) + "\n"
+    after, changed, reverted = clean(before)
+    assert not reverted
+    assert changed == 3
+    assert after == "\n".join([
+        "Attention( Q, K, V ) = softmax( [QK] V [T]",
+        "",
+        "dk",
+        "",
+        "",
+        ") V (1)",
+    ]) + "\n"
+    assert pmc.tokens(before) == pmc.tokens(after)
+
+
+def test_prose_continuation_after_a_math_line_is_untouched():
+    before = "\n".join([
+        "_lrate_ = _d_ _[-]_ model [0] _[.]_ [5]",
+        "where _warmup_ steps and the **learning rate** schedule are described in section 5.3.",
+        "_dk_, the dot products grow large in magnitude, pushing the softmax function.",
+    ])
+    after, changed, _ = clean(before)
+    assert changed == 1  # only the equation line itself
+    assert after.splitlines()[1:] == before.splitlines()[1:]
+    assert pmc.tokens(before) == pmc.tokens(after)
+
+
+def test_table_after_a_math_line_closes_the_block():
+    before = "\n".join([
+        "PE ( pos, 2 i ) = sin ( pos/ 10000 [2] [i/d] [model] )",
+        "",
+        "|big|6|**4.33**|",
+        "",
+        "**26.4**",
+    ]) + "\n"
+    after, changed, _ = clean(before)
+    assert (after, changed) == (before, 0)
+    assert pmc.tokens(before) == pmc.tokens(after)
+
+
+def test_heading_after_a_math_line_closes_the_block():
+    before = "\n".join([
+        "lrate = d [-] model [0] [.] [5]",
+        "",
+        "## **Positional Encoding**",
+        "",
+        "_dk_",
+    ]) + "\n"
+    after, changed, _ = clean(before)
+    assert (after, changed) == (before, 0)
+
+
+def test_blank_lines_bridge_a_block_but_prose_closes_it():
+    before = "\n".join([
+        "Attention( Q, K, V ) = softmax( [QK] √ [T]",
+        "",
+        "",
+        "_dk_",
+        "",
+        "",
+        ") _V_ (1)",
+        "",
+        "The two most commonly used attention functions are additive attention.",
+        "",
+        "_dk_",
+    ]) + "\n"
+    after, changed, reverted = clean(before)
+    assert not reverted
+    assert changed == 2
+    assert "\ndk\n\n\n) V (1)" in after
+    assert after.endswith("additive attention.\n\n_dk_\n")
+    assert pmc.tokens(before) == pmc.tokens(after)
+
+
+def test_multihead_formula_fragments_are_cleaned_and_prose_keeps_marks():
+    before = "\n".join([
+        "where headi = Attention( QWi [Q]",
+        "",
+        "_[ K]_ _i_ _[, V W][ V]_ _i_",
+        "",
+        "_[ V]_ _i_ [)]",
+        "",
+        "Where the projections are parameter matrices _W_ _[Q]_",
+    ]) + "\n"
+    after, changed, reverted = clean(before)
+    assert not reverted
+    assert changed == 2  # both fragment lines; the formula line carries no markers
+    assert "[ K] i [, V W][ V] i" in after
+    assert "[ V] i [)]" in after
+    assert "_W_ _[Q]_" in after  # the prose line keeps its emphasis
+    assert pmc.tokens(before) == pmc.tokens(after)
+
+
 def test_snake_case_identifiers_keep_their_underscores():
     before = "where d_model = _h_ and n_head = 8"
     after, changed, _ = clean(before)

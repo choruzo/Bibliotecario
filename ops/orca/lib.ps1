@@ -146,31 +146,159 @@ function Get-RepoId {
     return $repo.id
 }
 
-function Get-Coordinator {
-    param([switch]$Recreate)
+function Get-CoordinatorFile {
+    param([string]$RunId)
 
     $stateDir = Get-StateDir
-    $file = Join-Path $stateDir 'coordinator.json'
+    if ($RunId) { return (Join-Path $stateDir "coordinator-$RunId.json") }
+    return (Join-Path $stateDir 'coordinator.json')
+}
+
+function Save-Coordinator {
+    param(
+        [Parameter(Mandatory)][string]$Handle,
+        [string]$Worktree,
+        [string]$RunId
+    )
+
+    $file = Get-CoordinatorFile -RunId $RunId
+    @{
+        handle    = $Handle
+        worktree  = $Worktree
+        runId     = $RunId
+        createdAt = (Get-Date).ToString('o')
+    } | ConvertTo-Json | Set-Content $file -Encoding UTF8
+}
+
+function New-OrcaCoordinatorTerminal {
+    param(
+        [string]$Title = 'Orca Coordinator',
+        [string]$RepoRoot
+    )
+
+    if (-not $RepoRoot) { $RepoRoot = Get-RepoRoot }
+    $repoPath = $RepoRoot -replace '\\', '/'
+    $created = Invoke-Orca terminal create --worktree "path:$repoPath" --title $Title --command 'pwsh -NoLogo -NoProfile' --json
+    $terminal = (Get-OrcaResult $created).terminal
+    return $terminal.handle
+}
+
+function Get-Coordinator {
+    param(
+        [switch]$Recreate,
+        [string]$RunId
+    )
+
+    $file = Get-CoordinatorFile -RunId $RunId
 
     if (-not $Recreate -and (Test-Path $file)) {
-        $saved = Get-Content $file -Raw | ConvertFrom-Json
-        $show = Invoke-Orca terminal show --terminal $saved.handle --json
-        if ($show.ok -and $show.result.terminal.connected -eq $true) {
-            return $saved.handle
+        try {
+            $saved = Get-Content $file -Raw -Encoding UTF8 | ConvertFrom-Json
+            $show = Invoke-Orca terminal show --terminal $saved.handle --json
+            if ($show.ok -and $show.result.terminal.connected -eq $true) {
+                return $saved.handle
+            }
+        }
+        catch { }
+    }
+
+    $repoRoot = Get-RepoRoot
+    $title = if ($RunId) { "Orca Coordinator $RunId" } else { 'Orca Coordinator' }
+    $handle = New-OrcaCoordinatorTerminal -Title $title -RepoRoot $repoRoot
+    Save-Coordinator -Handle $handle -Worktree $repoRoot -RunId $RunId
+    return $handle
+}
+
+function Close-OrcaTerminal {
+    param(
+        [string]$Handle,
+        [switch]$Quiet
+    )
+
+    if (-not $Handle) { return $true }
+
+    $closed = $null
+    try { $closed = Invoke-Orca terminal close --terminal $Handle --json } catch { $closed = $null }
+    if ($closed -and $closed.ok) { return $true }
+
+    # `terminal close` puede devolver ok:false con ptyStopVerdict unverifiable
+    # después de cerrar de verdad. La prueba es el estado del terminal, no `ok`.
+    for ($attempt = 0; $attempt -lt 2; $attempt++) {
+        Start-Sleep -Milliseconds (300 + 500 * $attempt)
+        $show = $null
+        try { $show = Invoke-Orca terminal show --terminal $Handle --json } catch { $show = $null }
+        $terminal = if ($show -and $show.ok) { $show.result.terminal } else { $null }
+        if ($terminal -and ($terminal.orphaned -eq $true -or $terminal.connected -eq $false)) {
+            if (-not $Quiet) { Write-Output "TERMINAL_CLOSED_UNVERIFIED=$Handle" }
+            return $true
+        }
+        if ($attempt -eq 0) {
+            try { [void](Invoke-Orca terminal close --terminal $Handle --json) } catch { }
         }
     }
 
-    $repoRoot = (Get-RepoRoot) -replace '\\', '/'
-    $created = Invoke-Orca terminal create --worktree "path:$repoRoot" --title 'Orca Coordinator' --command 'pwsh -NoLogo -NoProfile' --json
-    $terminal = (Get-OrcaResult $created).terminal
+    if (-not $Quiet) {
+        $reason = if ($closed -and $closed.error) { $closed.error.message } else { 'sin respuesta de Orca' }
+        Write-Warning "No se pudo cerrar el terminal ${Handle}: $reason"
+    }
+    return $false
+}
 
-    @{
-        handle    = $terminal.handle
-        worktree  = $repoRoot
-        createdAt = (Get-Date).ToString('o')
-    } | ConvertTo-Json | Set-Content $file -Encoding UTF8
+function Write-Audit {
+    param(
+        [Parameter(Mandatory)][string]$RunId,
+        [Parameter(Mandatory)][string]$Actor,
+        [Parameter(Mandatory)][string]$Action,
+        [string]$TaskId,
+        [string]$DispatchId,
+        [string]$Terminal,
+        [string]$Reason
+    )
 
-    return $terminal.handle
+    $file = Join-Path (Get-StateDir) "audit-$RunId.jsonl"
+    $entry = [ordered]@{
+        at         = (Get-Date).ToUniversalTime().ToString('o')
+        actor      = $Actor
+        action     = $Action
+        taskId     = $TaskId
+        dispatchId = $DispatchId
+        terminal   = $Terminal
+        reason     = $Reason
+    }
+    ($entry | ConvertTo-Json -Compress) | Add-Content -Path $file -Encoding UTF8
+}
+
+function Get-OrcaWorkerShow {
+    param([string]$DispatchId)
+
+    if (-not $DispatchId) { return $null }
+    try {
+        $show = Invoke-Orca orchestration worker-show --dispatch $DispatchId --json
+        if ($show.ok) { return $show.result }
+    }
+    catch { }
+    return $null
+}
+
+function Get-LatestWriteUtc {
+    param([string]$Worktree)
+
+    if (-not $Worktree -or -not (Test-Path $Worktree)) { return $null }
+    $latest = $null
+    try {
+        $status = @(& git -C $Worktree status --porcelain --untracked-files=all 2>$null)
+        foreach ($line in $status) {
+            if (-not $line -or $line.Length -lt 4) { continue }
+            $relative = $line.Substring(3).Trim()
+            if ($relative -match ' -> ') { $relative = ($relative -split ' -> ')[-1] }
+            $path = Join-Path $Worktree $relative
+            if (-not (Test-Path $path)) { continue }
+            $item = Get-Item $path -Force -ErrorAction SilentlyContinue
+            if ($item -and (-not $latest -or $item.LastWriteTimeUtc -gt $latest)) { $latest = $item.LastWriteTimeUtc }
+        }
+    }
+    catch { }
+    return $latest
 }
 
 function Bind-Run {

@@ -50,12 +50,6 @@ permissions:
     resource: "git log *"
     effect: allow
   - action: shell
-    resource: "git add *"
-    effect: allow
-  - action: shell
-    resource: "git commit *"
-    effect: allow
-  - action: shell
     resource: "git push *"
     effect: deny
   - action: shell
@@ -63,6 +57,15 @@ permissions:
     effect: deny
   - action: shell
     resource: "git rebase *"
+    effect: deny
+  - action: shell
+    resource: "git add *"
+    effect: deny
+  - action: shell
+    resource: "git commit *"
+    effect: deny
+  - action: shell
+    resource: "orca orchestration task-update *"
     effect: deny
   - action: external_directory
     resource: "*"
@@ -89,8 +92,10 @@ Eres un **worker** del ciclo Orca. Ejecutas **una sola tarea** en tu worktree.
 - Ejecuta los checks con `pwsh ops/orca/check.ps1 -Worktree .`.
 - En trabajo largo, late cada ~10 min o al cambiar de fase:
   `orca orchestration send --type heartbeat --subject "alive" --phase "implementing" --task-id <task_id> --dispatch-id <dispatch_id> --json`.
-- Si te quedan pocos pasos, **entrega primero**: escribe `report.md`, actualiza el estado y envía `worker_done` antes de empezar trabajo nuevo.
+- Si te quedan pocos pasos, **entrega primero**: escribe `report.md` y envía `worker_done` antes de empezar trabajo nuevo.
 - Escribe `report.md` en la raíz del worktree con: resultado, archivos, checks, decisiones, riesgos y pendientes.
+- **No cambies el estado de la tarea.** No ejecutes `orca orchestration task-update`: Orca marca la tarea `completed` al recibir `worker_done`, pero eso solo significa "reportado". El orquestador hace el review, el commit y la integración.
+- **No hagas `git add` ni `git commit`**: deja los cambios sin stage para que el orquestador commitee exactamente los archivos del review.
 - No hagas `git push`, `git merge` ni `git rebase`. No toques otros worktrees.
 - Si el orquestador te devuelve defectos, corrige exactamente esos defectos y vuelve a reportar.
 

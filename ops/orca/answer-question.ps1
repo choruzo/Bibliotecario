@@ -321,7 +321,7 @@ if ($NoReply) {
 }
 
 try {
-    $coordinator = if ($question.PSObject.Properties['coordinator'] -and $question.coordinator) { [string]$question.coordinator } else { Get-Coordinator }
+    $coordinator = if ($question.PSObject.Properties['coordinator'] -and $question.coordinator) { [string]$question.coordinator } else { Get-Coordinator -RunId $RunId }
     $reply = Invoke-Orca orchestration reply --id $messageId --body $answer --run $RunId --from $coordinator --json
     if (-not $reply.ok) {
         Write-Result -Status 'FAILED' -Reason "Orca rechazo la respuesta: $($reply.error.message)"

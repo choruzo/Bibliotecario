@@ -53,17 +53,23 @@ orca orchestration send --type worker_done \
 - `worker_done` se envía **una sola vez**, también si fallas (`--outcome failed`).
 - Incluye siempre `task_id` y `dispatch_id`.
 - Después de `worker_done`, **detente**. No empieces trabajo nuevo ni esperes en bucle.
+- **No ejecutes `orca orchestration task-update`.** Orca marca la tarea `completed`
+  al recibir `worker_done`, pero eso solo significa «reportado». El orquestador
+  hace el review, el commit y la integración; solo entonces hay entrega.
+- **No hagas `git add` ni `git commit`.** Deja los cambios sin stage: el
+  orquestador commitea exactamente los archivos que acepta el review.
 
 ## Reglas
 
 1. Una tarea, un worktree, un writer.
 2. Hasta 3 subagentes; solo uno escribe. Los lectores son read-only.
 3. No toques otros worktrees.
-4. No hagas `git push`, `git merge` ni `git rebase`.
-5. Ejecuta los checks con `pwsh ops/orca/check.ps1 -Worktree .`.
-6. Escribe `report.md` en la raíz del worktree.
-7. Si el orquestador devuelve defectos, corrige exactamente esos defectos y vuelve a reportar.
-8. Si no puedes verificar algo, dilo; no lo declares verde.
+4. No hagas `git push`, `git merge`, `git rebase`, `git add` ni `git commit`.
+5. No cambies el estado de la tarea ni la marques `completed`.
+6. Ejecuta los checks con `pwsh ops/orca/check.ps1 -Worktree .`.
+7. Escribe `report.md` en la raíz del worktree.
+8. Si el orquestador devuelve defectos, corrige exactamente esos defectos y vuelve a reportar.
+9. Si no puedes verificar algo, dilo; no lo declares verde.
 
 ## Informe mínimo
 

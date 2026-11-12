@@ -1,142 +1,170 @@
-# T2d — Informe: quitar el énfasis de las ecuaciones (solo énfasis)
+# T2e - Informe: limpiar el énfasis en las líneas de continuación de las fórmulas
 
-Task: `task_b2d8d2039f80` · run `run_43fca8504d61` · worktree `pdf-math-emphasis-b2d8d2`
+Task: `task_5b5eb9149cae` · run `run_43fca8504d61` · worktree `pdf-math-block-5b5eb9`
 
 ## Resultado
 
-**SUCCESS.** Las marcas de énfasis (`_`, `**`, `~~`) que `pymupdf4llm` inyecta en las
-líneas matemáticas de `arxiv-attention-is-all-you-need-en.pdf` y `arxiv-bert-en.pdf`
-se eliminan ahora durante la conversión, sin cambiar ningún token alfanumérico y sin
-mover el markdown de los otros 15 PDF.
+**SUCCESS.** Las marcas `_`, `**` y `~~` de las líneas de continuación de una
+fórmula se limpian ahora agrupando el markdown de cada página en **bloques
+matemáticos**. La fórmula de attention queda sin `_` en todas sus líneas y los
+otros 15 PDF del corpus permanecen byte-idénticos al baseline de T0.
+
+## Objetivo y alcance cumplido
+
+`clean_math_emphasis` trabajaba línea a línea y solo limpiaba líneas con `=` o
+glifo matemático propio; `_dk_` y `_V_` caían en líneas sueltas y se quedaban.
+Ahora:
+
+1. **Bloques matemáticos**: una línea matemática *fuerte* (con `=` o un glifo
+   distinto del punto medio) abre un bloque; las líneas siguientes son líneas de
+   continuación hasta una línea no vacía que no sea fragmento matemático (prosa,
+   tabla, heading, bullet, código, enlace) — que cierra el bloque. Las líneas en
+   blanco **nunca** cierran un bloque: son los huecos verticales que
+   `pymupdf4llm` deja entre los fragmentos de una fórmula desplegada en dos
+   columnas (la evidencia real del enunciado tiene la fórmula separada por
+   líneas en blanco; un bloque que terminara en la primera línea en blanco no
+   habría alcanzado `_dk_` ni `) _V_ (1)`).
+2. **Continuación**: se limpia solo si TODO par de marcadores de la línea es un
+   fragmento matemático (mismo `_is_math_fragment` de T2d) y todo el texto fuera
+   de los pares es cáscara matemática (`CONT_SHELL`: dígitos, corchetes,
+   paréntesis, operadores planos, glifos, espacios) sin puntuación de frase y
+   sin palabras de prosa. La prosa de continuación no se toca.
+3. **Invariante por página intacto** (T2d): mismo token-stream
+   `[^\W_]+` antes/después; página revertida entera si falla. Reversiones en los
+   17 PDF: **0**.
+4. Fuera de alcance respetado: `pdf_audit.py`, `coverage()`, `PDF_MIN_COVERAGE`,
+   `_line_missing`, `_missing_runs`, `place()` intactos; sin reconstrucción de
+   sub/superíndices (T2f); sin republicar ni calibrar.
+
+## Antes / después de la fórmula (attention, conversión real)
+
+```
+antes:    Attention( Q, K, V ) = softmax( [QK] √ [T]
+          (en blanco)
+          _dk_
+          (en blanco x3)
+          ) _V_ (1)
+
+después:  Attention( Q, K, V ) = softmax( [QK] √ [T]
+          (en blanco)
+          dk
+          (en blanco x3)
+          ) V (1)
+```
+
+Concatenada: `Attention( Q, K, V ) = softmax( [QK] √ [T] dk ) V (1)` — sin `_`
+en ninguna línea. Otros cambios (los 7 de la delta completa):
+
+```
+antes:    _[ K]_ _i_ _[, V W][ V]_ _i_     después:  [ K] i [, V W][ V] i
+antes:    _[ V]_ _i_ [)]                   después:  [ V] i [)]
+antes:    _i_ _[Q][, KW][ K]_ _i_          después:  i [Q][, KW][ K] i
+antes:    …network with / _dk_             después:  …network with / dk   (denominador √ 1/dk)
+antes:    …by √ 1 . / _dk_                 después:  …by √ 1 . / dk       (denominador √ 1/dk)
+```
+
+La prosa de continuación se conserva con sus marcas: `_dk_, the dot products
+grow large in magnitude…` y `Where the projections are parameter matrices _W_
+_[Q]_` quedan intactos, igual que las 11 líneas de autores/etiquetas de T2d.
+
+## Recuentos
+
+- Delta de attention: **exactamente 7 líneas** (2 scaled dot-product, 3
+  multi-head, 2 denominadores), verificada con diff pre/post del comportamiento
+  en un mismo proceso (`.orca-task/diff_all.py`): los otros 16 PDF byte-idénticos
+  entre comportamiento pre y post.
+- `math_pages` diagnostics: attention 10 páginas, bert 7 (bert sin delta de
+  código); resto del corpus 0.
+- Reversiones del invariante: 0 en los 17 PDF.
+
+## Invariante
+
+Mismo mecanismo de T2d: `tokens(markdown)` por página dentro de
+`clean_math_emphasis`, con reversión entera y diagnóstico
+`pdf_math_clean_reverted_page_N`. Los 7 cambios son eliminaciones de marcadores
+que no fusionan ni mueven tokens (`dk` → `dk`, `V` → `V`); el diff de tokens es
+idéntico. Test dedicado sigue en verde.
+
+## Tabla de SHAs (arnés, 2 pasadas con `PYTHONHASHSEED=0`, `--audit-json`)
+
+| archivo | bytes | SHA-256 (pasada 1 == pasada 2) | vs estado T2d | vs baseline T0 |
+|---|---|---|---|---|
+| arxiv-attention | 42 420 → 42 394 | `6af33cfea93b1f186b5b94eba8068968ff841182f0ad2123d3807ce603bd9c00` | cambia de `dcff3ea5…c9d8a441` (objetivo) | cambia (objetivo) |
+| arxiv-bert | 69 709 | `61066a97d28f…` | **sin cambio de código** (variante ya documentada de su bimodalidad: `8717a1fe…`/69 705 y `61066a97…`/69 709) | cambia (T2d) |
+| otros 15 (boe ×2, wiki ×13) | idénticos | idénticos a `evaluation/h3/pdf-legacy-baseline.json` | sin cambio | SAME |
+
+Notas de medición:
+
+- Copa Mundial mostró `8dbce921…` en una pasada auxiliar **sin semilla fija**:
+  es la bimodalidad preexistente entre procesos documentada desde T2d; el diff en
+  un mismo proceso (semilla idéntica para pre y post) la descarta como delta de
+  esta tarea, y las dos pasadas del arnés dan el SHA del baseline `14342a0f…2c77`.
+- Auditoría tras el cambio (2 pasadas, `pdf-content-audit/1`): attention y bert
+  `real_prose = 0`, `real_equation = 0`, `missing_symbols = 0`;
+  `duplicate_layer` 357/263 líneas — exactamente los valores documentados en
+  T1/T2d (artefacto de medida por repetición de cabeceras por página), **sin
+  delta**; resto del corpus sin pérdida real.
+
+## Tiempo del arnés (2 pasadas, código final)
+
+| pasada | baseline (s) | T2e (s) | delta |
+|---|---|---|---|
+| 1 | 127.872 | 119.427 (106.680 conv + 12.747 audit) | −6.6 % |
+| 2 | 148.181 | 112.552 (100.416 conv + 12.136 audit) | −24.0 % |
+| **total** | **276.053** | **231.979** | **−16 %** |
+
+Muy por debajo del tope de +10 %.
+
+## Tests y checks
+
+- `apps/api/tests/test_pdf_math_clean.py`: **17 passed** (6 nuevos: fórmula
+  multilínea con huecos en blanco, prosa de continuación intacta, tabla tras una
+  ecuación cierra el bloque, heading tras una ecuación cierra el bloque,
+  líneas en blanco tienden el bloque y la prosa lo cierra, fragmentos multi-head
+  con `_W_ _[Q]_` conservado; todos con aserto de token-stream).
+- `pwsh -NoProfile -File ops/orca/check.ps1 -Worktree .` → **CHECK_OK**
+  (198 passed, 1 skipped; H0_SKIP por corpus ausente en worktree, según diseño
+  del gate; typecheck web verde).
+- Arnés ×2 con `--audit-json`: `.orca-task/after-pass1.json` +
+  `after-audit-pass1.json` (119.427 s) y `.orca-task/after-pass2.json` +
+  `after-audit-pass2.json` (112.552 s); SHAs idénticos entre pasadas,
+  reversiones 0.
+
+## Defensa encontrada y corregida (por medición, no por intuición)
+
+El punto medio (`·`) es glifo matemático para el predicado de T2d
+(`pos/ 10000 · 2 π`), pero la wiki lo usa como bullet a inicio de línea
+(`·El helio pertenece al bloque`). La primera implementación abría bloques con
+cualquier línea matemática y comía la `**s**` siguiente (la letra del bloque s)
+en `wiki-Tabla_periódica_de_los_elementos.pdf`. El diff pre/post sobre el corpus
+lo detectó; la versión final solo abre bloques con líneas matemáticas *fuertes*
+(`=` o glifo ≠ `·`) y las líneas de solo-punto-medio cierran el bloque. Con esa
+defensa, el diff en un mismo proceso da 16/17 archivos byte-idénticos.
+
+## Riesgos y limitaciones
+
+1. El alcance de un bloque cruza líneas en blanco hasta la primera prosa: una
+   línea de fragmento matemático separada de una fórmula por muchas líneas en
+   blanco y solo dígitos/corchetes se limpiaría. En el corpus real no ocurre
+   (16/17 byte-idénticos, diff en mismo proceso); el invariante de tokens y la
+   reversión entera siguen protegiendo cada página.
+2. bert queda en la variante `61066a97…` de su bimodalidad documentada
+   (69 709 bytes); el diff en mismo proceso confirma que la limpieza no altera
+   ni un byte de bert.
+3. Restos conocidos de T2d sin cambio: 11 líneas de autores/etiquetas en
+   attention, `warmup _ steps` sin par, compuestos (`lefttoright`,
+   `selfattention`) y `dimensionquery` — todo fuera del alcance de T2e.
+4. La reconstrucción de sub/superíndices (`[QK] √ [T]` → `QK^T/√dk`) sigue
+   pendiente para T2f; la fórmula queda `… [QK] √ [T] dk ) V (1)`.
 
 ## Archivos tocados
 
 | archivo | cambio |
 |---|---|
-| `apps/api/bibliotecario/pdf_math_clean.py` | **nuevo**: limpieza de énfasis solo en líneas matemáticas (predicado + fragmentos + invariante) |
-| `apps/api/bibliotecario/converters.py` | rama PDF de `convert()`: limpia cada chunk tras `pdf_markdown_chunks()` y antes de `recover_pdf_page()`; diagnósticos `pdf_math_emphasis_page_N` / `pdf_math_clean_reverted_page_N` |
-| `apps/api/tests/test_pdf_math_clean.py` | **nuevo**: 10 unitarios + integración con PDF sintético |
-| `docs/h3/pdf-two-column-format.md` | **nuevo**: muestras antes/después, recuentos, SHAs, limitaciones |
+| `apps/api/bibliotecario/pdf_math_clean.py` | bloques matemáticos: `_opens_math_block` (apertura fuerte), `_clean_math_continuation` (cáscara `CONT_SHELL` + todos los pares fragmento), bucle con `in_block`; docstring actualizado |
+| `apps/api/tests/test_pdf_math_clean.py` | 6 tests nuevos (17 en total) |
+| `docs/h3/pdf-two-column-format.md` | sección T2e: diseño, antes/después, recuentos, SHAs, defensa del punto medio |
+| `report.md` | este informe (raíz, para el review) |
+| `.orca-task/report.md` | copia del informe (ruta pedida por el enunciado) |
 
-`coverage()`, `PDF_MIN_COVERAGE`, `scan_tables`, `_line_missing`, `_missing_runs`,
-`place()` y `pdf_audit.py` intactos; `apps/web` intacto; sin instalaciones nuevas.
-
-## Diseño (resumen)
-
-1. **Predicado de línea matemática** (por línea del chunk): `=` rodeada de espacios
-   o glifo matemático curado (∑ √ ≤ ≥ ∈ ∂ ∫ × · − ± flechas letterlike ⟨⟩ ⌈⌉⌊⌋),
-   **fuera de destinos de enlaces**; nunca tablas/headings/bullets/código. `-` y `/`
-   ASCII excluidos a propósito (compuestos, URLs, fechas).
-2. **Fragmento matemático**: el par de marcadores se quita solo si su contenido es
-   matemático (glifos, corchetes, dígitos, `Q, K, V`, `lrate`, `Pdrop`, `softmax`,
-   `QWi`). Se conservan enlaces (`](`), prosa multi-palabra (`_York Times_`),
-   siglas (`**BERTBASE**`), etiquetas (`**Encoder:**`, `**Operador**`), autores
-   (`**Ashish Vaswani**`) y tachados wiki (`~~4~~`, `~~.~~`).
-3. **Invariante**: `re.findall(r"[^\W_]+", antes) == … (después)` por página; en
-   caso contrario la página se revierte entera (`pdf_math_clean_reverted_page_N`).
-
-## Medición antes → después
-
-| medida | attention | bert |
-|---|---|---|
-| líneas de markdown con énfasis (cualquier línea) | 185 | 240 |
-| marcas de énfasis totales | 861 | 980 |
-| líneas matemáticas con énfasis | 59 → **11** | 20 → **0** |
-| marcas en líneas matemáticas | 496 → **44** | 104 → **0** |
-
-Muestras:
-
-```
-antes:  Attention( _Q, K, V_ ) = softmax( _[QK]_ ~~_V_~~ _[T]_
-después: Attention( Q, K, V ) = softmax( [QK] V [T]
-
-antes:  _lrate_ = _d_ _[-]_ model [0] _[.]_ [5]
-después: lrate = d [-] model [0] [.] [5]
-
-antes:  Transformer (base model) 27.3 38.1 **3** _**.**_ **3** _**·**_ **10** **[18]**
-después: Transformer (base model) 27.3 38.1 3 . 3 · 10 [18]
-```
-
-Resto en attention (11 líneas, motivo): 8 nombres de autores (`**Ashish Vaswani**`…)
-y 3 etiquetas en negrita (`**Encoder:**`, `**Decoder:**`, `**Label Smoothing**`) —
-prosa legítima dentro de líneas matemáticas que la limpieza no debe tocar. Además
-queda 1 marcador suelto sin par (`warmup _ steps = 4000`): quitar `_` sueltos podría
-fusionar identificadores (`d_model`) y romper el invariante. En bert no queda
-ninguna marca.
-
-## Invariante de tokens (script + mecanismo)
-
-- `.orca-task/dry_run.py`: los 17 markdown antes/después con el mismo token-stream
-  (`pmc.tokens(antes) == pmc.tokens(tras)`), aserto explícito → PASS.
-- `.orca-task/tokens_invariant.py` con `convert()` real: attention 6 668 tokens,
-  bert 11 125 tokens, idénticos antes/después.
-- Mecanismo de defensa: `clean_math_emphasis` revierte la página entera si el
-  resultado altera el token-stream (test dedicado). Reversiones en el arnés: **0**.
-
-## SHAs (tabla completa en `docs/h3/pdf-two-column-format.md`)
-
-| archivo | markdown_bytes | SHA-256 tras el cambio | vs baseline |
-|---|---|---|---|
-| arxiv-attention-is-all-you-need-en.pdf | 42 420 | `dcff3ea55a56e5332f8f714c84e02964dacd9101c365407d58b0cf00c9d8a441` | cambia (objetivo) |
-| arxiv-bert-en.pdf | 69 705 | `8717a1fe48ce65800c6c350c92c68cd088017401987687efa38022c7b35f0e61` | cambia (objetivo) |
-| otros 15 (boe-×2, wiki-×13) | idénticos | idénticos | SHA igual al baseline T0 |
-
-**Lista exacta de archivos cuyo SHA cambia: `arxiv-attention-is-all-you-need-en.pdf`
-y `arxiv-bert-en.pdf`.** Ningún otro cambia. Nota sobre bert: entre procesos el
-markdown de bert tiene una bimodalidad preexistente registrada (69 809/69 813
-bytes antes; 69 705/69 709 tras el cambio, vía `8717a1fe…` o `61066a97…`); dentro
-del mismo proceso tres pasadas son byte-idénticas y la limpieza es determinista.
-Los "Copa 254200/254203" registrados se confirman sin delta de esta tarea
-(Copa = SHA del baseline en ambas pasadas).
-
-## Auditoría (`--audit-json` sobre los 17)
-
-| archivo | real_prose (palabras) | real_equation (líneas) | missing_symbols | duplicate_layer |
-|---|---|---|---|---|
-| arxiv-attention | 0 | 0 | 0 | 357 líneas (sin delta vs T1) |
-| arxiv-bert | 0 | 0 | 0 | 263 líneas (sin delta vs T1) |
-
-Todo el corpus: `real_prose_words = 0`, `real_equation_lines = 0`.
-`duplicate_layer` 357/263 = los mismos valores documentados en
-`docs/h3/pdf-two-column-loss.md` (repeticiones por página, artefacto de medida;
-cero pérdida real atribuible y cero delta de esta tarea).
-
-## Tiempo del arnés (dos pasadas, código final)
-
-| pasada | baseline (s) | T2d (s) | delta |
-|---|---|---|---|
-| 1 | 127.872 | 145.708 | +13.9 % |
-| 2 | 148.181 | 122.231 | −17.5 % |
-| **total** | **276.053** | **267.939** | **−2.9 %** |
-
-El tiempo total baja un 2.9 %: muy por debajo del tope de +10 %. La dispersión
-entre pasadas del propio baseline (127.872 → 148.181, +16 %) domina el ruido de
-una pasada individual; el coste marginal de la limpieza son unas pasadas de regex
-por línea matemática.
-
-## Tests y checks
-
-- `pytest tests` (gate): **192 passed, 1 skipped** (incluye los 11 nuevos de
-  `test_pdf_math_clean.py`), typecheck web verde.
-- `pwsh -NoProfile -File ops/orca/check.ps1 -Worktree .` → `CHECK_OK` (H0 SKIP
-  por corpus ausente en worktree, según diseño del gate).
-- Arnés ×2 con `--audit-json` (código final): `.orca-task/after-pass1.json` +
-  `.orca-task/after-audit-pass1.json` (145.708 s), `.orca-task/after-pass2.json`
-  + `.orca-task/after-audit-pass2.json` (122.231 s); SHAs idénticos entre ambas
-  pasadas y reversiones del invariante = 0.
-
-## Riesgos y limitaciones
-
-1. Restos de énfasis en prosa bold dentro de líneas matemáticas de attention
-   (autores/etiquetas): 11 líneas, documentadas con muestra y motivo.
-2. `dimensionquery` (pegado de columna) NO se corrige: queda como limitación
-   medida, fuera del alcance (verbatim del enunciado).
-3. Compuestos (`lefttoright`, `selfattention`, `pretrain`) intactos, excluidos.
-4. El invariante protege contra cualquier fusión/split de tokens; el coste de la
-   limpieza es despreciable (−2.9 % de tiempo total del arnés).
-5. `pdf_math_clean.py` es ciego a la página (solo texto): el mismo predicado se
-   aplicaría a la estrategia `layout` si se usara.
-
-## Pendientes
-
-Ninguno bloqueante: la tarea queda implementada, medida, documentada y testeada.
+Sin `git add` ni `git commit`: los cambios quedan sin stage para el orquestador.

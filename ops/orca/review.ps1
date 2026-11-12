@@ -3,13 +3,16 @@ param(
     [Parameter(Mandatory)][string]$TaskId,
     [Parameter(Mandatory)][string]$Worktree,
     [string]$DispatchId,
-    [int]$Round = 1
+    [int]$Round = 1,
+    [string]$BaseBranch = 'main'
 )
 
 $ErrorActionPreference = 'Stop'
 
 $worktreePath = (Resolve-Path $Worktree).Path
-$reviewPath = Join-Path $worktreePath '.orca-task\review.json'
+$reviewDir = Join-Path $worktreePath '.orca-task'
+New-Item -ItemType Directory -Force -Path $reviewDir | Out-Null
+$reviewPath = Join-Path $reviewDir 'review.json'
 
 $review = [ordered]@{
     taskId      = $TaskId
@@ -45,11 +48,19 @@ try {
         exit 2
     }
 
-    $files = @(
-        (& git diff --name-only)
-        (& git ls-files --others --exclude-standard)
-    ) |
-        Where-Object { $_ -and $_ -notmatch '^(report\.md|\.orca-task/)|(^|/)logs/|\.log$' } |
+    # Incluye lo commiteado por el worker (diff desde la rama base), lo staged
+    # y lo unstaged frente a HEAD, y los archivos nuevos. `git diff` a secas
+    # dejaba fuera los dos primeros casos.
+    $baseOk = $false
+    & git rev-parse --verify -q $BaseBranch *> $null
+    if ($LASTEXITCODE -eq 0) { $baseOk = $true }
+
+    $files = @()
+    if ($baseOk) { $files += @(& git diff --name-only "$BaseBranch...HEAD") }
+    $files += @(& git diff --name-only HEAD)
+    $files += @(& git ls-files --others --exclude-standard)
+    $files = @($files) |
+        Where-Object { $_ -and $_ -notmatch '^(report\.md|\.orca-task/|\.orca-run/)|(^|/)logs/|\.log$' } |
         ForEach-Object { $_ -replace '\\', '/' } |
         Sort-Object -Unique
 

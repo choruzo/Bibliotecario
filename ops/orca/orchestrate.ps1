@@ -18,7 +18,7 @@ $ErrorActionPreference = 'Stop'
 
 . (Join-Path $PSScriptRoot 'lib.ps1')
 
-$coordinator = Get-Coordinator
+$coordinator = Get-Coordinator -RunId $RunId
 Bind-Run -RunId $RunId -Coordinator $coordinator
 
 $script:Dispatches = @(Read-Dispatches -RunId $RunId)
@@ -26,6 +26,8 @@ $script:Watchdog = @{}
 $script:StallRecoveries = @{}
 $script:WatchdogRestarted = $false
 $script:WatchdogBlocked = $false
+$script:ClosedTerminals = @{}
+$script:IntegrityBlocked = $false
 $commitScript = Join-Path $PSScriptRoot 'commit.ps1'
 $reviewScript = Join-Path $PSScriptRoot 'review.ps1'
 $integrateScript = Join-Path $PSScriptRoot 'integrate.ps1'
@@ -41,6 +43,277 @@ function Get-Record {
     param([string]$TaskId)
     $items = @($script:Dispatches) | Where-Object { $_.taskId -eq $TaskId } | Select-Object -Last 1
     return $items
+}
+
+function Get-PayloadObject {
+    param($Payload)
+    if (-not $Payload) { return $null }
+    if ($Payload -is [string]) {
+        try { return ($Payload | ConvertFrom-Json) } catch { return $null }
+    }
+    return $Payload
+}
+
+function Get-MessageText {
+    param($Message)
+    try { return ($Message | ConvertTo-Json -Depth 20 -Compress) } catch { return '' }
+}
+
+function Resolve-MessageContext {
+    param($Message)
+
+    $payload = Get-PayloadObject -Payload $Message.payload
+    $taskId = $null
+    $dispatchId = $null
+    if ($payload) {
+        foreach ($name in @('taskId', 'task_id')) {
+            if ($payload.PSObject.Properties[$name] -and $payload.$name) { $taskId = [string]$payload.$name; break }
+        }
+        foreach ($name in @('dispatchId', 'dispatch_id')) {
+            if ($payload.PSObject.Properties[$name] -and $payload.$name) { $dispatchId = [string]$payload.$name; break }
+        }
+    }
+
+    $text = Get-MessageText -Message $Message
+    if (-not $taskId -and $text -match '(task_[A-Za-z0-9_]+)') { $taskId = $Matches[1] }
+    if (-not $dispatchId -and $text -match '(ctx_[A-Za-z0-9_]+)') { $dispatchId = $Matches[1] }
+
+    $record = $null
+    if ($dispatchId) {
+        $record = @($script:Dispatches | Where-Object { $_.dispatchId -eq $dispatchId }) | Select-Object -Last 1
+    }
+    if (-not $record -and $taskId) {
+        $record = Get-Record -TaskId $taskId
+    }
+    if (-not $record) {
+        foreach ($handle in @([regex]::Matches($text, 'term_[A-Za-z0-9-]+') | ForEach-Object { $_.Value })) {
+            $record = @($script:Dispatches | Where-Object { $_.workerHandle -eq $handle }) | Select-Object -Last 1
+            if ($record) { break }
+        }
+    }
+    if (-not $record) {
+        foreach ($candidate in @($script:Dispatches)) {
+            if ($candidate.taskTitle -and $text.Contains([string]$candidate.taskTitle)) {
+                $record = $candidate
+                break
+            }
+        }
+    }
+
+    if (-not $taskId -and $record) { $taskId = [string]$record.taskId }
+    if (-not $dispatchId -and $record) { $dispatchId = [string]$record.dispatchId }
+    return [pscustomobject]@{ TaskId = $taskId; DispatchId = $dispatchId; Record = $record }
+}
+
+function Get-EscalationFile {
+    return (Join-Path (Get-StateDir) "escalations-$RunId.json")
+}
+
+function Register-Escalation {
+    param(
+        [string]$Key,
+        [string]$MessageId,
+        [int]$MinSeconds = 30,
+        [int]$Required = 2
+    )
+
+    if (-not $Key) { $Key = $MessageId }
+    if (-not $Key) { return $Required }
+
+    $file = Get-EscalationFile
+    $state = @{}
+    if (Test-Path $file) {
+        try { $state = Get-Content $file -Raw -Encoding UTF8 | ConvertFrom-Json -AsHashtable } catch { $state = @{} }
+    }
+    if ($null -eq $state) { $state = @{} }
+
+    $now = [datetime]::UtcNow
+    $entry = $state[$Key]
+    if (-not $entry) {
+        $entry = @{ count = 0; firstAt = $now.ToString('o'); lastAt = $null }
+    }
+    $last = $null
+    if ($entry.lastAt) {
+        try { $last = ([datetimeoffset]::Parse([string]$entry.lastAt)).UtcDateTime } catch { $last = $null }
+    }
+    if (-not $last -or ($now - $last).TotalSeconds -ge $MinSeconds) {
+        $entry.count = [int]$entry.count + 1
+        $entry.lastAt = $now.ToString('o')
+    }
+    $state[$Key] = $entry
+    $state | ConvertTo-Json -Depth 10 | Set-Content $file -Encoding UTF8
+    return [int]$entry.count
+}
+
+function Clear-Escalation {
+    param([string]$Key)
+    if (-not $Key) { return }
+    $file = Get-EscalationFile
+    if (-not (Test-Path $file)) { return }
+    try {
+        $state = Get-Content $file -Raw -Encoding UTF8 | ConvertFrom-Json -AsHashtable
+        if ($null -eq $state) { return }
+        if ($state.ContainsKey($Key)) {
+            $state.Remove($Key)
+            $state | ConvertTo-Json -Depth 10 | Set-Content $file -Encoding UTF8
+        }
+    }
+    catch { }
+}
+
+function Resolve-Escalation {
+    param($Message)
+
+    $context = Resolve-MessageContext -Message $Message
+    $record = $context.Record
+    if ($record -and ($record.integrationSha -or $record.status -eq 'integrated')) {
+        return [pscustomobject]@{ Action = 'ignore'; Reason = 'dispatch ya integrado'; Context = $context }
+    }
+
+    $dispatchId = if ($context.DispatchId) { [string]$context.DispatchId } elseif ($record) { [string]$record.dispatchId } else { $null }
+    if (-not $dispatchId) {
+        return [pscustomobject]@{ Action = 'escalate'; Reason = 'sin dispatch identificable'; Context = $context }
+    }
+
+    $show = Get-OrcaWorkerShow -DispatchId $dispatchId
+    if (-not $show) {
+        return [pscustomobject]@{ Action = 'defer'; Reason = 'worker-show no disponible'; Context = $context; DispatchId = $dispatchId }
+    }
+
+    $dispatchStatus = [string]$show.dispatch.status
+    if ($dispatchStatus -in @('completed', 'failed', 'cancelled', 'settled')) {
+        return [pscustomobject]@{ Action = 'ignore'; Reason = "dispatch $dispatchStatus"; Context = $context; DispatchId = $dispatchId }
+    }
+
+    $liveness = [string]$show.projection.liveness.verdict
+    $activity = [string]$show.projection.stage.activity
+    $wait = $show.observation.agentWait
+    if ($wait) {
+        return [pscustomobject]@{ Action = 'waiting'; Reason = 'agentWait'; Context = $context; DispatchId = $dispatchId; Liveness = $liveness; Activity = $activity }
+    }
+    if ($liveness -eq 'live' -or $activity -eq 'working') {
+        return [pscustomobject]@{ Action = 'ignore'; Reason = "worker $liveness/$activity"; Context = $context; DispatchId = $dispatchId }
+    }
+    if ($liveness -in @('', 'unknown', 'unverifiable')) {
+        return [pscustomobject]@{ Action = 'defer'; Reason = "liveness $liveness"; Context = $context; DispatchId = $dispatchId }
+    }
+    return [pscustomobject]@{ Action = 'escalate'; Reason = "liveness $liveness activity $activity"; Context = $context; DispatchId = $dispatchId }
+}
+
+function Handle-Escalation {
+    param($Message)
+
+    $resolution = Resolve-Escalation -Message $Message
+    $taskId = $resolution.Context.TaskId
+    $dispatchId = $resolution.DispatchId
+
+    switch ($resolution.Action) {
+        'ignore' {
+            Write-Output "[loop] ESCALATION_IGNORED $($Message.id): $($resolution.Reason) dispatch=$dispatchId"
+            Clear-Escalation -Key $dispatchId
+            Write-Audit -RunId $RunId -Actor 'loop' -Action 'escalation-ignored' -TaskId $taskId -DispatchId $dispatchId -Reason $resolution.Reason
+            return 'CONTINUE'
+        }
+        'defer' {
+            $count = Register-Escalation -Key $dispatchId -MessageId $Message.id -MinSeconds 30 -Required 2
+            if ($count -lt 2) {
+                Write-Output "[loop] ESCALATION_DEFER $($Message.id): $($resolution.Reason) intento=$count"
+                Write-Audit -RunId $RunId -Actor 'loop' -Action 'escalation-deferred' -TaskId $taskId -DispatchId $dispatchId -Reason "$($resolution.Reason) intento=$count"
+                return 'CONTINUE'
+            }
+            Write-Output "[loop] ESCALATION $($Message.id): $($Message.body)"
+            Write-Audit -RunId $RunId -Actor 'orca' -Action 'escalation' -TaskId $taskId -DispatchId $dispatchId -Reason "confirmada: $($resolution.Reason)"
+            return 'ESCALATION'
+        }
+        'waiting' {
+            Write-Output "[loop] ESCALATION_WAITING $($Message.id): el worker espera aprobacion humana (dispatch=$dispatchId)"
+            Write-Audit -RunId $RunId -Actor 'worker' -Action 'waiting-human' -TaskId $taskId -DispatchId $dispatchId -Reason $resolution.Reason
+            return 'ESCALATION'
+        }
+        default {
+            Write-Output "[loop] ESCALATION $($Message.id): $($Message.body)"
+            Write-Audit -RunId $RunId -Actor 'orca' -Action 'escalation' -TaskId $taskId -DispatchId $dispatchId -Reason $resolution.Reason
+            return 'ESCALATION'
+        }
+    }
+}
+
+function Get-DispatchIdFromResponse {
+    param($Response)
+    if (-not $Response) { return $null }
+    if ($Response.result -and $Response.result.dispatch -and $Response.result.dispatch.id) { return [string]$Response.result.dispatch.id }
+    if ($Response.result -and $Response.result.dispatchId) { return [string]$Response.result.dispatchId }
+    $text = ''
+    try { $text = ($Response | ConvertTo-Json -Depth 20 -Compress) } catch { return $null }
+    $matches = @([regex]::Matches($text, 'ctx_[A-Za-z0-9_]+') | ForEach-Object { $_.Value })
+    if ($matches.Count -gt 0) { return $matches[-1] }
+    return $null
+}
+
+function Send-ToWorker {
+    param(
+        $Record,
+        [string]$TaskId,
+        [string]$Preamble,
+        [string]$Subject,
+        [string]$DispatchId
+    )
+
+    if ($Record.workerHandle) {
+        $send = Invoke-Orca terminal send --terminal $Record.workerHandle --text $Preamble --enter --json
+        if ($send.ok) { return $true }
+        Write-Warning "terminal send fallo para ${TaskId}: $($send.error.message)"
+    }
+
+    $target = if ($DispatchId) { $DispatchId } elseif ($Record.dispatchId) { $Record.dispatchId } else { $null }
+    if (-not $target) { return $false }
+    $fallback = Invoke-Orca orchestration send --to "dispatch:$target" --run $RunId --from $coordinator --subject $Subject --body $Preamble --task-id $TaskId --dispatch-id $target --json
+    if (-not $fallback.ok) {
+        Write-Warning "No se pudo entregar el mensaje a ${TaskId}: $($fallback.error.message)"
+        return $false
+    }
+    $newId = Get-DispatchIdFromResponse -Response $fallback
+    if ($newId -and $newId -ne $target) {
+        Set-RecordValue -Record $Record -Name 'dispatchId' -Value $newId
+        Save-Record -Record $Record
+    }
+    return $true
+}
+
+function Test-RecordSettled {
+    param($Record)
+    if (-not $Record) { return $false }
+    if ($Record.integrationSha) { return $true }
+    return ($Record.status -in @('integrated', 'completed', 'failed'))
+}
+
+function Get-WorkerEvidence {
+    param($Record)
+
+    if (-not $Record -or -not $Record.dispatchId) { return $null }
+    $show = Get-OrcaWorkerShow -DispatchId $Record.dispatchId
+    if (-not $show) { return $null }
+
+    $lastSignal = $null
+    $heartbeat = $show.dispatch.lastHeartbeatAt
+    if ($heartbeat) {
+        try { $lastSignal = ([datetimeoffset]::Parse([string]$heartbeat)).UtcDateTime } catch { }
+    }
+    if (-not $lastSignal -and $show.projection.evidence.lastObservedAt) {
+        try { $lastSignal = ([datetimeoffset]::Parse([string]$show.projection.evidence.lastObservedAt)).UtcDateTime } catch { }
+    }
+    $write = Get-LatestWriteUtc -Worktree $Record.worktree
+    if ($write -and (-not $lastSignal -or $write -gt $lastSignal)) { $lastSignal = $write }
+
+    return [pscustomobject]@{
+        DispatchStatus = [string]$show.dispatch.status
+        Liveness       = [string]$show.projection.liveness.verdict
+        Activity       = [string]$show.projection.stage.activity
+        AgentWait      = $show.observation.agentWait
+        LastSignalUtc  = $lastSignal
+        LastError      = [string]$show.dispatch.lastError
+        Attention      = $show.projection.attention
+    }
 }
 
 function Update-Watchdog {
@@ -64,52 +337,89 @@ function Update-Watchdog {
         }
 
         $minutes = ($now - $state.startedAt).TotalMinutes
-        if ($minutes -ge $StallMinutes -and (-not $state.warnedAt -or ($now - $state.warnedAt).TotalMinutes -ge $StallMinutes)) {
-            if ($StallAction -ne 'restart') {
-                Write-Output "[loop] WATCHDOG task=$($task.id) minutes=$([int]$minutes) terminal=$($record.terminal)"
+        if ($minutes -lt $StallMinutes) { continue }
+
+        $evidence = Get-WorkerEvidence -Record $record
+        if ($evidence -and $evidence.DispatchStatus -in @('completed', 'failed', 'cancelled', 'settled')) { continue }
+        if ($evidence -and $evidence.AgentWait) {
+            if (-not $state.warnedAt -or ($now - $state.warnedAt).TotalMinutes -ge $StallMinutes) {
+                Write-Output "[loop] WATCHDOG_WAITING task=$($task.id) minutes=$([int]$minutes) (espera humana)"
                 $state.warnedAt = $now
-                continue
             }
-
-            $recoveries = [int]$script:StallRecoveries[$task.id]
-            if ($recoveries -ge $MaxStallRecoveries) {
-                $update = Invoke-Orca orchestration task-update --from $coordinator --run $RunId --id $task.id --status blocked --result "stalled max_recoveries=$MaxStallRecoveries" --json
-                if (-not $update.ok) { Write-Warning $update.error.message }
-                Set-RecordValue -Record $record -Name 'status' -Value 'blocked'
-                Save-Record -Record $record
-                Write-Output "[loop] WATCHDOG_BLOCKED task=$($task.id) recoveries=$recoveries"
-                $script:WatchdogBlocked = $true
-                continue
-            }
-
-            if (-not $record.dispatchId) {
-                Write-Output "[loop] WATCHDOG_NO_DISPATCH task=$($task.id); no se puede reiniciar"
-                $script:WatchdogBlocked = $true
-                continue
-            }
-
-            $stop = Invoke-Orca orchestration worker-stop --dispatch $record.dispatchId --json
-            if (-not $stop.ok) {
-                Write-Warning "No se pudo parar el worker estancado de $($task.id): $($stop.error.message)"
-                $script:WatchdogBlocked = $true
-                continue
-            }
-            [void](Invoke-Orca terminal close --terminal $record.workerHandle --json)
-
-            $update = Invoke-Orca orchestration task-update --from $coordinator --run $RunId --id $task.id --status ready --result "stalled_recovery=$($recoveries + 1)" --json
-            if (-not $update.ok) {
-                Write-Warning "No se pudo reabrir $($task.id) tras el estancamiento: $($update.error.message)"
-                $script:WatchdogBlocked = $true
-                continue
-            }
-
-            Set-RecordValue -Record $record -Name 'status' -Value 'stalled'
-            Save-Record -Record $record
-            $script:StallRecoveries[$task.id] = $recoveries + 1
-            $script:WatchdogRestarted = $true
-            $state.warnedAt = $now
-            Write-Output "[loop] WATCHDOG_RESTART task=$($task.id) attempt=$($recoveries + 1) terminal=$($record.terminal)"
+            continue
         }
+
+        $signalMinutes = $minutes
+        if ($evidence -and $evidence.LastSignalUtc) {
+            $signalMinutes = ($now - $evidence.LastSignalUtc).TotalMinutes
+        }
+        if ($evidence -and $evidence.Activity -eq 'working') {
+            $state.warnedAt = $null
+            continue
+        }
+        if ($evidence -and $evidence.Liveness -eq 'live' -and (-not $evidence.LastSignalUtc -or $signalMinutes -lt $StallMinutes)) {
+            $state.warnedAt = $null
+            continue
+        }
+        if ($signalMinutes -lt $StallMinutes) { continue }
+
+        if ($StallAction -ne 'restart') {
+            Write-Output "[loop] WATCHDOG task=$($task.id) minutes=$([int]$minutes) signal=$([int]$signalMinutes) terminal=$($record.terminal)"
+            $state.warnedAt = $now
+            continue
+        }
+
+        # Reiniciar solo con prueba. Silencio o liveness unverifiable nunca
+        # autorizan matar a un worker segun el contrato de Orca.
+        $provenDead = $evidence -and ($evidence.Liveness -eq 'dead' -or $evidence.DispatchStatus -in @('failed', 'cancelled'))
+        if (-not $provenDead) {
+            Write-Output "[loop] WATCHDOG_NO_PROOF task=$($task.id) minutes=$([int]$minutes) signal=$([int]$signalMinutes): no se reinicia"
+            $state.warnedAt = $now
+            Write-Audit -RunId $RunId -Actor 'loop' -Action 'watchdog-no-proof' -TaskId $task.id -DispatchId $record.dispatchId -Reason "liveness=$($evidence.Liveness) activity=$($evidence.Activity)"
+            continue
+        }
+
+        $recoveries = [int]$script:StallRecoveries[$task.id]
+        if ($recoveries -ge $MaxStallRecoveries) {
+            $update = Invoke-Orca orchestration task-update --from $coordinator --run $RunId --id $task.id --status blocked --result "stalled max_recoveries=$MaxStallRecoveries" --json
+            if (-not $update.ok) { Write-Warning $update.error.message }
+            Set-RecordValue -Record $record -Name 'status' -Value 'blocked'
+            Save-Record -Record $record
+            Write-Output "[loop] WATCHDOG_BLOCKED task=$($task.id) recoveries=$recoveries"
+            Write-Audit -RunId $RunId -Actor 'loop' -Action 'watchdog-blocked' -TaskId $task.id -DispatchId $record.dispatchId -Reason "max_recoveries=$MaxStallRecoveries"
+            $script:WatchdogBlocked = $true
+            continue
+        }
+
+        if (-not $record.dispatchId) {
+            Write-Output "[loop] WATCHDOG_NO_DISPATCH task=$($task.id); no se puede reiniciar"
+            $script:WatchdogBlocked = $true
+            continue
+        }
+
+        Write-Output "[loop] WATCHDOG_STOP task=$($task.id) dispatch=$($record.dispatchId) liveness=$($evidence.Liveness)"
+        $stop = Invoke-Orca orchestration worker-stop --dispatch $record.dispatchId --json
+        if (-not $stop.ok) {
+            Write-Warning "No se pudo parar el worker estancado de $($task.id): $($stop.error.message)"
+            $script:WatchdogBlocked = $true
+            continue
+        }
+        [void](Close-OrcaTerminal -Handle $record.workerHandle -Quiet)
+
+        $update = Invoke-Orca orchestration task-update --from $coordinator --run $RunId --id $task.id --status ready --result "stalled_recovery=$($recoveries + 1)" --json
+        if (-not $update.ok) {
+            Write-Warning "No se pudo reabrir $($task.id) tras el estancamiento: $($update.error.message)"
+            $script:WatchdogBlocked = $true
+            continue
+        }
+
+        Set-RecordValue -Record $record -Name 'status' -Value 'stalled'
+        Save-Record -Record $record
+        $script:StallRecoveries[$task.id] = $recoveries + 1
+        $script:WatchdogRestarted = $true
+        $state.warnedAt = $now
+        Write-Output "[loop] WATCHDOG_RESTART task=$($task.id) attempt=$($recoveries + 1) terminal=$($record.terminal)"
+        Write-Audit -RunId $RunId -Actor 'loop' -Action 'watchdog-restart' -TaskId $task.id -DispatchId $record.dispatchId -Reason "liveness=$($evidence.Liveness)"
     }
 
     foreach ($id in @($script:Watchdog.Keys)) {
@@ -183,23 +493,28 @@ function Request-Changes {
     }
 
     $dispatchResult = Get-OrcaResult $dispatch
+    $previousDispatchId = [string]$Record.dispatchId
+    $newDispatchId = Get-DispatchIdFromResponse -Response $dispatch
+    if (-not $newDispatchId) { $newDispatchId = $previousDispatchId }
     $preamble = $dispatchResult.preamble
     $preamble += "`n`n=== REVIEW DEFECTS (round $Round / max $MaxReviewRounds) ===`n$defects`n`n"
-    $preamble += "Corrige exactamente estos defectos. Vuelve a ejecutar el check y envía un nuevo worker_done con el nuevo dispatch_id. No hagas push ni merge."
+    $preamble += "Corrige exactamente estos defectos. Vuelve a ejecutar el check y envia un nuevo worker_done con el nuevo dispatch_id. No hagas push ni merge ni task-update."
 
-    $send = Invoke-Orca terminal send --terminal $Record.workerHandle --text $preamble --enter --json
-    if (-not $send.ok) {
-        Write-Warning "No se pudo entregar los defectos a ${TaskId}: $($send.error.message)"
+    if (-not (Send-ToWorker -Record $Record -TaskId $TaskId -Preamble $preamble -Subject "review changes $TaskId" -DispatchId $newDispatchId)) {
         Set-RecordValue -Record $Record -Name 'status' -Value 'blocked'
         Save-Record -Record $Record
+        Write-Audit -RunId $RunId -Actor 'loop' -Action 'blocked' -TaskId $TaskId -DispatchId $newDispatchId -Reason 'no se pudo entregar los defectos'
         return 'STOP'
     }
 
-    Set-RecordValue -Record $Record -Name 'dispatchId' -Value $dispatchResult.dispatch.id
+    if (-not $Record.dispatchId -or $Record.dispatchId -eq $previousDispatchId) {
+        Set-RecordValue -Record $Record -Name 'dispatchId' -Value $newDispatchId
+    }
     Set-RecordValue -Record $Record -Name 'reviewRounds' -Value $Round
     Set-RecordValue -Record $Record -Name 'status' -Value 'changes_requested'
     Save-Record -Record $Record
     Write-Host "[loop] CHANGES $TaskId round $Round -> re-dispatched $($Record.dispatchId)"
+    Write-Audit -RunId $RunId -Actor 'loop' -Action 'review-changes' -TaskId $TaskId -DispatchId $newDispatchId -Reason "round=$Round"
     return 'CONTINUE'
 }
 
@@ -248,6 +563,7 @@ function Request-Repair {    param(
     }
 
     $dispatchResult = Get-OrcaResult $dispatch
+    $repairDispatchId = Get-DispatchIdFromResponse -Response $dispatch
     $preamble = $dispatchResult.preamble
     $preamble += "`n`n=== REPARACION (ronda $repairRound / $MaxRepairRounds) ===`n"
     $preamble += "El worker original agoto $MaxReviewRounds rondas de review. Tienes un presupuesto nuevo y un modelo distinto.`n"
@@ -263,11 +579,15 @@ function Request-Repair {    param(
     }
 
     if ($Record.workerHandle -and $Record.workerHandle -ne $workerHandle) {
-        $closed = Invoke-Orca terminal close --terminal $Record.workerHandle --json
-        if (-not $closed.ok) { Write-Warning "No se pudo cerrar el worker anterior de ${TaskId}: $($closed.error.message)" }
+        if (Close-OrcaTerminal -Handle $Record.workerHandle -Quiet) {
+            Write-Audit -RunId $RunId -Actor 'loop' -Action 'terminal-close' -TaskId $TaskId -Terminal $Record.workerHandle -Reason 'repair-replaces-worker'
+        }
+        else {
+            Write-Warning "No se pudo cerrar el worker anterior de ${TaskId}"
+        }
     }
 
-    Set-RecordValue -Record $Record -Name 'dispatchId' -Value $dispatchResult.dispatch.id
+    if ($repairDispatchId) { Set-RecordValue -Record $Record -Name 'dispatchId' -Value $repairDispatchId }
     Set-RecordValue -Record $Record -Name 'workerHandle' -Value $workerHandle
     Set-RecordValue -Record $Record -Name 'terminal' -Value "repair:$name"
     Set-RecordValue -Record $Record -Name 'reviewRounds' -Value 0
@@ -370,79 +690,88 @@ Reglas:
 - Envia un unico worker_done con el nuevo dispatch_id.
 "@
 
-    $send = Invoke-Orca terminal send --terminal $Record.workerHandle --text $preamble --enter --json
-    if (-not $send.ok) {
-        Write-Warning "No se pudo entregar el conflicto a ${TaskId}: $($send.error.message)"
+    $previousDispatchId = [string]$Record.dispatchId
+    $newDispatchId = Get-DispatchIdFromResponse -Response $dispatch
+    if (-not $newDispatchId) { $newDispatchId = $previousDispatchId }
+    if (-not (Send-ToWorker -Record $Record -TaskId $TaskId -Preamble $preamble -Subject "rescue conflict $TaskId" -DispatchId $newDispatchId)) {
         Set-RecordValue -Record $Record -Name 'status' -Value 'blocked'
         Save-Record -Record $Record
+        Write-Audit -RunId $RunId -Actor 'loop' -Action 'blocked' -TaskId $TaskId -DispatchId $newDispatchId -Reason 'no se pudo entregar el conflicto'
         return 'STOP'
     }
 
-    Set-RecordValue -Record $Record -Name 'dispatchId' -Value $dispatchResult.dispatch.id
+    if (-not $Record.dispatchId -or $Record.dispatchId -eq $previousDispatchId) {
+        Set-RecordValue -Record $Record -Name 'dispatchId' -Value $newDispatchId
+    }
     Set-RecordValue -Record $Record -Name 'rescueRounds' -Value $Round
     Set-RecordValue -Record $Record -Name 'status' -Value 'changes_requested'
     Save-Record -Record $Record
     Write-Host "[loop] RESCUE $TaskId round $Round -> worker $($Record.workerHandle)"
+    Write-Audit -RunId $RunId -Actor 'loop' -Action 'rescue' -TaskId $TaskId -DispatchId $newDispatchId -Reason "round=$Round"
     return 'CONTINUE'
 }
 
-function Handle-Done {
-    param($Message)
+function Invoke-TaskDelivery {
+    param(
+        [Parameter(Mandatory)][string]$TaskId,
+        $Record
+    )
 
-    $payload = $null
-    try { $payload = $Message.payload | ConvertFrom-Json } catch { $payload = $null }
-    if (-not $payload -or -not $payload.taskId) {
-        Write-Warning "worker_done sin taskId: $($Message.id)"
+    if (-not $Record) { $Record = Get-Record -TaskId $TaskId }
+    if (-not $Record) {
+        Write-Warning "No hay mapping local para $TaskId"
         return 'CONTINUE'
     }
-
-    $taskId = $payload.taskId
-    $record = Get-Record -TaskId $taskId
-    if (-not $record) {
-        Write-Warning "No hay mapping local para $taskId"
+    if ($Record.integrationSha -or $Record.status -eq 'integrated') {
+        Write-Output "[loop] DELIVERY_SKIP $TaskId ya integrada"
         return 'CONTINUE'
     }
-
-    if ($payload.outcome -ne 'succeeded') {
-        $update = Invoke-Orca orchestration task-update --from $coordinator --run $RunId --id $taskId --status failed --result "worker outcome: $($payload.outcome)" --json
-        if (-not $update.ok) { Write-Warning $update.error.message }
-        Set-RecordValue -Record $record -Name 'status' -Value 'failed'
-        Save-Record -Record $record
-        Write-Host "[loop] FAILED $taskId outcome=$($payload.outcome)"
-        return 'CONTINUE'
+    if (-not $Record.worktree -or -not (Test-Path $Record.worktree)) {
+        $result = 'completed_sin_worktree'
+        $update = Invoke-Orca orchestration task-update --from $coordinator --run $RunId --id $TaskId --status blocked --result $result --json
+        if (-not $update.ok) {
+            Write-Warning $update.error.message
+            $script:IntegrityBlocked = $true
+        }
+        Set-RecordValue -Record $Record -Name 'status' -Value 'blocked'
+        Save-Record -Record $Record
+        Write-Audit -RunId $RunId -Actor 'loop' -Action 'blocked' -TaskId $TaskId -DispatchId $Record.dispatchId -Reason $result
+        Write-Host "[loop] BLOCKED $TaskId $result"
+        return 'STOP'
     }
 
-    $round = [int]($record.reviewRounds) + 1
-    $reviewOutput = (& pwsh -NoProfile -File $reviewScript -RunId $RunId -TaskId $taskId -Worktree $record.worktree -DispatchId $record.dispatchId -Round $round 2>&1 | Out-String)
+    $round = [int]($Record.reviewRounds) + 1
+    $reviewOutput = (& pwsh -NoProfile -File $reviewScript -RunId $RunId -TaskId $TaskId -Worktree $Record.worktree -DispatchId $Record.dispatchId -Round $round -BaseBranch $BaseBranch 2>&1 | Out-String)
     $reviewExit = $LASTEXITCODE
     Write-Host $reviewOutput.TrimEnd()
 
-    $reviewPath = Join-Path $record.worktree '.orca-task\review.json'
+    $reviewPath = Join-Path $Record.worktree '.orca-task\review.json'
     $review = $null
     if (Test-Path $reviewPath) {
-        try { $review = Get-Content $reviewPath -Raw | ConvertFrom-Json } catch { $review = $null }
+        try { $review = Get-Content $reviewPath -Raw -Encoding UTF8 | ConvertFrom-Json } catch { $review = $null }
     }
 
     if ($reviewExit -ne 0) {
-        return Request-Changes -Record $record -Review $review -Round $round -TaskId $taskId
+        return Request-Changes -Record $Record -Review $review -Round $round -TaskId $TaskId
     }
 
     $files = @($review.files) | Where-Object { $_ }
     if ($files.Count -eq 0) {
-        $review = [pscustomobject]@{ defects = @('El review aceptó pero no declaró archivos para commitear.') }
-        return Request-Changes -Record $record -Review $review -Round $round -TaskId $taskId
+        $review = [pscustomobject]@{ defects = @('El review acepto pero no declaro archivos para commitear.') }
+        return Request-Changes -Record $Record -Review $review -Round $round -TaskId $TaskId
     }
 
-    $commitOutput = (& pwsh -NoProfile -File $commitScript -Worktree $record.worktree -TaskId $taskId -FilesCsv ($files -join ',') -Message "task($taskId): review round $round" 2>&1 | Out-String)
+    $commitOutput = (& pwsh -NoProfile -File $commitScript -Worktree $Record.worktree -TaskId $TaskId -FilesCsv ($files -join ',') -Message "task($TaskId): review round $round" -BaseBranch $BaseBranch 2>&1 | Out-String)
     if ($LASTEXITCODE -ne 0) {
-        Write-Warning "Commit falló para ${TaskId}: $commitOutput"
-        $review = [pscustomobject]@{ defects = @("Commit falló: $($commitOutput.Trim())") }
-        return Request-Changes -Record $record -Review $review -Round $round -TaskId $taskId
+        Write-Warning "Commit fallo para ${TaskId}: $commitOutput"
+        $review = [pscustomobject]@{ defects = @("Commit fallo: $($commitOutput.Trim())") }
+        return Request-Changes -Record $Record -Review $review -Round $round -TaskId $TaskId
     }
     $commitSha = ([regex]::Match($commitOutput, 'COMMIT=([0-9a-f]+)')).Groups[1].Value
-    Write-Host "[loop] COMMIT $taskId $commitSha"
+    Write-Host "[loop] COMMIT $TaskId $commitSha"
+    Write-Audit -RunId $RunId -Actor 'loop' -Action 'commit' -TaskId $TaskId -DispatchId $Record.dispatchId -Reason $commitSha
 
-    $branch = $record.branch -replace '^refs/heads/', ''
+    $branch = $Record.branch -replace '^refs/heads/', ''
     $integrationBranch = "orca/integration/$RunId"
     $integrationOutput = ''
     $integrationOk = $false
@@ -461,11 +790,11 @@ function Handle-Done {
         }
 
         Write-Warning "Integración falló para ${TaskId}; intentando rescate"
-        $rescueRound = ([int]($record.rescueRounds)) + 1
-        $merge = Invoke-RescueMerge -Worktree $record.worktree -IntegrationBranch $integrationBranch
+        $rescueRound = ([int]($Record.rescueRounds)) + 1
+        $merge = Invoke-RescueMerge -Worktree $Record.worktree -IntegrationBranch $integrationBranch
 
         if ($merge.status -eq 'conflict') {
-            return Request-Rescue -Record $record -ConflictFiles $merge.files -Round $rescueRound -TaskId $taskId -IntegrationBranch $integrationBranch
+            return Request-Rescue -Record $Record -ConflictFiles $merge.files -Round $rescueRound -TaskId $TaskId -IntegrationBranch $integrationBranch
         }
 
         if ($merge.status -eq 'error') {
@@ -478,26 +807,187 @@ function Handle-Done {
 
     if (-not $integrationOk) {
         Write-Warning "Integración falló para ${TaskId}: $integrationOutput"
-        $update = Invoke-Orca orchestration task-update --from $coordinator --run $RunId --id $taskId --status blocked --result 'integration failed' --json
-        if (-not $update.ok) { Write-Warning $update.error.message }
-        Set-RecordValue -Record $record -Name 'status' -Value 'blocked'
-        Save-Record -Record $record
+        $update = Invoke-Orca orchestration task-update --from $coordinator --run $RunId --id $TaskId --status blocked --result 'integration failed' --json
+        if (-not $update.ok) {
+            Write-Warning $update.error.message
+            $script:IntegrityBlocked = $true
+        }
+        Set-RecordValue -Record $Record -Name 'status' -Value 'blocked'
+        Save-Record -Record $Record
+        Write-Audit -RunId $RunId -Actor 'loop' -Action 'blocked' -TaskId $TaskId -DispatchId $Record.dispatchId -Reason 'integration failed'
         return 'STOP'
     }
     $integrationSha = ([regex]::Match($integrationOutput, 'INTEGRATION_SHA=([0-9a-f]+)')).Groups[1].Value
-    Write-Host "[loop] INTEGRATED $taskId $integrationSha"
+    Write-Host "[loop] INTEGRATED $TaskId $integrationSha"
 
-    & pwsh -NoProfile -File $archiveScript -RunId $RunId -TaskId $taskId -Worktree $record.worktree | Out-Host
+    # Guardamos la evidencia ANTES de archivar/limpiar: si la limpieza falla o
+    # el proceso muere, la reconciliacion no vuelve a integrar la misma tarea.
+    Set-RecordValue -Record $Record -Name 'status' -Value 'integrated'
+    Set-RecordValue -Record $Record -Name 'commitSha' -Value $commitSha
+    Set-RecordValue -Record $Record -Name 'integrationSha' -Value $integrationSha
+    Save-Record -Record $Record
+    Write-Audit -RunId $RunId -Actor 'loop' -Action 'integrated' -TaskId $TaskId -DispatchId $Record.dispatchId -Reason $integrationSha
 
-    $cleanupArgs = @('-NoProfile', '-File', $cleanupScript, '-RunId', $RunId, '-TaskId', $taskId)
+    # Red de seguridad: Orca marca completed al recibir worker_done. Solo lo
+    # forzamos si la tarea siguiera en otro estado, para no pisar el result que
+    # guarda el informe del worker.
+    $current = $null
+    try { $current = @((Get-Tasks) | Where-Object { $_.id -eq $TaskId }) | Select-Object -First 1 } catch { $current = $null }
+    if ($current -and $current.status -ne 'completed') {
+        $update = Invoke-Orca orchestration task-update --from $coordinator --run $RunId --id $TaskId --status completed --result "integrated=$integrationSha" --json
+        if (-not $update.ok) {
+            Write-Warning "No se pudo marcar ${TaskId} como completed: $($update.error.message)"
+        }
+    }
+
+    & pwsh -NoProfile -File $archiveScript -RunId $RunId -TaskId $TaskId -Worktree $Record.worktree | Out-Host
+
+    $cleanupArgs = @('-NoProfile', '-File', $cleanupScript, '-RunId', $RunId, '-TaskId', $TaskId)
     if (-not $KeepWorktrees) { $cleanupArgs += @('-RemoveWorktree', '-Force') }
-    & pwsh @cleanupArgs | Out-Host
+    $cleanupOutput = (& pwsh @cleanupArgs 2>&1 | Out-String)
+    if ($cleanupOutput.Trim()) { Write-Host $cleanupOutput.TrimEnd() }
 
-    Set-RecordValue -Record $record -Name 'status' -Value 'integrated'
-    Set-RecordValue -Record $record -Name 'commitSha' -Value $commitSha
-    Set-RecordValue -Record $record -Name 'integrationSha' -Value $integrationSha
-    Save-Record -Record $record
     return 'CONTINUE'
+}
+
+function Handle-Done {
+    param($Message)
+
+    $context = Resolve-MessageContext -Message $Message
+    if (-not $context.TaskId) {
+        Write-Warning "worker_done sin taskId resoluble: $($Message.id)"
+        Write-Audit -RunId $RunId -Actor 'worker' -Action 'worker-done-unresolved' -Reason $Message.id
+        return 'CONTINUE'
+    }
+
+    $taskId = $context.TaskId
+    $record = $context.Record
+    if (-not $record) { $record = Get-Record -TaskId $taskId }
+    if (-not $record) {
+        Write-Warning "No hay mapping local para $taskId"
+        Write-Audit -RunId $RunId -Actor 'worker' -Action 'worker-done-sin-record' -TaskId $taskId
+        return 'CONTINUE'
+    }
+
+    $payload = Get-PayloadObject -Payload $Message.payload
+    $outcome = 'succeeded'
+    if ($payload -and $payload.PSObject.Properties['outcome'] -and $payload.outcome) {
+        $outcome = [string]$payload.outcome
+    }
+
+    if ($outcome -ne 'succeeded') {
+        $update = Invoke-Orca orchestration task-update --from $coordinator --run $RunId --id $taskId --status failed --result "worker outcome: $outcome" --json
+        if (-not $update.ok) { Write-Warning $update.error.message }
+        Set-RecordValue -Record $record -Name 'status' -Value 'failed'
+        Save-Record -Record $record
+        Write-Host "[loop] FAILED $taskId outcome=$outcome"
+        Write-Audit -RunId $RunId -Actor 'worker' -Action 'failed' -TaskId $taskId -DispatchId $record.dispatchId -Reason $outcome
+        return 'CONTINUE'
+    }
+
+    return Invoke-TaskDelivery -TaskId $taskId -Record $record
+}
+
+function Reconcile-CompletedTasks {
+    param([array]$Tasks)
+
+    if (-not $script:Dispatches -or $script:Dispatches.Count -eq 0) {
+        return $Tasks
+    }
+
+    $completed = @($Tasks | Where-Object { $_.status -eq 'completed' })
+    if ($completed.Count -eq 0) { return $Tasks }
+
+    foreach ($task in $completed) {
+        $record = Get-Record -TaskId $task.id
+        if (-not $record) {
+            Write-Warning "RECONCILE_NO_RECORD task=$($task.id)"
+            $update = Invoke-Orca orchestration task-update --from $coordinator --run $RunId --id $task.id --status blocked --result 'completed_sin_dispatch_local' --json
+            if (-not $update.ok) {
+                Write-Warning $update.error.message
+                $script:IntegrityBlocked = $true
+            }
+            Write-Audit -RunId $RunId -Actor 'loop' -Action 'blocked' -TaskId $task.id -Reason 'completed_sin_dispatch_local'
+            continue
+        }
+        if ($record.integrationSha -or $record.status -eq 'integrated') { continue }
+
+        Write-Output "[loop] RECONCILE task=$($task.id) completed sin integrar"
+        Write-Audit -RunId $RunId -Actor 'loop' -Action 'reconcile' -TaskId $task.id -DispatchId $record.dispatchId -Reason 'completed_sin_integracion'
+        $outcome = Invoke-TaskDelivery -TaskId $task.id -Record $record
+        if ($outcome -eq 'STOP') { break }
+    }
+
+    return @(Get-Tasks)
+}
+
+function Settle-SettledDispatches {
+    param([array]$Tasks)
+
+    $byTask = @{}
+    foreach ($task in $Tasks) { $byTask[$task.id] = $task }
+
+    foreach ($record in @($script:Dispatches)) {
+        if (-not $record.workerHandle) { continue }
+        $task = $byTask[$record.taskId]
+        $settled = $false
+
+        if ($record.integrationSha -or $record.status -eq 'integrated') {
+            $settled = $true
+        }
+        elseif ($task -and $task.status -in @('completed', 'failed', 'blocked')) {
+            $settled = $true
+        }
+        elseif ($record.dispatchId) {
+            $show = Get-OrcaWorkerShow -DispatchId $record.dispatchId
+            if ($show -and ([string]$show.dispatch.status) -in @('completed', 'failed', 'cancelled', 'settled')) {
+                if (-not $task -or $task.status -notin @('dispatched', 'changes_requested', 'ready')) {
+                    $settled = $true
+                }
+            }
+        }
+
+        if (-not $settled) { continue }
+        if ($script:ClosedTerminals[$record.workerHandle]) { continue }
+        if (Close-OrcaTerminal -Handle $record.workerHandle -Quiet) {
+            $script:ClosedTerminals[$record.workerHandle] = $true
+            Write-Output "TERMINAL_SETTLED=$($record.workerHandle) task=$($record.taskId)"
+            Write-Audit -RunId $RunId -Actor 'loop' -Action 'terminal-close' -TaskId $record.taskId -DispatchId $record.dispatchId -Terminal $record.workerHandle -Reason 'settled'
+        }
+    }
+}
+
+function Detect-RuntimeReverts {
+    param([array]$Tasks)
+
+    foreach ($task in @($Tasks | Where-Object { $_.status -eq 'ready' })) {
+        $record = Get-Record -TaskId $task.id
+        if (-not $record -or -not $record.dispatchId) { continue }
+        # Solo investigamos un dispatch que creiamos activo. Los estados que el
+        # propio bucle escribe (lost/stalled/changes_requested/ready) ya llevan
+        # su result y no son una reversion silenciosa del runtime.
+        if ($record.status -and $record.status -ne 'dispatched') { continue }
+
+        $show = Get-OrcaWorkerShow -DispatchId $record.dispatchId
+        if (-not $show) { continue }
+        $lastError = [string]$show.dispatch.lastError
+        $attention = ''
+        if ($show.projection.attention -and $show.projection.attention.categories) {
+            $attention = (@($show.projection.attention.categories) -join ',')
+        }
+        if ($lastError -match 'stop was requested|never confirmed|worker_identity_changed' -or $attention -match 'failure') {
+            $reason = if ($lastError) { $lastError } else { $attention }
+            $update = Invoke-Orca orchestration task-update --from $coordinator --run $RunId --id $task.id --status blocked --result "runtime_stop: $reason" --json
+            if (-not $update.ok) {
+                Write-Warning $update.error.message
+                $script:IntegrityBlocked = $true
+            }
+            Set-RecordValue -Record $record -Name 'status' -Value 'blocked'
+            Save-Record -Record $record
+            Write-Output "[loop] RUNTIME_STOP task=$($task.id): $reason"
+            Write-Audit -RunId $RunId -Actor 'orca' -Action 'blocked' -TaskId $task.id -DispatchId $record.dispatchId -Reason "runtime_stop: $reason"
+        }
+    }
 }
 
 function Resume-DeadDispatches {
@@ -506,27 +996,50 @@ function Resume-DeadDispatches {
         $record = Get-Record -TaskId $task.id
         if (-not $record -or -not $record.workerHandle) { continue }
 
-        $show = Invoke-Orca terminal show --terminal $record.workerHandle --json
-        $alive = $false
-        if ($show.ok -and $show.result -and $show.result.terminal) {
-            $alive = $show.result.terminal.connected -eq $true
-        }
-        if ($alive) { continue }
+        $show = Get-OrcaWorkerShow -DispatchId $record.dispatchId
+        $liveness = if ($show) { [string]$show.projection.liveness.verdict } else { 'unknown' }
+        $dispatchStatus = if ($show) { [string]$show.dispatch.status } else { 'unknown' }
 
-        Write-Output "RESUME_DEAD task=$($task.id) terminal=$($record.terminal)"
+        $terminal = $null
+        try {
+            $terminalResponse = Invoke-Orca terminal show --terminal $record.workerHandle --json
+            if ($terminalResponse.ok) { $terminal = $terminalResponse.result.terminal }
+        }
+        catch { }
+        $connected = [bool]($terminal -and $terminal.connected -eq $true)
+
+        if ($connected -and $liveness -ne 'dead' -and $dispatchStatus -notin @('failed', 'cancelled')) { continue }
+
+        $proven = ($liveness -eq 'dead') -or ($dispatchStatus -in @('failed', 'cancelled'))
+        if (-not $proven -and -not $connected -and $liveness -ne 'live' -and $show -and $show.dispatch.lastError) {
+            $proven = $true
+        }
+        if (-not $proven) {
+            Write-Output "RESUME_UNPROVEN task=$($task.id) liveness=$liveness dispatch=$dispatchStatus terminal_connected=$connected"
+            Write-Audit -RunId $RunId -Actor 'loop' -Action 'resume-unproven' -TaskId $task.id -DispatchId $record.dispatchId -Reason "liveness=$liveness dispatch=$dispatchStatus"
+            continue
+        }
+
+        $reason = if ($show -and $show.dispatch.lastError) { [string]$show.dispatch.lastError } else { "terminal_connected=$connected liveness=$liveness dispatch=$dispatchStatus" }
+        Write-Output "RESUME_DEAD task=$($task.id) terminal=$($record.terminal) reason=$reason"
         if ($record.dispatchId) {
             [void](Invoke-Orca orchestration worker-stop --dispatch $record.dispatchId --json)
         }
-        $update = Invoke-Orca orchestration task-update --from $coordinator --run $RunId --id $task.id --status ready --result 'resume_dead_worker' --json
+        [void](Close-OrcaTerminal -Handle $record.workerHandle -Quiet)
+
+        $update = Invoke-Orca orchestration task-update --from $coordinator --run $RunId --id $task.id --status ready --result "resume_dead_worker: $reason" --json
         if (-not $update.ok) {
             Write-Warning "No se pudo reabrir $($task.id) tras perder su terminal: $($update.error.message)"
             continue
         }
         Set-RecordValue -Record $record -Name 'status' -Value 'lost'
+        Set-RecordValue -Record $record -Name 'lastError' -Value $reason
         Save-Record -Record $record
+        Write-Audit -RunId $RunId -Actor 'loop' -Action 'resume-dead' -TaskId $task.id -DispatchId $record.dispatchId -Reason $reason
     }
 }
 
+Detect-RuntimeReverts -Tasks @(Get-Tasks)
 Resume-DeadDispatches
 
 $stopReason = $null
@@ -534,6 +1047,16 @@ $stopReason = $null
 while (-not $stopReason) {
     $tasks = @(Get-Tasks)
     if ($tasks.Count -eq 0) { $stopReason = 'EMPTY'; break }
+
+    # Una tarea completed solo es una entrega cuando tiene integrationSha.
+    # Reconciliar antes de contar evita que un worker_done sin taskId o un
+    # task-update manual salten review, commit e integracion.
+    Detect-RuntimeReverts -Tasks $tasks
+    $tasks = @(Get-Tasks)
+    $tasks = @(Reconcile-CompletedTasks -Tasks $tasks)
+    if ($script:IntegrityBlocked) { $stopReason = 'BLOCKED'; break }
+    Settle-SettledDispatches -Tasks $tasks
+
     Update-Watchdog -Tasks $tasks
     if ($script:WatchdogBlocked) { $stopReason = 'BLOCKED'; break }
     if ($script:WatchdogRestarted) {
@@ -586,9 +1109,12 @@ while (-not $stopReason) {
             break
         }
         if ($message.type -eq 'escalation') {
-            Write-Output "[loop] ESCALATION $($message.id): $($message.body)"
-            $stopReason = 'ESCALATION'
-            break
+            $escalationOutcome = Handle-Escalation -Message $message
+            if ($escalationOutcome -eq 'ESCALATION') {
+                $stopReason = 'ESCALATION'
+                break
+            }
+            continue
         }
         if ($message.type -eq 'worker_done') {
             $outcome = Handle-Done -Message $message

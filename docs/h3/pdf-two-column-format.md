@@ -1,4 +1,4 @@
-# Énfasis tipográfico inyectado en las ecuaciones del PDF (T2d)
+# Énfasis tipográfico inyectado en las ecuaciones del PDF (T2d, extendido en T2e)
 
 ## Objetivo
 
@@ -151,3 +151,122 @@ Python bold con `:=`, autores, tabla/head/bullet/indentado/código cercado,
 `d_model` preservado, marcadores flanqueados por alfanuméricos, reversión del
 invariante y un caso de integración con PDF sintético (ecuación en Times-Italic
 limpia sus `_`, la prosa sin operadores conserva los suyos).
+
+---
+
+## Bloques matemáticos y líneas de continuación (T2e)
+
+T2d limpiaba línea a línea: solo se limpiaban las líneas que llevan `=` o un glifo
+matemático propio, así que las líneas de continuación de una fórmula desplegada en
+dos columnas se quedaban con sus marcas. En `Attention Is All You Need`:
+
+```
+antes:   Attention( Q, K, V ) = softmax( [QK] √ [T]
+         (en blanco)
+         _dk_
+         (en blanco x3)
+         ) _V_ (1)
+```
+
+`_dk_` y `) _V_ (1)` no llevan `=` ni glifo: caían en líneas sueltas y permanecían,
+y la evaluación de cobertura no podía sostener la respuesta de la fórmula.
+
+### Diseño T2e (`pdf_math_clean.py`)
+
+- **Bloque matemático**: una línea matemática *fuerte* — con `=` o con un glifo
+  matemático distinto del punto medio — abre un bloque. Las líneas que siguen,
+  **también a través de las líneas en blanco** que pymupdf4llm deja entre los
+  fragmentos de una fórmula desplegada en dos columnas, son líneas de continuación
+  y se limpian cuando son fragmentos matemáticos puros.
+- **Línea de continuación**: se limpia solo si TODO par de marcadores de la línea
+  es un fragmento matemático y todo el texto fuera de los pares es cáscara
+  matemática (dígitos, corchetes/llaves/paréntesis, operadores planos, glifos,
+  espacios) sin puntuación de frase y sin palabras de prosa. Cualquier otra línea
+  no vacía — prosa de continuación, tabla, heading, bullet, código, una línea con
+  enlace — cierra el bloque y conserva su énfasis. Las líneas en blanco nunca
+  cierran un bloque: son los huecos verticales de la fórmula.
+- **Apertura fuerte (defensa contra la wiki)**: el punto medio cuenta como glifo
+  matemático para el predicado de línea (`pos/ 10000 · 2 π`), pero la wiki usa
+  `·` a inicio de línea como bullet (`·El helio pertenece al bloque`); esa línea
+  limpia sus propias marcas (comportamiento T2d intacto) pero NO abre bloque —
+  de lo contrario la `**s**` (la letra del bloque s) que le sigue se limpiaría
+  como si fuera un fragmento de fórmula. Detectado y corregido midiendo el corpus:
+  el diff pre/post en un mismo proceso mostró ese único falso positivo en
+  `wiki-Tabla_periódica_de_los_elementos.pdf`.
+- **Invariante T2d intacto**: mismo token-stream por página, con reversión entera
+  si falla. Reversiones en los 17 PDF: 0.
+
+### Antes / después (attention, conversión real)
+
+```
+antes:    Attention( Q, K, V ) = softmax( [QK] √ [T]
+          (en blanco)
+          _dk_
+          (en blanco x3)
+          ) _V_ (1)
+
+después:  Attention( Q, K, V ) = softmax( [QK] √ [T]
+          (en blanco)
+          dk
+          (en blanco x3)
+          ) V (1)
+```
+
+Concatenada, la fórmula queda sin `_` en ninguna de sus líneas:
+`Attention( Q, K, V ) = softmax( [QK] √ [T] dk ) V (1)`.
+
+Fragmentos multi-línea de la fórmula multi-head (sección 3.2.2):
+
+```
+antes:    where headi = Attention( QWi [Q]
+          (en blanco)
+          _[ K]_ _i_ _[, V W][ V]_ _i_
+          _[ V]_ _i_ [)]
+          _i_ _[Q][, KW][ K]_ _i_
+
+después:  where headi = Attention( QWi [Q]
+          (en blanco)
+          [ K] i [, V W][ V] i
+          [ V] i [)]
+          i [Q][, KW][ K] i
+```
+
+Los denominadores de las fracciones en prosa (`…scaling factor of √ 1 / _dk_…`,
+`…we scale the dot products by √ 1 / _dk_…`) también se limpian a `dk`.
+
+La prosa de continuación **no se toca**: `_dk_, the dot products grow large in
+magnitude…` y `Where the projections are parameter matrices _W_ _[Q]_` conservan
+sus marcas, igual que las 11 líneas de autores/etiquetas que T2d documentó.
+
+### Recuentos y SHAs tras T2e
+
+La delta de attention son exactamente 7 líneas (2 de la fórmula scaled
+dot-product, 3 de la multi-head, 2 denominadores); diff pre/post en un mismo
+proceso (`.orca-task/diff_all.py`): los otros 16 PDF byte-idénticos entre el
+comportamiento pre y el post.
+
+| archivo | bytes | SHA-256 | vs estado T2d |
+|---|---|---|---|
+| arxiv-attention | 42 420 → 42 394 | `dcff3ea5…c9d8a441` → `6af33cfe…3bd9c00` | cambia (objetivo T2e) |
+| arxiv-bert | 69 709 | `61066a97…` (variante ya documentada de su bimodalidad) | sin cambio de código |
+| otros 15 | idénticos | idénticos al baseline T0 (`evaluation/h3/pdf-legacy-baseline.json`) | sin cambio |
+
+Notas:
+
+- Copa Mundial: una pasada sin semilla fija mostró `8dbce921…`; es la bimodalidad
+  preexistente entre procesos (documentada desde T2d). Con la semilla del arnés
+  (`PYTHONHASHSEED=0`) ambas pasadas dan el SHA del baseline `14342a0f…2c77`.
+- Auditoría tras el cambio (2 pasadas del arnés con `--audit-json`):
+  `real_prose_words = 0`, `real_equation_lines = 0`, `missing_symbol_occurrences
+  = 0` en los 17 PDF; reversiones del invariante: 0.
+- Tiempo del arnés: 119.427 s (pasada 1) y 112.552 s (pasada 2) contra el baseline
+  127.872 s / 148.181 s: **−16 %** en total, muy por debajo del tope de +10 %.
+
+### Tests añadidos en T2e (6 nuevos, 17 en total)
+
+Fórmula multilínea con huecos en blanco (3 líneas cambiadas), prosa de
+continuación tras una ecuación (intacta), tabla tras una ecuación (cierra el
+bloque; la `**26.4**` posterior no se toca), heading tras una ecuación (cierra el
+bloque), líneas en blanco que tienden el bloque pero la prosa lo cierra, y los
+fragmentos multi-head con la línea de prosa conservando `_W_ _[Q]_`. Todos con
+aserto del token-stream.

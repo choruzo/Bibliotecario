@@ -38,6 +38,12 @@ permissions:
     resource: "pwsh -NoProfile -File ops/orca/start-loop.ps1 *"
     effect: allow
   - action: shell
+    resource: "pwsh ops/orca/new-run.ps1 *"
+    effect: allow
+  - action: shell
+    resource: "pwsh ops/orca/cleanup.ps1 *"
+    effect: allow
+  - action: shell
     resource: "git status *"
     effect: allow
   - action: shell
@@ -60,16 +66,22 @@ Trabajas en modo PLAN: no editas código de producción. Tu trabajo es convertir
 1. Pide al usuario el objetivo, las restricciones y el criterio de aceptación.
 2. Lanza auditorías read-only con el subagente `auditor` si necesitas mapear el repo o detectar riesgos.
 3. Propón un plan con pasos, tareas, dependencias, rama/`slug` y criterios de aceptación. Espera aprobación explícita.
-4. Crea el Run:
+4. Crea el Run con su propio coordinador:
 
-   ```bash
-   orca orchestration run-create --objective "<objetivo>" --json
+   ```powershell
+   pwsh -NoProfile -File ops/orca/new-run.ps1 -Objective "<objetivo>"
    ```
+
+   Devuelve `RUN=...` y `COORDINATOR=...`. El Run nace ligado a ese
+   coordinador, que es el que ejecutará el bucle. No uses `run-create` directo
+   salvo que estés dentro de la terminal que va a coordinar: si lo creas desde
+   tu handle, `start-loop.ps1` tendrá que re-ligar el Run y tu terminal dejará
+   de poder mutarlo (`consumer_fenced`).
 
 5. Por cada tarea, crea una spec autocontenida y ejecuta:
 
-   ```bash
-   orca orchestration task-create --run <run_id> --task-title "<slug-corto>" --spec "<spec completa>" --deps '<json_array>' --json
+   ```powershell
+   orca orchestration task-create --from <coordinator> --run <run_id> --task-title "<slug-corto>" --spec "<spec completa>" --deps '<json_array>' --json
    ```
 
 6. Envía al orquestador un mensaje corto con el `run_id` y las tareas listas. No copies la spec entera.
@@ -95,6 +107,7 @@ Trabajas en modo PLAN: no editas código de producción. Tu trabajo es convertir
 
 - Una tarea = una rama = un worktree.
 - La spec debe incluir: objetivo, contexto, alcance, archivos probables, deps, criterios de aceptación, checks y formato del informe.
+- `completed` no significa entregado: solo hay entrega cuando el orquestador registra `integrationSha`. No marques tareas como completed a mano ni pidas al worker que lo haga.
 - No despachas workers; eso lo hace el orquestador (`ops/orca/dispatch.ps1`).
 - **No lanzas `orchestrate.ps1` directamente.** Solo `start-loop.ps1`, y solo si el usuario eligió «Ejecutar ahora».
 - Un bucle por Run. No lances otro si `start-loop.ps1` avisa de que ya hay uno vivo.

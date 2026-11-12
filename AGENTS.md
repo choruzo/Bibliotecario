@@ -74,6 +74,8 @@ pwsh -NoProfile -File ops/orca/start-loop.ps1 -RunId run_... -MaxWorkers 2
   `.orca-run/loop-<run>.json` y log en `.orca-run/loop-<run>.log`.
 - Una tarea = una rama = un worktree = un writer. Maximo 3 subagentes por worker.
 - `worker_done` se envia una sola vez; el worker se detiene despues.
+- `completed` en Orca no es entrega: el bucle reconcilia y exige `integrationSha`.
+- El worker no ejecuta `task-update`, `git add` ni `git commit`.
 - Sin push/merge/rebase en workers. El push del lider requiere aprobacion.
 - `LOOP=QUESTION` (3): responder con `reply` y relanzar. `LOOP=BLOCKED` o
   `ESCALATION` (2): decidir con la evidencia. `stop-loop.ps1` detiene el runner y su arbol de procesos, pero no cancela
@@ -91,6 +93,29 @@ el asesor escala, se responde desde el panel o con `reply`.
 - `-AutoRepair` usa `worker-repair` con `glm5.3`; `advisor` usa `qwen3.8-max`.
 - `notify.ps1` avisa en `done`, `question`, `blocked`, `escalated`, `failed` y
   `stopped`; webhook opcional en `ORCA_NOTIFY_WEBHOOK`.
+
+
+## Integridad de entrega
+
+- `completed` en Orca solo significa «el worker reporto». Solo hay entrega
+  cuando `dispatches-<run>.json` tiene `integrationSha`.
+- Al inicio de cada vuelta, el bucle reconcilia las tareas `completed` sin
+  integrar: review -> commit -> integrate (`RECONCILE` en el log).
+- El worker no ejecuta `task-update`, `git add` ni `git commit`; el
+  orquestador es el unico que commitea e integra.
+- Cada Run tiene su coordinador (`coordinator-<run>.json`). `new-run.ps1` crea
+  el Run ya ligado a el. No compartas un coordinador entre dos bucles vivos:
+  el segundo expulsa al primero con `consumer_fenced`.
+- Las escalaciones se cualifican con `worker-show`: `ESCALATION_IGNORED` si el
+  dispatch esta settled o el worker sigue `live/working`; `ESCALATION_DEFER`
+  si es `unverifiable` (dos avisos >=30 s); `ESCALATION_WAITING` si hay
+  `agentWait`.
+- El watchdog no reinicia por tiempo: exige `liveness=dead` o dispatch
+  fallido. Si no hay prueba, deja `WATCHDOG_NO_PROOF`.
+- `cleanup.ps1` cierra todos los intentos, reintenta y soporta
+  `-Settled -RemoveWorktree -Force` y `-DryRun`.
+- `integrate.ps1` usa `setup-worktree.ps1`, pide `-Full` solo si el Run toca
+  `apps/web` y avanza `main` por fast-forward (`BASE_ADVANCED`).
 
 ## Modelos y claves
 
