@@ -44,10 +44,31 @@ permissions:
     resource: "pwsh ops/orca/cleanup.ps1 *"
     effect: allow
   - action: shell
+    resource: "pwsh -NoProfile -File ops/orca/cleanup.ps1 *"
+    effect: allow
+  - action: shell
     resource: "pwsh ops/orca/lesson.ps1 *"
     effect: allow
   - action: shell
+    resource: "pwsh -NoProfile -File ops/orca/lesson.ps1 *"
+    effect: allow
+  - action: shell
     resource: "pwsh ops/orca/harness-probe.ps1 *"
+    effect: allow
+  - action: shell
+    resource: "pwsh -NoProfile -File ops/orca/harness-probe.ps1 *"
+    effect: allow
+  - action: shell
+    resource: "git show-ref *"
+    effect: allow
+  - action: shell
+    resource: "git for-each-ref *"
+    effect: allow
+  - action: shell
+    resource: "git worktree list *"
+    effect: allow
+  - action: shell
+    resource: "git show *"
     effect: allow
   - action: shell
     resource: "git status *"
