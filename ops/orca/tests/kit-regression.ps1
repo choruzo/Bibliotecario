@@ -84,6 +84,12 @@ Assert-Contains (Join-Path $repoRoot 'ops\orca\task-template.md') '## Evidencia'
 Assert-Contains (Join-Path $repoRoot 'ops\orca\task-template.md') 'no cumple' 'la regla de evidencia debe ser explicita en la plantilla'
 Assert-Contains (Join-Path $repoRoot 'ops\orca\report-template.md') '## Evidencia' 'report-template debe tener el hueco para la evidencia'
 Assert-Contains (Join-Path $repoRoot '.opencode\agents\worker.md') '## Evidencia' 'worker debe saber que la seccion Evidencia es obligatoria'
+
+# Retro automatica (etapa 1 del roadmap de auto-mejoramiento, PRD 08).
+Assert-Contains (Join-Path $orcaDir 'harnessing-retro.ps1') 'RETRO_BRIEF' 'la retro debe componer el briefing de hipotesis'
+Assert-Contains (Join-Path $orcaDir 'harnessing-retro.ps1') 'CommissionEditor' 'la comision del editor debe ser opt-in'
+Assert-Contains (Join-Path $orcaDir 'lesson.ps1') 'if \(\$Confidence\) \{ \$childArgs' 'el scaffold multi-candidato no puede pasar -Confidence vacio (ValidateSet lo rechaza)'
+Assert-Contains (Join-Path $repoRoot '.opencode\agents\lider.md') 'harnessing-retro\.ps1' 'el lider debe ejecutar la retro al cierre del bucle'
 Assert-Contains (Join-Path $orcaDir 'harness-probe.ps1') "Action 'lesson-candidate'" 'el probe debe dejar marca para el flujo de lecciones'
 Assert-Contains (Join-Path $orcaDir 'harness-probe.ps1') 'review\.ps1' 'el contraste debe venir del verificador existente'
 $editor = Join-Path $repoRoot '.opencode\agents\harness-editor.md'

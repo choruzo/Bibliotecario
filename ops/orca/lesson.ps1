@@ -288,7 +288,14 @@ if (-not $TaskId) {
     $created = 0
     foreach ($candidate in $candidates) {
         if ($existing.ContainsKey($candidate)) { continue }
-        & $PSCommandPath -RunId $RunId -TaskId $candidate -Domain $Domain -StateDir $StateDir -LibraryDir $LibraryDir -Confidence:$Confidence -Force:$Force
+        # Splat condicional: ValidateSet de -Confidence rechaza cadenas vacias,
+        # y -StateDir/-LibraryDir vacios son validos (fallback dentro del hijo).
+        $childArgs = @('-NoProfile', '-File', $PSCommandPath, '-RunId', $RunId, '-TaskId', $candidate, '-Domain', $Domain)
+        if ($StateDir) { $childArgs += @('-StateDir', $StateDir) }
+        if ($LibraryDir) { $childArgs += @('-LibraryDir', $LibraryDir) }
+        if ($Confidence) { $childArgs += @('-Confidence', $Confidence) }
+        if ($Force) { $childArgs += '-Force' }
+        & pwsh @childArgs
         if ($LASTEXITCODE -eq 0) { $created++ }
     }
     Write-Output "LESSON_SCAFFOLD_RUN created=$created"
