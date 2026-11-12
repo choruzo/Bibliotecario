@@ -63,7 +63,10 @@ function Test-LoopAlive {
         return $true
     }
     if (-not $info) { return $true }
-    if (-not $info.CommandLine) { return $true }
+    if (-not $info.CommandLine) {
+        # Proceso zombie (cmdline vacia, visto tras stop-loop): no esta vivo.
+        return $false
+    }
     return ($info.CommandLine -match '(loop-runner|start-loop)\.ps1')
 }
 

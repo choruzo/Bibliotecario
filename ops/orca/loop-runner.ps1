@@ -80,6 +80,7 @@ if (-not (Test-Path $orchestrate)) {
 
 Write-LoopMeta -Status 'running'
 Set-Content -Path $LogPath -Value "=== LOOP $RunId $startedAt ===" -Encoding UTF8
+Write-Host "[runner] VariantDir=[$VariantDir] BaseBranch=[$BaseBranch] MaxWorkers=$MaxWorkers"
 
 $status = 'failed'
 $lastLine = ''

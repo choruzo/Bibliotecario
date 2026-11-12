@@ -23,6 +23,7 @@ $ErrorActionPreference = 'Stop'
 
 $coordinator = Get-Coordinator -RunId $RunId
 Bind-Run -RunId $RunId -Coordinator $coordinator
+Write-Host "[loop] VariantDir=[$VariantDir]"
 
 $script:Dispatches = @(Read-Dispatches -RunId $RunId)
 $script:Watchdog = @{}

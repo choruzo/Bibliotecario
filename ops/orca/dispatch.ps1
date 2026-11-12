@@ -18,6 +18,7 @@ param(
 
 $coordinator = Get-Coordinator -RunId $RunId
 Bind-Run -RunId $RunId -Coordinator $coordinator
+Write-Host "[dispatch] VariantDir=[$VariantDir]"
 $repoId = Get-RepoId
 $stateDir = Get-StateDir
 $dispatches = @(Read-Dispatches -RunId $RunId)
@@ -73,7 +74,10 @@ function Invoke-WorkerDispatch {
         }
         $worktreePath = $worktree.path -replace '/', '\'
 
-        & pwsh -NoProfile -File (Join-Path $PSScriptRoot 'setup-worktree.ps1') -Worktree $worktreePath
+        # Capturado: dentro de una funcion que devuelve el record, la salida del
+        # setup contaminaria el retorno (visto: DISPATCH_SUMMARY=2 con 1 tarea).
+        $setupOut = (& pwsh -NoProfile -File (Join-Path $PSScriptRoot 'setup-worktree.ps1') -Worktree $worktreePath 2>&1 | Out-String)
+        if ($setupOut.Trim()) { Write-Host $setupOut.TrimEnd() }
         if ($LASTEXITCODE -ne 0) { throw "Setup falló para $worktreePath" }
 
         if ($PrepareWorktree) {
