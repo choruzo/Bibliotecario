@@ -41,6 +41,9 @@ permissions:
     resource: "pwsh ops/orca/new-run.ps1 *"
     effect: allow
   - action: shell
+    resource: "pwsh -NoProfile -File ops/orca/new-run.ps1 *"
+    effect: allow
+  - action: shell
     resource: "pwsh ops/orca/cleanup.ps1 *"
     effect: allow
   - action: shell
