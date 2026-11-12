@@ -379,14 +379,26 @@ function Get-WorkerEvidence {
     $write = Get-LatestWriteUtc -Worktree $Record.worktree
     if ($write -and (-not $lastSignal -or $write -gt $lastSignal)) { $lastSignal = $write }
 
+    # Evidencia de sesion OpenCode (RF2.3): la actividad real del modelo es otra
+    # senal de vida. Solo suma, nunca mata: el reinicio sigue exigiendo prueba
+    # de muerte (liveness dead / dispatch failed) segun el contrato de Orca.
+    $sessionId = Get-OpenCodeSessionId -Worktree $Record.worktree
+    $sessionActivity = $null
+    if ($sessionId) {
+        $sessionActivity = Get-SessionActivityUtc -SessionId $sessionId
+        if ($sessionActivity -and (-not $lastSignal -or $sessionActivity -gt $lastSignal)) { $lastSignal = $sessionActivity }
+    }
+
     return [pscustomobject]@{
-        DispatchStatus = [string]$show.dispatch.status
-        Liveness       = [string]$show.projection.liveness.verdict
-        Activity       = [string]$show.projection.stage.activity
-        AgentWait      = $show.observation.agentWait
-        LastSignalUtc  = $lastSignal
-        LastError      = [string]$show.dispatch.lastError
-        Attention      = $show.projection.attention
+        DispatchStatus     = [string]$show.dispatch.status
+        Liveness           = [string]$show.projection.liveness.verdict
+        Activity           = [string]$show.projection.stage.activity
+        AgentWait          = $show.observation.agentWait
+        LastSignalUtc      = $lastSignal
+        LastError          = [string]$show.dispatch.lastError
+        Attention          = $show.projection.attention
+        SessionId          = $sessionId
+        SessionActivityUtc = $sessionActivity
     }
 }
 
@@ -447,9 +459,10 @@ function Update-Watchdog {
         # autorizan matar a un worker segun el contrato de Orca.
         $provenDead = $evidence -and ($evidence.Liveness -eq 'dead' -or $evidence.DispatchStatus -in @('failed', 'cancelled'))
         if (-not $provenDead) {
-            Write-Host "[loop] WATCHDOG_NO_PROOF task=$($task.id) minutes=$([int]$minutes) signal=$([int]$signalMinutes): no se reinicia"
+            $sessionMinutes = if ($evidence.SessionActivityUtc) { [int](($now - $evidence.SessionActivityUtc).TotalMinutes) } else { -1 }
+            Write-Host "[loop] WATCHDOG_NO_PROOF task=$($task.id) minutes=$([int]$minutes) signal=$([int]$signalMinutes) session=$($sessionMinutes): no se reinicia"
             $state.warnedAt = $now
-            Write-Audit -RunId $RunId -Actor 'loop' -Action 'watchdog-no-proof' -TaskId $task.id -DispatchId $record.dispatchId -Reason "liveness=$($evidence.Liveness) activity=$($evidence.Activity)"
+            Write-Audit -RunId $RunId -Actor 'loop' -Action 'watchdog-no-proof' -TaskId $task.id -DispatchId $record.dispatchId -Reason "liveness=$($evidence.Liveness) activity=$($evidence.Activity) session=$($sessionMinutes)"
             continue
         }
 

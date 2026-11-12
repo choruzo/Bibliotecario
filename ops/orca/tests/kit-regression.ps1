@@ -74,6 +74,11 @@ Assert-Contains $editor 'RATIONALE\.md' 'el editor debe justificar cada cambio c
 Assert-Contains $editor 'effect: deny' 'el editor debe tener permisos restrictivos'
 Assert-Contains (Join-Path $repoRoot '.opencode\agents\lider.md') 'harness-probe\.ps1' 'el lider debe poder lanzar probes de calibracion'
 
+# Evidencia de sesion para el watchdog (RF2.3, PRD docs/08-prd-harnessing.md).
+Assert-Contains (Join-Path $orcaDir 'worker-terminal.ps1') 'opencode-session\.json' 'worker-terminal debe registrar la sesion vigente para el watchdog'
+Assert-Contains (Join-Path $orcaDir 'lib.ps1') 'function Get-SessionActivityUtc' 'falta la senal de actividad de sesion'
+Assert-Contains (Join-Path $orcaDir 'orchestrate.ps1') 'SessionActivityUtc' 'el watchdog debe incorporar la actividad de sesion como senal'
+
 $worker = Join-Path $repoRoot '.opencode\agents\worker.md'
 Assert-Contains $worker 'orca orchestration task-update \*' 'worker debe denegar task-update'
 Assert-Contains $worker 'git commit \*' 'worker debe denegar git commit'

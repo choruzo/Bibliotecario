@@ -547,3 +547,52 @@ function Write-ProbeResultDir {
     }
     return $Dir
 }
+
+# --- Evidencia de sesion OpenCode (RF2.3, PRD docs/08-prd-harnessing.md) ---
+
+function Get-OpenCodeSessionId {
+    # El worker-terminal registra la sesion vigente en .orca-task del worktree.
+    # $null si no hay registro: la evidencia de sesion es opcional, nunca bloquea.
+    param([Parameter(Mandatory)][string]$Worktree)
+
+    $file = Join-Path $Worktree '.orca-task\opencode-session.json'
+    if (-not (Test-Path $file)) { return $null }
+    try {
+        $record = Get-Content $file -Raw -Encoding UTF8 | ConvertFrom-Json
+        if ($record.PSObject.Properties['sessionId'] -and $record.sessionId) { return [string]$record.sessionId }
+    }
+    catch { }
+    return $null
+}
+
+function Get-SessionActivityUtc {
+    # Actividad real de una sesion OpenCode via la API local: fecha UTC del ultimo
+    # mensaje. Acepta epoch ms (BD) o ISO (API). $null si la API no responde o la
+    # sesion no existe: una senal ausente nunca debe empeorar la decision del watchdog.
+    param([Parameter(Mandatory)][string]$SessionId)
+
+    try {
+        $raw = & opencode api GET "/api/session/$SessionId/message" 2>$null
+        if ($LASTEXITCODE -ne 0) { return $null }
+        $text = ($raw | Out-String).Trim()
+        if (-not $text) { return $null }
+        $payload = $text | ConvertFrom-Json -Depth 30
+        $messages = @()
+        if ($payload.PSObject.Properties['data'] -and $payload.data) { $messages = @($payload.data) }
+        elseif ($payload -is [array]) { $messages = @($payload) }
+        foreach ($message in $messages) {
+            $stamp = $null
+            if ($message.PSObject.Properties['time'] -and $message.time) {
+                if ($message.time.PSObject.Properties['streamed'] -and $message.time.streamed) { $stamp = $message.time.streamed }
+                elseif ($message.time.PSObject.Properties['created'] -and $message.time.created) { $stamp = $message.time.created }
+            }
+            if (-not $stamp) { continue }
+            if ($stamp -is [long] -or $stamp -is [int] -or ($stamp -match '^\d{10,}$')) {
+                return [DateTimeOffset]::FromUnixTimeMilliseconds([long]$stamp).UtcDateTime
+            }
+            try { return ([datetimeoffset]::Parse([string]$stamp)).UtcDateTime } catch { }
+        }
+    }
+    catch { }
+    return $null
+}

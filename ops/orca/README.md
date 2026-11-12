@@ -49,6 +49,7 @@ Esta carpeta implementa el ciclo de `docs/01-ciclo.md` usando **Orca como plano 
 | `tests/kit-regression.ps1` | Invariantes estáticos y sintaxis de todos los scripts. |
 | `tests/lesson.ps1` | Librería de lecciones: scaffold, `NO_ENTRY`, `-Validate` y `-Index` con estado sintético. |
 | `tests/harness-probe.ps1` | Variante válida/inválida, materialización y contraste A/B con casos sintéticos. |
+| `tests/session-evidence.ps1` | Registro de sesión del worker y degradación de la señal de sesión. |
 | `check.ps1` | Checks del repo (whitespace, tests/lint/typecheck si existen). |
 | `setup-worktree.ps1` | Setup idempotente del worktree. |
 | `PROTOCOL.md` | Contrato del worker. |
@@ -446,12 +447,18 @@ pwsh -NoProfile -File ops/orca/start-loop.ps1 -RunId run_... `
 ```
 
 - **Worker estancado** (`-AutoRecoverStalled`): el watchdog, tras
-  `-StallMinutes` (30), consulta `worker-show` y la última escritura del
-  worktree. Si el worker sigue vivo o hay señal reciente, no hace nada. Solo
+  `-StallMinutes` (30), consulta `worker-show`, la última escritura del
+  worktree y la **actividad real de la sesión OpenCode** (RF2.3: el terminal
+  registra la sesión vigente en `.orca-task/opencode-session.json` y el
+  watchdog la consulta por la API local; ver `Get-SessionActivityUtc`). Si el
+  worker sigue vivo o hay señal reciente, no hace nada. Solo
   reinicia cuando hay prueba (`liveness=dead` o dispatch fallido): para el
   dispatch, cierra su terminal, marca la tarea `ready` con `stalled_recovery` y
   deja que `dispatch.ps1` la re-despache. Máximo `-MaxStallRecoveries` (1);
-  después queda `blocked`. Silencio o `unverifiable` dejan `WATCHDOG_NO_PROOF`.
+  después queda `blocked`. Silencio o `unverifiable` dejan `WATCHDOG_NO_PROOF`
+  con la edad de la señal de sesión (`session=<min>`). La señal de sesión
+  **solo suma vida, nunca mata**: la actividad del modelo sin escrituras ni
+  heartbeats ya no parece estancamiento.
 - **Review agotada** (`-AutoRepair`): tras `MaxReviewRounds`, se crea un
   `worker-repair` (modelo `glm5.3`) en el mismo worktree, con presupuesto nuevo
   y los defectos; máximo `-MaxRepairRounds` (1). Después, `blocked`.
@@ -573,6 +580,11 @@ pwsh -NoProfile -File ops/orca/harness-probe.ps1 -SpecFile <spec.md> -VariantDir
 | Informes archivados antes de limpiar | `archive.ps1` + `cleanup.ps1` |
 
 ## Limitaciones actuales
+
+- `GET /api/config` del servidor OpenCode local devuelve las claves de API de
+  los proveedores en claro a cualquier cliente autenticado. El servidor solo
+  escucha en localhost y el panel exige token, pero tenlo en cuenta si das
+  acceso a la API a procesos no confiables.
 
 - Es un **piloto**, no un orquestador completo: el bucle de revisión/devolución es semiautomático.
 - El estado de negocio vive en Orca; `.orca-run/` solo guarda mappings y artefactos locales.
