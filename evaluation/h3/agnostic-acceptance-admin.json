@@ -9,10 +9,11 @@
   "improper_answers": 0,
   "unsupported_numbers": 0,
   "outcomes": {
-    "grounded": 27,
-    "grounded_extract": 1
+    "grounded": 26,
+    "grounded_extract": 2
   },
   "fallbacks": {
+    "unsupported_number:explanation": 1,
     "grounding_rejected:claim": 1
   },
   "by_kind": {
@@ -114,44 +115,44 @@
       "assessment": "answer",
       "score": 5.685432434082031,
       "policy_inherited": false,
-      "seconds": 8.0,
+      "seconds": 16.2,
       "chat_latency": {
-        "rewrite_ms": 0.82,
-        "generation_ms": 1081.1,
-        "verification_ms": 272.61,
-        "total_ms": 7966.48
+        "rewrite_ms": 0.61,
+        "generation_ms": 2311.0,
+        "verification_ms": 519.13,
+        "total_ms": 16048.67
       },
       "retrieval_latency": {
-        "embedding_ms": 36.04,
-        "search_ms": 112.61,
-        "fusion_ms": 39.3,
-        "reranking_ms": 531.59,
-        "sufficiency_ms": 5469.04
+        "embedding_ms": 39.31,
+        "search_ms": 186.88,
+        "fusion_ms": 43.24,
+        "reranking_ms": 1291.85,
+        "sufficiency_ms": 11480.76
       },
       "llm": {
         "calls": 4,
         "phases": {
           "intent": {
             "calls": 1,
-            "ms": 3082.9,
+            "ms": 6271.1,
             "prompt_tokens": 521,
             "completion_tokens": 6
           },
           "assessment": {
             "calls": 1,
-            "ms": 5466.8,
+            "ms": 11478.8,
             "prompt_tokens": 15386,
             "completion_tokens": 57
           },
           "generation": {
             "calls": 1,
-            "ms": 1080.4,
+            "ms": 2310.5,
             "prompt_tokens": 899,
             "completion_tokens": 32
           },
           "verification": {
             "calls": 1,
-            "ms": 272.5,
+            "ms": 519.0,
             "prompt_tokens": 400,
             "completion_tokens": 6
           }
@@ -174,45 +175,45 @@
       "assessment": "answer",
       "score": -0.38631999492645264,
       "policy_inherited": false,
-      "seconds": 7.9,
+      "seconds": 16.7,
       "chat_latency": {
-        "rewrite_ms": 0.58,
-        "generation_ms": 1044.36,
-        "verification_ms": 281.11,
-        "total_ms": 7810.05
+        "rewrite_ms": 0.61,
+        "generation_ms": 2492.28,
+        "verification_ms": 600.56,
+        "total_ms": 16601.09
       },
       "retrieval_latency": {
-        "embedding_ms": 34.13,
-        "search_ms": 174.22,
-        "fusion_ms": 184.86,
-        "reranking_ms": 510.94,
-        "sufficiency_ms": 5407.41
+        "embedding_ms": 38.84,
+        "search_ms": 120.33,
+        "fusion_ms": 282.94,
+        "reranking_ms": 1604.55,
+        "sufficiency_ms": 11265.6
       },
       "llm": {
         "calls": 4,
         "phases": {
           "intent": {
             "calls": 1,
-            "ms": 3082.6,
+            "ms": 6348.9,
             "prompt_tokens": 518,
             "completion_tokens": 6
           },
           "assessment": {
             "calls": 1,
-            "ms": 5405.8,
+            "ms": 11263.7,
             "prompt_tokens": 14951,
             "completion_tokens": 59
           },
           "generation": {
             "calls": 1,
-            "ms": 1043.7,
+            "ms": 2491.6,
             "prompt_tokens": 1207,
-            "completion_tokens": 30
+            "completion_tokens": 33
           },
           "verification": {
             "calls": 1,
-            "ms": 281.0,
-            "prompt_tokens": 728,
+            "ms": 600.4,
+            "prompt_tokens": 727,
             "completion_tokens": 6
           }
         }
@@ -234,45 +235,45 @@
       "assessment": "answer",
       "score": 4.704861640930176,
       "policy_inherited": false,
-      "seconds": 11.6,
+      "seconds": 24.8,
       "chat_latency": {
-        "rewrite_ms": 0.63,
-        "generation_ms": 3488.54,
-        "verification_ms": 294.95,
-        "total_ms": 11494.86
+        "rewrite_ms": 0.91,
+        "generation_ms": 7903.99,
+        "verification_ms": 649.91,
+        "total_ms": 24690.06
       },
       "retrieval_latency": {
-        "embedding_ms": 42.9,
-        "search_ms": 106.27,
-        "fusion_ms": 50.61,
-        "reranking_ms": 530.61,
-        "sufficiency_ms": 6743.02
+        "embedding_ms": 52.89,
+        "search_ms": 127.96,
+        "fusion_ms": 57.84,
+        "reranking_ms": 1587.74,
+        "sufficiency_ms": 14046.4
       },
       "llm": {
         "calls": 5,
         "phases": {
           "intent": {
             "calls": 1,
-            "ms": 3127.6,
+            "ms": 6268.3,
             "prompt_tokens": 523,
             "completion_tokens": 6
           },
           "assessment": {
             "calls": 1,
-            "ms": 6741.4,
+            "ms": 14044.8,
             "prompt_tokens": 15453,
             "completion_tokens": 97
           },
           "generation": {
             "calls": 1,
-            "ms": 3487.9,
+            "ms": 7903.1,
             "prompt_tokens": 1413,
-            "completion_tokens": 112
+            "completion_tokens": 120
           },
           "verification": {
             "calls": 2,
-            "ms": 560.5,
-            "prompt_tokens": 774,
+            "ms": 1227.0,
+            "prompt_tokens": 782,
             "completion_tokens": 12
           }
         }
@@ -294,45 +295,45 @@
       "assessment": "answer",
       "score": 3.1749799251556396,
       "policy_inherited": false,
-      "seconds": 8.3,
+      "seconds": 17.5,
       "chat_latency": {
-        "rewrite_ms": 0.66,
-        "generation_ms": 1888.01,
-        "verification_ms": 238.95,
-        "total_ms": 8182.48
+        "rewrite_ms": 0.64,
+        "generation_ms": 4206.76,
+        "verification_ms": 508.86,
+        "total_ms": 17400.75
       },
       "retrieval_latency": {
-        "embedding_ms": 41.29,
-        "search_ms": 107.91,
-        "fusion_ms": 87.11,
-        "reranking_ms": 493.57,
-        "sufficiency_ms": 5096.07
+        "embedding_ms": 43.55,
+        "search_ms": 117.73,
+        "fusion_ms": 95.6,
+        "reranking_ms": 1515.47,
+        "sufficiency_ms": 10741.98
       },
       "llm": {
         "calls": 4,
         "phases": {
           "intent": {
             "calls": 1,
-            "ms": 3078.1,
+            "ms": 6266.4,
             "prompt_tokens": 522,
             "completion_tokens": 6
           },
           "assessment": {
             "calls": 1,
-            "ms": 5094.5,
+            "ms": 10738.9,
             "prompt_tokens": 13966,
             "completion_tokens": 59
           },
           "generation": {
             "calls": 1,
-            "ms": 1887.4,
+            "ms": 4206.1,
             "prompt_tokens": 947,
-            "completion_tokens": 61
+            "completion_tokens": 65
           },
           "verification": {
             "calls": 1,
-            "ms": 238.8,
-            "prompt_tokens": 453,
+            "ms": 508.7,
+            "prompt_tokens": 457,
             "completion_tokens": 6
           }
         }
@@ -348,60 +349,51 @@
       "status": "completed",
       "chat_outcome": {
         "status": "completed",
-        "reason": "grounded_extract",
-        "fallback": {
-          "reason": "grounding_rejected",
-          "detail": {
-            "supported": false,
-            "claims": 2,
-            "rejected": [
-              2
-            ]
-          }
-        }
+        "reason": "grounded"
       },
       "decision": "calibrated_score",
       "assessment": "answer",
       "score": 4.308906555175781,
       "policy_inherited": false,
-      "seconds": 12.2,
+      "seconds": 25.7,
       "chat_latency": {
-        "rewrite_ms": 0.63,
-        "generation_ms": 3638.59,
-        "total_ms": 12144.01
+        "rewrite_ms": 0.65,
+        "generation_ms": 7720.35,
+        "verification_ms": 692.89,
+        "total_ms": 25571.53
       },
       "retrieval_latency": {
-        "embedding_ms": 40.59,
-        "search_ms": 112.36,
-        "fusion_ms": 80.81,
-        "reranking_ms": 503.12,
-        "sufficiency_ms": 7262.69
+        "embedding_ms": 47.84,
+        "search_ms": 200.33,
+        "fusion_ms": 88.04,
+        "reranking_ms": 1416.1,
+        "sufficiency_ms": 15238.68
       },
       "llm": {
         "calls": 5,
         "phases": {
           "intent": {
             "calls": 1,
-            "ms": 3078.1,
+            "ms": 6285.7,
             "prompt_tokens": 522,
             "completion_tokens": 6
           },
           "assessment": {
             "calls": 1,
-            "ms": 7261.1,
+            "ms": 15236.8,
             "prompt_tokens": 14584,
             "completion_tokens": 124
           },
           "generation": {
             "calls": 1,
-            "ms": 3637.9,
+            "ms": 7719.6,
             "prompt_tokens": 1779,
-            "completion_tokens": 117
+            "completion_tokens": 115
           },
           "verification": {
             "calls": 2,
-            "ms": 676.5,
-            "prompt_tokens": 1127,
+            "ms": 1384.4,
+            "prompt_tokens": 1125,
             "completion_tokens": 12
           }
         }
@@ -423,44 +415,44 @@
       "assessment": "answer",
       "score": 1.759958267211914,
       "policy_inherited": false,
-      "seconds": 8.5,
+      "seconds": 17.1,
       "chat_latency": {
-        "rewrite_ms": 0.56,
-        "generation_ms": 1536.41,
-        "verification_ms": 278.2,
-        "total_ms": 8453.4
+        "rewrite_ms": 0.64,
+        "generation_ms": 3318.28,
+        "verification_ms": 599.29,
+        "total_ms": 16989.15
       },
       "retrieval_latency": {
-        "embedding_ms": 39.07,
-        "search_ms": 182.12,
-        "fusion_ms": 91.84,
-        "reranking_ms": 520.47,
-        "sufficiency_ms": 5648.83
+        "embedding_ms": 42.63,
+        "search_ms": 109.92,
+        "fusion_ms": 93.87,
+        "reranking_ms": 1345.97,
+        "sufficiency_ms": 11214.22
       },
       "llm": {
         "calls": 4,
         "phases": {
           "intent": {
             "calls": 1,
-            "ms": 3092.5,
+            "ms": 5863.6,
             "prompt_tokens": 524,
             "completion_tokens": 6
           },
           "assessment": {
             "calls": 1,
-            "ms": 5647.1,
+            "ms": 11212.5,
             "prompt_tokens": 15940,
             "completion_tokens": 56
           },
           "generation": {
             "calls": 1,
-            "ms": 1535.8,
+            "ms": 3317.5,
             "prompt_tokens": 1143,
             "completion_tokens": 48
           },
           "verification": {
             "calls": 1,
-            "ms": 278.1,
+            "ms": 599.1,
             "prompt_tokens": 658,
             "completion_tokens": 6
           }
@@ -483,45 +475,45 @@
       "assessment": "answer",
       "score": 6.414032936096191,
       "policy_inherited": false,
-      "seconds": 9.5,
+      "seconds": 17.9,
       "chat_latency": {
-        "rewrite_ms": 0.58,
-        "generation_ms": 2046.62,
-        "verification_ms": 299.9,
-        "total_ms": 9467.11
+        "rewrite_ms": 0.82,
+        "generation_ms": 3126.15,
+        "verification_ms": 645.1,
+        "total_ms": 17797.99
       },
       "retrieval_latency": {
-        "embedding_ms": 40.29,
-        "search_ms": 106.82,
-        "fusion_ms": 128.78,
-        "reranking_ms": 523.55,
-        "sufficiency_ms": 6094.05
+        "embedding_ms": 39.94,
+        "search_ms": 110.84,
+        "fusion_ms": 136.12,
+        "reranking_ms": 1298.53,
+        "sufficiency_ms": 12039.77
       },
       "llm": {
         "calls": 4,
         "phases": {
           "intent": {
             "calls": 1,
-            "ms": 3108.5,
+            "ms": 6100.6,
             "prompt_tokens": 526,
             "completion_tokens": 6
           },
           "assessment": {
             "calls": 1,
-            "ms": 6092.5,
+            "ms": 12037.8,
             "prompt_tokens": 16724,
             "completion_tokens": 61
           },
           "generation": {
             "calls": 1,
-            "ms": 2046.0,
+            "ms": 3125.5,
             "prompt_tokens": 1330,
-            "completion_tokens": 64
+            "completion_tokens": 43
           },
           "verification": {
             "calls": 1,
-            "ms": 299.8,
-            "prompt_tokens": 825,
+            "ms": 645.0,
+            "prompt_tokens": 826,
             "completion_tokens": 6
           }
         }
@@ -543,46 +535,46 @@
       "assessment": "answer",
       "score": 5.102507591247559,
       "policy_inherited": false,
-      "seconds": 9.6,
+      "seconds": 24.4,
       "chat_latency": {
-        "rewrite_ms": 0.87,
-        "generation_ms": 1657.64,
-        "verification_ms": 236.28,
-        "total_ms": 9477.48
+        "rewrite_ms": 0.66,
+        "generation_ms": 7268.75,
+        "verification_ms": 609.34,
+        "total_ms": 24374.3
       },
       "retrieval_latency": {
-        "embedding_ms": 43.88,
-        "search_ms": 111.81,
-        "fusion_ms": 97.02,
-        "reranking_ms": 565.86,
-        "sufficiency_ms": 6511.0
+        "embedding_ms": 44.25,
+        "search_ms": 112.34,
+        "fusion_ms": 99.21,
+        "reranking_ms": 1622.86,
+        "sufficiency_ms": 14424.6
       },
       "llm": {
-        "calls": 4,
+        "calls": 5,
         "phases": {
           "intent": {
             "calls": 1,
-            "ms": 3087.7,
+            "ms": 8632.7,
             "prompt_tokens": 524,
             "completion_tokens": 6
           },
           "assessment": {
             "calls": 1,
-            "ms": 6509.2,
+            "ms": 14422.9,
             "prompt_tokens": 16362,
-            "completion_tokens": 80
+            "completion_tokens": 95
           },
           "generation": {
             "calls": 1,
-            "ms": 1657.0,
-            "prompt_tokens": 863,
-            "completion_tokens": 54
+            "ms": 7268.0,
+            "prompt_tokens": 1478,
+            "completion_tokens": 107
           },
           "verification": {
-            "calls": 1,
-            "ms": 236.2,
-            "prompt_tokens": 363,
-            "completion_tokens": 6
+            "calls": 2,
+            "ms": 1216.9,
+            "prompt_tokens": 810,
+            "completion_tokens": 12
           }
         }
       },
@@ -603,45 +595,45 @@
       "assessment": "answer",
       "score": 0.029485806822776794,
       "policy_inherited": false,
-      "seconds": 9.6,
+      "seconds": 20.3,
       "chat_latency": {
-        "rewrite_ms": 0.55,
-        "generation_ms": 2039.89,
-        "verification_ms": 300.6,
-        "total_ms": 9532.05
+        "rewrite_ms": 0.61,
+        "generation_ms": 4661.3,
+        "verification_ms": 591.47,
+        "total_ms": 20186.41
       },
       "retrieval_latency": {
-        "embedding_ms": 33.96,
-        "search_ms": 109.3,
-        "fusion_ms": 42.93,
-        "reranking_ms": 499.29,
-        "sufficiency_ms": 6358.14
+        "embedding_ms": 39.52,
+        "search_ms": 109.54,
+        "fusion_ms": 44.77,
+        "reranking_ms": 1330.55,
+        "sufficiency_ms": 13236.15
       },
       "llm": {
         "calls": 5,
         "phases": {
           "intent": {
             "calls": 1,
-            "ms": 3084.2,
+            "ms": 7449.7,
             "prompt_tokens": 518,
             "completion_tokens": 6
           },
           "assessment": {
             "calls": 1,
-            "ms": 6356.4,
+            "ms": 13234.3,
             "prompt_tokens": 14248,
             "completion_tokens": 97
           },
           "generation": {
             "calls": 1,
-            "ms": 2039.2,
+            "ms": 4660.8,
             "prompt_tokens": 1469,
-            "completion_tokens": 63
+            "completion_tokens": 67
           },
           "verification": {
             "calls": 2,
-            "ms": 575.1,
-            "prompt_tokens": 814,
+            "ms": 1181.6,
+            "prompt_tokens": 818,
             "completion_tokens": 12
           }
         }
@@ -661,46 +653,46 @@
       },
       "decision": "calibrated_score",
       "assessment": "answer",
-      "score": 1.9498947858810425,
+      "score": 1.9581513404846191,
       "policy_inherited": false,
-      "seconds": 7.2,
+      "seconds": 14.8,
       "chat_latency": {
-        "rewrite_ms": 0.65,
-        "generation_ms": 1390.07,
-        "verification_ms": 241.23,
-        "total_ms": 7158.6
+        "rewrite_ms": 0.67,
+        "generation_ms": 2833.71,
+        "verification_ms": 490.44,
+        "total_ms": 14702.25
       },
       "retrieval_latency": {
-        "embedding_ms": 47.76,
-        "search_ms": 176.73,
-        "fusion_ms": 75.86,
-        "reranking_ms": 467.69,
-        "sufficiency_ms": 4568.52
+        "embedding_ms": 48.19,
+        "search_ms": 115.7,
+        "fusion_ms": 77.29,
+        "reranking_ms": 1260.4,
+        "sufficiency_ms": 9648.97
       },
       "llm": {
         "calls": 4,
         "phases": {
           "intent": {
             "calls": 1,
-            "ms": 2951.1,
+            "ms": 5947.9,
             "prompt_tokens": 526,
             "completion_tokens": 6
           },
           "assessment": {
             "calls": 1,
-            "ms": 4566.6,
-            "prompt_tokens": 12504,
-            "completion_tokens": 56
+            "ms": 9647.3,
+            "prompt_tokens": 12498,
+            "completion_tokens": 57
           },
           "generation": {
             "calls": 1,
-            "ms": 1389.3,
+            "ms": 2833.0,
             "prompt_tokens": 906,
-            "completion_tokens": 44
+            "completion_tokens": 41
           },
           "verification": {
             "calls": 1,
-            "ms": 241.1,
+            "ms": 490.3,
             "prompt_tokens": 413,
             "completion_tokens": 6
           }
@@ -723,44 +715,44 @@
       "assessment": "answer",
       "score": 6.270615577697754,
       "policy_inherited": false,
-      "seconds": 8.2,
+      "seconds": 15.7,
       "chat_latency": {
-        "rewrite_ms": 0.7,
-        "generation_ms": 1590.92,
-        "verification_ms": 251.11,
-        "total_ms": 8134.51
+        "rewrite_ms": 0.68,
+        "generation_ms": 2280.64,
+        "verification_ms": 518.1,
+        "total_ms": 15588.86
       },
       "retrieval_latency": {
-        "embedding_ms": 37.53,
-        "search_ms": 108.73,
-        "fusion_ms": 44.3,
-        "reranking_ms": 512.31,
-        "sufficiency_ms": 5351.53
+        "embedding_ms": 44.97,
+        "search_ms": 110.05,
+        "fusion_ms": 48.37,
+        "reranking_ms": 1395.46,
+        "sufficiency_ms": 10964.0
       },
       "llm": {
         "calls": 4,
         "phases": {
           "intent": {
             "calls": 1,
-            "ms": 3082.8,
+            "ms": 6143.3,
             "prompt_tokens": 521,
             "completion_tokens": 6
           },
           "assessment": {
             "calls": 1,
-            "ms": 5349.9,
+            "ms": 10962.1,
             "prompt_tokens": 14840,
             "completion_tokens": 58
           },
           "generation": {
             "calls": 1,
-            "ms": 1590.3,
+            "ms": 2280.0,
             "prompt_tokens": 960,
-            "completion_tokens": 51
+            "completion_tokens": 33
           },
           "verification": {
             "calls": 1,
-            "ms": 251.0,
+            "ms": 518.0,
             "prompt_tokens": 462,
             "completion_tokens": 6
           }
@@ -783,45 +775,45 @@
       "assessment": "answer",
       "score": 7.783975601196289,
       "policy_inherited": false,
-      "seconds": 13.3,
+      "seconds": 27.2,
       "chat_latency": {
-        "rewrite_ms": 0.57,
-        "generation_ms": 4476.71,
-        "verification_ms": 348.88,
-        "total_ms": 13277.08
+        "rewrite_ms": 0.7,
+        "generation_ms": 9439.73,
+        "verification_ms": 562.52,
+        "total_ms": 27067.21
       },
       "retrieval_latency": {
-        "embedding_ms": 44.89,
-        "search_ms": 111.56,
-        "fusion_ms": 166.76,
-        "reranking_ms": 480.59,
-        "sufficiency_ms": 7392.44
+        "embedding_ms": 47.82,
+        "search_ms": 117.42,
+        "fusion_ms": 183.92,
+        "reranking_ms": 1239.97,
+        "sufficiency_ms": 15218.96
       },
       "llm": {
         "calls": 6,
         "phases": {
           "intent": {
             "calls": 1,
-            "ms": 3079.3,
+            "ms": 5909.2,
             "prompt_tokens": 523,
             "completion_tokens": 6
           },
           "assessment": {
             "calls": 1,
-            "ms": 7390.6,
+            "ms": 15217.3,
             "prompt_tokens": 13786,
             "completion_tokens": 137
           },
           "generation": {
             "calls": 1,
-            "ms": 4476.1,
+            "ms": 9438.9,
             "prompt_tokens": 1997,
-            "completion_tokens": 143
+            "completion_tokens": 139
           },
           "verification": {
             "calls": 3,
-            "ms": 1014.9,
-            "prompt_tokens": 1122,
+            "ms": 1683.4,
+            "prompt_tokens": 1118,
             "completion_tokens": 18
           }
         }
@@ -843,45 +835,45 @@
       "assessment": "answer",
       "score": 6.511028289794922,
       "policy_inherited": false,
-      "seconds": 11.8,
+      "seconds": 24.0,
       "chat_latency": {
-        "rewrite_ms": 0.7,
-        "generation_ms": 4918.89,
-        "verification_ms": 322.89,
-        "total_ms": 11699.98
+        "rewrite_ms": 0.68,
+        "generation_ms": 9807.55,
+        "verification_ms": 633.22,
+        "total_ms": 23928.33
       },
       "retrieval_latency": {
-        "embedding_ms": 52.91,
-        "search_ms": 111.27,
-        "fusion_ms": 83.36,
-        "reranking_ms": 405.28,
-        "sufficiency_ms": 5650.6
+        "embedding_ms": 52.57,
+        "search_ms": 110.69,
+        "fusion_ms": 92.7,
+        "reranking_ms": 1122.3,
+        "sufficiency_ms": 11925.41
       },
       "llm": {
         "calls": 5,
         "phases": {
           "intent": {
             "calls": 1,
-            "ms": 2840.2,
+            "ms": 5798.0,
             "prompt_tokens": 526,
             "completion_tokens": 6
           },
           "assessment": {
             "calls": 1,
-            "ms": 5648.9,
+            "ms": 11923.7,
             "prompt_tokens": 12069,
             "completion_tokens": 96
           },
           "generation": {
             "calls": 1,
-            "ms": 4917.9,
+            "ms": 9806.9,
             "prompt_tokens": 1506,
-            "completion_tokens": 163
+            "completion_tokens": 152
           },
           "verification": {
             "calls": 2,
-            "ms": 617.4,
-            "prompt_tokens": 911,
+            "ms": 1265.0,
+            "prompt_tokens": 908,
             "completion_tokens": 12
           }
         }
@@ -903,44 +895,44 @@
       "assessment": "answer",
       "score": 4.284306049346924,
       "policy_inherited": false,
-      "seconds": 6.8,
+      "seconds": 14.2,
       "chat_latency": {
-        "rewrite_ms": 0.57,
-        "generation_ms": 963.64,
-        "verification_ms": 261.4,
-        "total_ms": 6689.39
+        "rewrite_ms": 0.65,
+        "generation_ms": 2369.52,
+        "verification_ms": 511.64,
+        "total_ms": 14164.15
       },
       "retrieval_latency": {
-        "embedding_ms": 39.67,
-        "search_ms": 173.72,
-        "fusion_ms": 60.64,
-        "reranking_ms": 408.42,
-        "sufficiency_ms": 4632.36
+        "embedding_ms": 40.97,
+        "search_ms": 107.8,
+        "fusion_ms": 148.52,
+        "reranking_ms": 1194.06,
+        "sufficiency_ms": 9639.58
       },
       "llm": {
         "calls": 4,
         "phases": {
           "intent": {
             "calls": 1,
-            "ms": 3087.6,
+            "ms": 6311.1,
             "prompt_tokens": 523,
             "completion_tokens": 6
           },
           "assessment": {
             "calls": 1,
-            "ms": 4630.4,
+            "ms": 9638.0,
             "prompt_tokens": 13005,
             "completion_tokens": 52
           },
           "generation": {
             "calls": 1,
-            "ms": 962.9,
+            "ms": 2368.8,
             "prompt_tokens": 930,
-            "completion_tokens": 29
+            "completion_tokens": 33
           },
           "verification": {
             "calls": 1,
-            "ms": 261.2,
+            "ms": 511.5,
             "prompt_tokens": 439,
             "completion_tokens": 6
           }
@@ -963,53 +955,53 @@
       "assessment": "answer",
       "score": 2.680168867111206,
       "policy_inherited": false,
-      "seconds": 8.1,
+      "seconds": 16.8,
       "chat_latency": {
-        "rewrite_ms": 416.62,
-        "translation_ms": 415.84,
-        "generation_ms": 1563.82,
-        "verification_ms": 238.5,
-        "total_ms": 8062.91
+        "rewrite_ms": 657.73,
+        "translation_ms": 657.01,
+        "generation_ms": 3590.78,
+        "verification_ms": 519.02,
+        "total_ms": 16760.93
       },
       "retrieval_latency": {
-        "embedding_ms": 36.98,
-        "search_ms": 112.51,
-        "fusion_ms": 66.93,
-        "reranking_ms": 446.63,
-        "sufficiency_ms": 4911.8,
-        "translation_ms": 415.84
+        "embedding_ms": 41.7,
+        "search_ms": 131.18,
+        "fusion_ms": 71.1,
+        "reranking_ms": 1529.37,
+        "sufficiency_ms": 9952.94,
+        "translation_ms": 657.01
       },
       "llm": {
         "calls": 5,
         "phases": {
           "translation": {
             "calls": 1,
-            "ms": 415.8,
+            "ms": 656.9,
             "prompt_tokens": 117,
             "completion_tokens": 10
           },
           "intent": {
             "calls": 1,
-            "ms": 3092.1,
+            "ms": 6357.2,
             "prompt_tokens": 518,
             "completion_tokens": 6
           },
           "assessment": {
             "calls": 1,
-            "ms": 4910.2,
-            "prompt_tokens": 13120,
-            "completion_tokens": 60
+            "ms": 9951.2,
+            "prompt_tokens": 13229,
+            "completion_tokens": 54
           },
           "generation": {
             "calls": 1,
-            "ms": 1563.2,
-            "prompt_tokens": 935,
-            "completion_tokens": 50
+            "ms": 3590.1,
+            "prompt_tokens": 926,
+            "completion_tokens": 54
           },
           "verification": {
             "calls": 1,
-            "ms": 238.4,
-            "prompt_tokens": 442,
+            "ms": 518.9,
+            "prompt_tokens": 446,
             "completion_tokens": 6
           }
         }
@@ -1029,55 +1021,55 @@
       },
       "decision": "calibrated_score",
       "assessment": "answer",
-      "score": 6.963698863983154,
+      "score": 6.95557975769043,
       "policy_inherited": false,
-      "seconds": 8.5,
+      "seconds": 17.6,
       "chat_latency": {
-        "rewrite_ms": 356.4,
-        "translation_ms": 355.82,
-        "generation_ms": 1430.35,
-        "verification_ms": 278.37,
-        "total_ms": 8444.0
+        "rewrite_ms": 677.36,
+        "translation_ms": 676.69,
+        "generation_ms": 2982.14,
+        "verification_ms": 646.19,
+        "total_ms": 17383.6
       },
       "retrieval_latency": {
-        "embedding_ms": 36.72,
-        "search_ms": 106.7,
-        "fusion_ms": 40.95,
-        "reranking_ms": 517.04,
-        "sufficiency_ms": 5449.61,
-        "translation_ms": 355.82
+        "embedding_ms": 38.34,
+        "search_ms": 109.62,
+        "fusion_ms": 44.06,
+        "reranking_ms": 1317.32,
+        "sufficiency_ms": 11407.99,
+        "translation_ms": 676.69
       },
       "llm": {
         "calls": 5,
         "phases": {
           "translation": {
             "calls": 1,
-            "ms": 355.8,
+            "ms": 676.6,
             "prompt_tokens": 116,
             "completion_tokens": 10
           },
           "intent": {
             "calls": 1,
-            "ms": 3089.0,
+            "ms": 6357.8,
             "prompt_tokens": 518,
             "completion_tokens": 6
           },
           "assessment": {
             "calls": 1,
-            "ms": 5448.0,
+            "ms": 11406.3,
             "prompt_tokens": 15209,
             "completion_tokens": 57
           },
           "generation": {
             "calls": 1,
-            "ms": 1429.7,
+            "ms": 2981.5,
             "prompt_tokens": 893,
-            "completion_tokens": 46
+            "completion_tokens": 45
           },
           "verification": {
             "calls": 1,
-            "ms": 278.3,
-            "prompt_tokens": 397,
+            "ms": 646.1,
+            "prompt_tokens": 396,
             "completion_tokens": 6
           }
         }
@@ -1099,30 +1091,30 @@
       "assessment": "abstain",
       "score": -0.7772923707962036,
       "policy_inherited": null,
-      "seconds": 4.5,
+      "seconds": 8.9,
       "chat_latency": {
-        "rewrite_ms": 0.56,
-        "total_ms": 4418.5
+        "rewrite_ms": 0.71,
+        "total_ms": 8830.92
       },
       "retrieval_latency": {
-        "embedding_ms": 44.01,
-        "search_ms": 110.63,
-        "fusion_ms": 42.15,
-        "reranking_ms": 474.48,
-        "sufficiency_ms": 3612.04
+        "embedding_ms": 41.62,
+        "search_ms": 184.57,
+        "fusion_ms": 46.9,
+        "reranking_ms": 1912.91,
+        "sufficiency_ms": 6533.4
       },
       "llm": {
         "calls": 2,
         "phases": {
           "intent": {
             "calls": 1,
-            "ms": 3024.7,
+            "ms": 5262.7,
             "prompt_tokens": 521,
             "completion_tokens": 6
           },
           "assessment": {
             "calls": 1,
-            "ms": 3610.4,
+            "ms": 6531.5,
             "prompt_tokens": 12627,
             "completion_tokens": 21
           }
@@ -1145,24 +1137,24 @@
       "assessment": "clarify",
       "score": -1.079140067100525,
       "policy_inherited": null,
-      "seconds": 5.0,
+      "seconds": 9.9,
       "chat_latency": {
-        "rewrite_ms": 0.58,
-        "total_ms": 4920.02
+        "rewrite_ms": 0.64,
+        "total_ms": 9841.42
       },
       "retrieval_latency": {
-        "embedding_ms": 36.82,
-        "search_ms": 109.74,
-        "fusion_ms": 39.88,
-        "reranking_ms": 523.96,
-        "sufficiency_ms": 4020.11
+        "embedding_ms": 42.56,
+        "search_ms": 111.62,
+        "fusion_ms": 37.37,
+        "reranking_ms": 1300.48,
+        "sufficiency_ms": 8231.69
       },
       "llm": {
         "calls": 2,
         "phases": {
           "intent": {
             "calls": 2,
-            "ms": 4019.3,
+            "ms": 8230.5,
             "prompt_tokens": 1120,
             "completion_tokens": 12
           }
@@ -1187,24 +1179,24 @@
       "assessment": "clarify",
       "score": -1.2391849756240845,
       "policy_inherited": null,
-      "seconds": 4.5,
+      "seconds": 8.2,
       "chat_latency": {
-        "rewrite_ms": 0.63,
-        "total_ms": 4385.64
+        "rewrite_ms": 0.77,
+        "total_ms": 8066.96
       },
       "retrieval_latency": {
-        "embedding_ms": 44.13,
-        "search_ms": 111.02,
-        "fusion_ms": 137.29,
-        "reranking_ms": 503.61,
-        "sufficiency_ms": 3471.22
+        "embedding_ms": 45.74,
+        "search_ms": 190.09,
+        "fusion_ms": 141.73,
+        "reranking_ms": 1244.66,
+        "sufficiency_ms": 6310.91
       },
       "llm": {
         "calls": 2,
         "phases": {
           "intent": {
             "calls": 2,
-            "ms": 3470.5,
+            "ms": 6309.8,
             "prompt_tokens": 1097,
             "completion_tokens": 12
           }
@@ -1229,30 +1221,30 @@
       "assessment": "abstain",
       "score": 5.469916820526123,
       "policy_inherited": null,
-      "seconds": 5.4,
+      "seconds": 10.5,
       "chat_latency": {
-        "rewrite_ms": 0.68,
-        "total_ms": 5270.18
+        "rewrite_ms": 0.62,
+        "total_ms": 10379.99
       },
       "retrieval_latency": {
-        "embedding_ms": 36.73,
-        "search_ms": 116.19,
-        "fusion_ms": 72.2,
-        "reranking_ms": 497.06,
-        "sufficiency_ms": 4352.93
+        "embedding_ms": 37.91,
+        "search_ms": 113.14,
+        "fusion_ms": 80.34,
+        "reranking_ms": 1349.19,
+        "sufficiency_ms": 8607.09
       },
       "llm": {
         "calls": 2,
         "phases": {
           "intent": {
             "calls": 1,
-            "ms": 3088.3,
+            "ms": 5953.5,
             "prompt_tokens": 523,
             "completion_tokens": 6
           },
           "assessment": {
             "calls": 1,
-            "ms": 4351.4,
+            "ms": 8605.5,
             "prompt_tokens": 15173,
             "completion_tokens": 21
           }
@@ -1275,30 +1267,30 @@
       "assessment": "abstain",
       "score": -0.18528404831886292,
       "policy_inherited": null,
-      "seconds": 4.5,
+      "seconds": 9.4,
       "chat_latency": {
-        "rewrite_ms": 0.58,
-        "total_ms": 4437.01
+        "rewrite_ms": 1.11,
+        "total_ms": 9293.18
       },
       "retrieval_latency": {
-        "embedding_ms": 44.1,
-        "search_ms": 111.43,
-        "fusion_ms": 61.65,
-        "reranking_ms": 426.75,
-        "sufficiency_ms": 3678.49
+        "embedding_ms": 97.12,
+        "search_ms": 115.62,
+        "fusion_ms": 65.4,
+        "reranking_ms": 1343.21,
+        "sufficiency_ms": 7552.94
       },
       "llm": {
         "calls": 2,
         "phases": {
           "intent": {
             "calls": 1,
-            "ms": 3095.4,
+            "ms": 6648.3,
             "prompt_tokens": 525,
             "completion_tokens": 6
           },
           "assessment": {
             "calls": 1,
-            "ms": 3676.6,
+            "ms": 7551.2,
             "prompt_tokens": 12978,
             "completion_tokens": 21
           }
@@ -1321,30 +1313,30 @@
       "assessment": "abstain",
       "score": 0.31019842624664307,
       "policy_inherited": null,
-      "seconds": 5.2,
+      "seconds": 10.7,
       "chat_latency": {
-        "rewrite_ms": 0.72,
-        "total_ms": 5158.19
+        "rewrite_ms": 0.68,
+        "total_ms": 10622.71
       },
       "retrieval_latency": {
-        "embedding_ms": 43.49,
-        "search_ms": 179.52,
-        "fusion_ms": 91.35,
-        "reranking_ms": 500.15,
-        "sufficiency_ms": 4217.48
+        "embedding_ms": 49.19,
+        "search_ms": 110.98,
+        "fusion_ms": 94.72,
+        "reranking_ms": 1429.02,
+        "sufficiency_ms": 8722.38
       },
       "llm": {
         "calls": 2,
         "phases": {
           "intent": {
             "calls": 1,
-            "ms": 3091.1,
+            "ms": 6338.0,
             "prompt_tokens": 529,
             "completion_tokens": 6
           },
           "assessment": {
             "calls": 1,
-            "ms": 4215.6,
+            "ms": 8720.6,
             "prompt_tokens": 14750,
             "completion_tokens": 21
           }
@@ -1367,24 +1359,24 @@
       "assessment": "clarify",
       "score": -1.445585012435913,
       "policy_inherited": null,
-      "seconds": 4.5,
+      "seconds": 9.2,
       "chat_latency": {
         "rewrite_ms": 0.58,
-        "total_ms": 4463.71
+        "total_ms": 9158.34
       },
       "retrieval_latency": {
-        "embedding_ms": 29.32,
-        "search_ms": 103.36,
-        "fusion_ms": 263.65,
-        "reranking_ms": 455.15,
-        "sufficiency_ms": 3387.07
+        "embedding_ms": 37.17,
+        "search_ms": 115.29,
+        "fusion_ms": 278.2,
+        "reranking_ms": 1606.87,
+        "sufficiency_ms": 7003.46
       },
       "llm": {
         "calls": 2,
         "phases": {
           "intent": {
             "calls": 2,
-            "ms": 3386.3,
+            "ms": 7002.5,
             "prompt_tokens": 1138,
             "completion_tokens": 12
           }
@@ -1407,24 +1399,24 @@
       "assessment": "clarify",
       "score": -2.307664155960083,
       "policy_inherited": null,
-      "seconds": 4.9,
+      "seconds": 9.8,
       "chat_latency": {
-        "rewrite_ms": 0.57,
-        "total_ms": 4799.57
+        "rewrite_ms": 0.85,
+        "total_ms": 9695.43
       },
       "retrieval_latency": {
-        "embedding_ms": 27.81,
-        "search_ms": 106.87,
-        "fusion_ms": 200.37,
-        "reranking_ms": 485.67,
-        "sufficiency_ms": 3849.4
+        "embedding_ms": 32.3,
+        "search_ms": 185.63,
+        "fusion_ms": 212.14,
+        "reranking_ms": 1250.01,
+        "sufficiency_ms": 7893.78
       },
       "llm": {
         "calls": 2,
         "phases": {
           "intent": {
             "calls": 2,
-            "ms": 3848.6,
+            "ms": 7892.8,
             "prompt_tokens": 1265,
             "completion_tokens": 12
           }
@@ -1447,24 +1439,24 @@
       "assessment": "clarify",
       "score": -1.463454246520996,
       "policy_inherited": null,
-      "seconds": 4.5,
+      "seconds": 9.2,
       "chat_latency": {
-        "rewrite_ms": 0.56,
-        "total_ms": 4463.0
+        "rewrite_ms": 0.67,
+        "total_ms": 9092.37
       },
       "retrieval_latency": {
-        "embedding_ms": 31.57,
-        "search_ms": 105.75,
-        "fusion_ms": 281.41,
-        "reranking_ms": 443.18,
-        "sufficiency_ms": 3453.03
+        "embedding_ms": 35.77,
+        "search_ms": 111.36,
+        "fusion_ms": 204.62,
+        "reranking_ms": 1472.15,
+        "sufficiency_ms": 7060.38
       },
       "llm": {
         "calls": 2,
         "phases": {
           "intent": {
             "calls": 2,
-            "ms": 3452.2,
+            "ms": 7059.3,
             "prompt_tokens": 1222,
             "completion_tokens": 12
           }
@@ -1487,44 +1479,44 @@
       "assessment": "answer",
       "score": 2.4577717781066895,
       "policy_inherited": false,
-      "seconds": 8.0,
+      "seconds": 15.7,
       "chat_latency": {
-        "rewrite_ms": 0.58,
-        "generation_ms": 1865.9,
-        "verification_ms": 259.73,
-        "total_ms": 7887.09
+        "rewrite_ms": 0.63,
+        "generation_ms": 2995.75,
+        "verification_ms": 562.65,
+        "total_ms": 15611.64
       },
       "retrieval_latency": {
-        "embedding_ms": 47.95,
-        "search_ms": 114.36,
-        "fusion_ms": 57.39,
-        "reranking_ms": 451.22,
-        "sufficiency_ms": 4841.37
+        "embedding_ms": 48.97,
+        "search_ms": 112.32,
+        "fusion_ms": 57.48,
+        "reranking_ms": 1630.39,
+        "sufficiency_ms": 10044.03
       },
       "llm": {
         "calls": 4,
         "phases": {
           "intent": {
             "calls": 1,
-            "ms": 3074.7,
+            "ms": 6447.0,
             "prompt_tokens": 525,
             "completion_tokens": 6
           },
           "assessment": {
             "calls": 1,
-            "ms": 4839.4,
+            "ms": 10042.4,
             "prompt_tokens": 12885,
             "completion_tokens": 61
           },
           "generation": {
             "calls": 1,
-            "ms": 1865.1,
+            "ms": 2995.2,
             "prompt_tokens": 987,
-            "completion_tokens": 59
+            "completion_tokens": 41
           },
           "verification": {
             "calls": 1,
-            "ms": 259.6,
+            "ms": 562.5,
             "prompt_tokens": 482,
             "completion_tokens": 6
           }
@@ -1547,51 +1539,51 @@
       "assessment": "answer",
       "score": 3.505018949508667,
       "policy_inherited": false,
-      "seconds": 14.7,
+      "seconds": 30.2,
       "chat_latency": {
-        "rewrite_ms": 557.88,
-        "generation_ms": 5538.6,
-        "verification_ms": 405.32,
-        "total_ms": 14620.43
+        "rewrite_ms": 1133.78,
+        "generation_ms": 8511.51,
+        "verification_ms": 724.7,
+        "total_ms": 30098.48
       },
       "retrieval_latency": {
-        "embedding_ms": 47.28,
-        "search_ms": 111.3,
-        "fusion_ms": 54.83,
-        "reranking_ms": 474.51,
-        "sufficiency_ms": 7270.5
+        "embedding_ms": 49.97,
+        "search_ms": 194.47,
+        "fusion_ms": 194.07,
+        "reranking_ms": 1552.58,
+        "sufficiency_ms": 17563.33
       },
       "llm": {
         "calls": 7,
         "phases": {
           "rewrite": {
             "calls": 1,
-            "ms": 557.2,
+            "ms": 1132.8,
             "prompt_tokens": 443,
             "completion_tokens": 16
           },
           "intent": {
             "calls": 1,
-            "ms": 3091.6,
+            "ms": 6860.2,
             "prompt_tokens": 524,
             "completion_tokens": 6
           },
           "assessment": {
             "calls": 1,
-            "ms": 7268.9,
+            "ms": 17561.5,
             "prompt_tokens": 13350,
-            "completion_tokens": 138
+            "completion_tokens": 171
           },
           "generation": {
             "calls": 1,
-            "ms": 5537.8,
+            "ms": 8510.8,
             "prompt_tokens": 2220,
-            "completion_tokens": 180
+            "completion_tokens": 122
           },
           "verification": {
             "calls": 3,
-            "ms": 1180.6,
-            "prompt_tokens": 1391,
+            "ms": 2169.7,
+            "prompt_tokens": 1381,
             "completion_tokens": 18
           }
         }
@@ -1613,45 +1605,45 @@
       "assessment": "answer",
       "score": 5.5068559646606445,
       "policy_inherited": false,
-      "seconds": 8.3,
+      "seconds": 15.5,
       "chat_latency": {
-        "rewrite_ms": 0.56,
-        "generation_ms": 2001.03,
-        "verification_ms": 259.14,
-        "total_ms": 8197.23
+        "rewrite_ms": 0.58,
+        "generation_ms": 2510.21,
+        "verification_ms": 508.01,
+        "total_ms": 15419.61
       },
       "retrieval_latency": {
-        "embedding_ms": 37.27,
-        "search_ms": 178.07,
-        "fusion_ms": 54.39,
-        "reranking_ms": 478.44,
-        "sufficiency_ms": 5039.62
+        "embedding_ms": 43.03,
+        "search_ms": 108.73,
+        "fusion_ms": 57.74,
+        "reranking_ms": 1620.04,
+        "sufficiency_ms": 10339.43
       },
       "llm": {
         "calls": 4,
         "phases": {
           "intent": {
             "calls": 1,
-            "ms": 3111.4,
+            "ms": 6286.7,
             "prompt_tokens": 525,
             "completion_tokens": 6
           },
           "assessment": {
             "calls": 1,
-            "ms": 5037.8,
-            "prompt_tokens": 13684,
+            "ms": 10337.8,
+            "prompt_tokens": 13599,
             "completion_tokens": 58
           },
           "generation": {
             "calls": 1,
-            "ms": 2000.4,
+            "ms": 2509.6,
             "prompt_tokens": 993,
-            "completion_tokens": 65
+            "completion_tokens": 38
           },
           "verification": {
             "calls": 1,
-            "ms": 259.0,
-            "prompt_tokens": 516,
+            "ms": 507.9,
+            "prompt_tokens": 489,
             "completion_tokens": 6
           }
         }
@@ -1671,52 +1663,52 @@
       },
       "decision": "calibrated_score",
       "assessment": "answer",
-      "score": 4.565485000610352,
+      "score": 4.142093181610107,
       "policy_inherited": false,
-      "seconds": 8.8,
+      "seconds": 17.8,
       "chat_latency": {
-        "rewrite_ms": 589.91,
-        "generation_ms": 1565.33,
-        "verification_ms": 244.12,
-        "total_ms": 8708.65
+        "rewrite_ms": 1213.25,
+        "generation_ms": 3309.61,
+        "verification_ms": 579.62,
+        "total_ms": 17701.5
       },
       "retrieval_latency": {
-        "embedding_ms": 43.31,
-        "search_ms": 120.0,
-        "fusion_ms": 131.38,
-        "reranking_ms": 490.48,
-        "sufficiency_ms": 5263.35
+        "embedding_ms": 46.45,
+        "search_ms": 118.87,
+        "fusion_ms": 133.53,
+        "reranking_ms": 1359.17,
+        "sufficiency_ms": 10692.16
       },
       "llm": {
         "calls": 5,
         "phases": {
           "rewrite": {
             "calls": 1,
-            "ms": 589.2,
-            "prompt_tokens": 484,
+            "ms": 1212.4,
+            "prompt_tokens": 457,
             "completion_tokens": 19
           },
           "intent": {
             "calls": 1,
-            "ms": 3086.2,
+            "ms": 5956.2,
             "prompt_tokens": 527,
             "completion_tokens": 6
           },
           "assessment": {
             "calls": 1,
-            "ms": 5261.8,
-            "prompt_tokens": 14535,
+            "ms": 10690.6,
+            "prompt_tokens": 14502,
             "completion_tokens": 58
           },
           "generation": {
             "calls": 1,
-            "ms": 1564.7,
+            "ms": 3308.9,
             "prompt_tokens": 989,
             "completion_tokens": 50
           },
           "verification": {
             "calls": 1,
-            "ms": 244.0,
+            "ms": 579.5,
             "prompt_tokens": 479,
             "completion_tokens": 6
           }
@@ -1739,46 +1731,46 @@
       "assessment": "answer",
       "score": 3.456665277481079,
       "policy_inherited": false,
-      "seconds": 14.2,
+      "seconds": 32.3,
       "chat_latency": {
-        "rewrite_ms": 0.58,
-        "generation_ms": 4777.33,
-        "verification_ms": 384.19,
-        "total_ms": 14080.35
+        "rewrite_ms": 0.63,
+        "generation_ms": 12378.37,
+        "verification_ms": 903.17,
+        "total_ms": 32172.28
       },
       "retrieval_latency": {
-        "embedding_ms": 46.92,
-        "search_ms": 108.21,
-        "fusion_ms": 125.01,
-        "reranking_ms": 456.45,
-        "sufficiency_ms": 7940.12
+        "embedding_ms": 51.04,
+        "search_ms": 111.91,
+        "fusion_ms": 120.47,
+        "reranking_ms": 1244.14,
+        "sufficiency_ms": 17187.48
       },
       "llm": {
-        "calls": 6,
+        "calls": 7,
         "phases": {
           "intent": {
             "calls": 1,
-            "ms": 3081.8,
+            "ms": 6086.2,
             "prompt_tokens": 524,
             "completion_tokens": 6
           },
           "assessment": {
             "calls": 1,
-            "ms": 7938.5,
-            "prompt_tokens": 13048,
-            "completion_tokens": 163
+            "ms": 17185.5,
+            "prompt_tokens": 13124,
+            "completion_tokens": 171
           },
           "generation": {
             "calls": 1,
-            "ms": 4776.7,
-            "prompt_tokens": 2205,
-            "completion_tokens": 151
+            "ms": 12377.7,
+            "prompt_tokens": 2856,
+            "completion_tokens": 180
           },
           "verification": {
-            "calls": 3,
-            "ms": 1115.9,
-            "prompt_tokens": 1390,
-            "completion_tokens": 18
+            "calls": 4,
+            "ms": 3442.6,
+            "prompt_tokens": 1886,
+            "completion_tokens": 24
           }
         }
       },
@@ -1793,58 +1785,61 @@
       "status": "completed",
       "chat_outcome": {
         "status": "completed",
-        "reason": "grounded"
+        "reason": "grounded_extract",
+        "fallback": {
+          "reason": "unsupported_number",
+          "detail": {
+            "where": "explanation",
+            "citation_id": "C3",
+            "added": [
+              1000.0
+            ]
+          }
+        }
       },
       "decision": "calibrated_score",
       "assessment": "answer",
-      "score": 3.8890130519866943,
+      "score": 3.8814139366149902,
       "policy_inherited": false,
-      "seconds": 12.4,
+      "seconds": 26.8,
       "chat_latency": {
-        "rewrite_ms": 897.54,
-        "generation_ms": 4297.78,
-        "verification_ms": 328.5,
-        "total_ms": 12277.36
+        "rewrite_ms": 1822.24,
+        "generation_ms": 9225.62,
+        "total_ms": 26669.98
       },
       "retrieval_latency": {
-        "embedding_ms": 58.24,
-        "search_ms": 116.75,
-        "fusion_ms": 42.57,
-        "reranking_ms": 473.48,
-        "sufficiency_ms": 5897.81
+        "embedding_ms": 59.44,
+        "search_ms": 198.2,
+        "fusion_ms": 42.34,
+        "reranking_ms": 1108.11,
+        "sufficiency_ms": 14018.77
       },
       "llm": {
-        "calls": 6,
+        "calls": 4,
         "phases": {
           "rewrite": {
             "calls": 1,
-            "ms": 896.7,
-            "prompt_tokens": 627,
+            "ms": 1821.3,
+            "prompt_tokens": 679,
             "completion_tokens": 26
           },
           "intent": {
             "calls": 1,
-            "ms": 3056.6,
+            "ms": 5751.0,
             "prompt_tokens": 535,
             "completion_tokens": 6
           },
           "assessment": {
             "calls": 1,
-            "ms": 5895.9,
-            "prompt_tokens": 12851,
-            "completion_tokens": 97
+            "ms": 14017.0,
+            "prompt_tokens": 12858,
+            "completion_tokens": 133
           },
           "generation": {
             "calls": 1,
-            "ms": 4297.2,
-            "prompt_tokens": 1576,
-            "completion_tokens": 141
-          },
-          "verification": {
-            "calls": 2,
-            "ms": 628.5,
-            "prompt_tokens": 914,
-            "completion_tokens": 12
+            "ms": 9224.9,
+            "prompt_tokens": 2208,
+            "completion_tokens": 132
           }
         }
       },
@@ -1863,53 +1858,53 @@
       },
       "decision": "calibrated_score",
       "assessment": "answer",
-      "score": 6.319716930389404,
+      "score": 5.237909317016602,
       "policy_inherited": false,
-      "seconds": 11.4,
+      "seconds": 21.1,
       "chat_latency": {
-        "rewrite_ms": 987.5,
-        "generation_ms": 3084.21,
-        "verification_ms": 342.64,
-        "total_ms": 11310.97
+        "rewrite_ms": 1709.7,
+        "generation_ms": 5033.56,
+        "verification_ms": 591.96,
+        "total_ms": 20987.35
       },
       "retrieval_latency": {
-        "embedding_ms": 68.22,
-        "search_ms": 193.34,
-        "fusion_ms": 41.0,
-        "reranking_ms": 498.86,
-        "sufficiency_ms": 5931.08
+        "embedding_ms": 61.62,
+        "search_ms": 122.69,
+        "fusion_ms": 42.87,
+        "reranking_ms": 1078.14,
+        "sufficiency_ms": 12097.79
       },
       "llm": {
         "calls": 6,
         "phases": {
           "rewrite": {
             "calls": 1,
-            "ms": 986.8,
-            "prompt_tokens": 865,
-            "completion_tokens": 31
+            "ms": 1708.9,
+            "prompt_tokens": 957,
+            "completion_tokens": 25
           },
           "intent": {
             "calls": 1,
-            "ms": 3100.6,
-            "prompt_tokens": 540,
+            "ms": 6035.4,
+            "prompt_tokens": 534,
             "completion_tokens": 6
           },
           "assessment": {
             "calls": 1,
-            "ms": 5929.4,
-            "prompt_tokens": 12953,
+            "ms": 12096.0,
+            "prompt_tokens": 12622,
             "completion_tokens": 97
           },
           "generation": {
             "calls": 1,
-            "ms": 3083.5,
-            "prompt_tokens": 1575,
-            "completion_tokens": 97
+            "ms": 5032.6,
+            "prompt_tokens": 1549,
+            "completion_tokens": 71
           },
           "verification": {
             "calls": 2,
-            "ms": 656.3,
-            "prompt_tokens": 869,
+            "ms": 1181.8,
+            "prompt_tokens": 878,
             "completion_tokens": 12
           }
         }
@@ -1931,52 +1926,52 @@
       "assessment": "answer",
       "score": 6.956367492675781,
       "policy_inherited": false,
-      "seconds": 8.7,
+      "seconds": 17.5,
       "chat_latency": {
-        "rewrite_ms": 384.03,
-        "translation_ms": 383.48,
-        "generation_ms": 1458.09,
-        "verification_ms": 252.96,
-        "total_ms": 8576.06
+        "rewrite_ms": 634.56,
+        "translation_ms": 633.95,
+        "generation_ms": 3185.24,
+        "verification_ms": 503.65,
+        "total_ms": 17461.89
       },
       "retrieval_latency": {
-        "embedding_ms": 36.58,
-        "search_ms": 112.34,
-        "fusion_ms": 44.41,
-        "reranking_ms": 532.7,
-        "sufficiency_ms": 5498.92,
-        "translation_ms": 383.48
+        "embedding_ms": 39.26,
+        "search_ms": 106.91,
+        "fusion_ms": 43.89,
+        "reranking_ms": 1399.92,
+        "sufficiency_ms": 11314.74,
+        "translation_ms": 633.95
       },
       "llm": {
         "calls": 5,
         "phases": {
           "translation": {
             "calls": 1,
-            "ms": 383.4,
+            "ms": 633.9,
             "prompt_tokens": 118,
             "completion_tokens": 10
           },
           "intent": {
             "calls": 1,
-            "ms": 3134.9,
+            "ms": 7904.4,
             "prompt_tokens": 518,
             "completion_tokens": 6
           },
           "assessment": {
             "calls": 1,
-            "ms": 5496.9,
+            "ms": 11313.1,
             "prompt_tokens": 15209,
             "completion_tokens": 57
           },
           "generation": {
             "calls": 1,
-            "ms": 1457.5,
+            "ms": 3184.6,
             "prompt_tokens": 895,
             "completion_tokens": 47
           },
           "verification": {
             "calls": 1,
-            "ms": 252.9,
+            "ms": 503.5,
             "prompt_tokens": 398,
             "completion_tokens": 6
           }
@@ -1999,38 +1994,38 @@
       "assessment": "answer",
       "score": -1.7649943828582764,
       "policy_inherited": false,
-      "seconds": 6.9,
+      "seconds": 14.9,
       "chat_latency": {
-        "rewrite_ms": 518.92,
-        "translation_ms": 518.3,
-        "total_ms": 6767.82
+        "rewrite_ms": 813.5,
+        "translation_ms": 812.8,
+        "total_ms": 14857.1
       },
       "retrieval_latency": {
-        "embedding_ms": 39.29,
-        "search_ms": 110.31,
-        "fusion_ms": 169.9,
-        "reranking_ms": 460.7,
-        "sufficiency_ms": 5363.3,
-        "translation_ms": 518.3
+        "embedding_ms": 41.72,
+        "search_ms": 110.11,
+        "fusion_ms": 178.75,
+        "reranking_ms": 1288.56,
+        "sufficiency_ms": 12316.81,
+        "translation_ms": 812.8
       },
       "llm": {
         "calls": 3,
         "phases": {
           "translation": {
             "calls": 1,
-            "ms": 518.2,
+            "ms": 812.7,
             "prompt_tokens": 118,
             "completion_tokens": 13
           },
           "intent": {
             "calls": 1,
-            "ms": 2771.2,
+            "ms": 6145.5,
             "prompt_tokens": 521,
             "completion_tokens": 6
           },
           "assessment": {
             "calls": 1,
-            "ms": 5361.7,
+            "ms": 12315.2,
             "prompt_tokens": 14767,
             "completion_tokens": 79
           }
@@ -2055,53 +2050,53 @@
       "assessment": "answer",
       "score": -0.07162560522556305,
       "policy_inherited": false,
-      "seconds": 9.4,
+      "seconds": 20.5,
       "chat_latency": {
-        "rewrite_ms": 431.07,
-        "translation_ms": 430.42,
-        "generation_ms": 1893.44,
-        "verification_ms": 311.68,
-        "total_ms": 9361.22
+        "rewrite_ms": 696.32,
+        "translation_ms": 695.72,
+        "generation_ms": 3924.67,
+        "verification_ms": 590.38,
+        "total_ms": 20400.5
       },
       "retrieval_latency": {
-        "embedding_ms": 38.81,
-        "search_ms": 182.46,
-        "fusion_ms": 42.75,
-        "reranking_ms": 436.32,
-        "sufficiency_ms": 5830.22,
-        "translation_ms": 430.42
+        "embedding_ms": 38.56,
+        "search_ms": 133.37,
+        "fusion_ms": 45.03,
+        "reranking_ms": 1345.33,
+        "sufficiency_ms": 13389.02,
+        "translation_ms": 695.72
       },
       "llm": {
         "calls": 6,
         "phases": {
           "translation": {
             "calls": 1,
-            "ms": 430.3,
+            "ms": 695.7,
             "prompt_tokens": 117,
             "completion_tokens": 11
           },
           "intent": {
             "calls": 1,
-            "ms": 2810.1,
+            "ms": 6346.2,
             "prompt_tokens": 520,
             "completion_tokens": 6
           },
           "assessment": {
             "calls": 1,
-            "ms": 5828.5,
+            "ms": 13387.4,
             "prompt_tokens": 14277,
             "completion_tokens": 98
           },
           "generation": {
             "calls": 1,
-            "ms": 1892.8,
+            "ms": 3924.0,
             "prompt_tokens": 1472,
-            "completion_tokens": 64
+            "completion_tokens": 56
           },
           "verification": {
             "calls": 2,
-            "ms": 597.6,
-            "prompt_tokens": 822,
+            "ms": 1178.8,
+            "prompt_tokens": 814,
             "completion_tokens": 12
           }
         }
@@ -2117,59 +2112,68 @@
       "status": "completed",
       "chat_outcome": {
         "status": "completed",
-        "reason": "grounded"
+        "reason": "grounded_extract",
+        "fallback": {
+          "reason": "grounding_rejected",
+          "detail": {
+            "supported": false,
+            "claims": 1,
+            "rejected": [
+              1
+            ]
+          }
+        }
       },
       "decision": "calibrated_score",
       "assessment": "answer",
       "score": 3.172801971435547,
       "policy_inherited": false,
-      "seconds": 8.7,
+      "seconds": 18.3,
       "chat_latency": {
-        "rewrite_ms": 413.06,
-        "translation_ms": 412.38,
-        "generation_ms": 2334.69,
-        "verification_ms": 250.44,
-        "total_ms": 8641.3
+        "rewrite_ms": 906.97,
+        "translation_ms": 906.33,
+        "generation_ms": 3907.85,
+        "total_ms": 18203.33
       },
       "retrieval_latency": {
-        "embedding_ms": 39.44,
-        "search_ms": 116.82,
-        "fusion_ms": 99.01,
-        "reranking_ms": 472.9,
-        "sufficiency_ms": 4668.17,
-        "translation_ms": 412.38
+        "embedding_ms": 45.42,
+        "search_ms": 126.73,
+        "fusion_ms": 110.72,
+        "reranking_ms": 1549.26,
+        "sufficiency_ms": 10808.73,
+        "translation_ms": 906.33
       },
       "llm": {
         "calls": 5,
         "phases": {
           "translation": {
             "calls": 1,
-            "ms": 412.3,
+            "ms": 906.3,
             "prompt_tokens": 116,
             "completion_tokens": 14
           },
           "intent": {
             "calls": 1,
-            "ms": 2840.9,
+            "ms": 6312.3,
             "prompt_tokens": 522,
             "completion_tokens": 6
           },
           "assessment": {
             "calls": 1,
-            "ms": 4666.4,
+            "ms": 10807.1,
             "prompt_tokens": 13966,
             "completion_tokens": 59
           },
           "generation": {
             "calls": 1,
-            "ms": 2333.8,
+            "ms": 3907.2,
             "prompt_tokens": 943,
-            "completion_tokens": 85
+            "completion_tokens": 59
           },
           "verification": {
             "calls": 1,
-            "ms": 250.2,
-            "prompt_tokens": 477,
+            "ms": 500.5,
+            "prompt_tokens": 451,
             "completion_tokens": 6
           }
         }
@@ -2191,53 +2195,53 @@
       "assessment": "answer",
       "score": 7.468493938446045,
       "policy_inherited": false,
-      "seconds": 12.8,
+      "seconds": 26.2,
       "chat_latency": {
-        "rewrite_ms": 520.26,
-        "translation_ms": 519.64,
-        "generation_ms": 4008.48,
-        "verification_ms": 366.0,
-        "total_ms": 12748.61
+        "rewrite_ms": 900.17,
+        "translation_ms": 899.52,
+        "generation_ms": 7383.18,
+        "verification_ms": 636.6,
+        "total_ms": 26148.25
       },
       "retrieval_latency": {
-        "embedding_ms": 45.96,
-        "search_ms": 118.08,
-        "fusion_ms": 174.53,
-        "reranking_ms": 439.45,
-        "sufficiency_ms": 6754.53,
-        "translation_ms": 519.64
+        "embedding_ms": 48.49,
+        "search_ms": 120.3,
+        "fusion_ms": 186.36,
+        "reranking_ms": 1763.98,
+        "sufficiency_ms": 14955.98,
+        "translation_ms": 899.52
       },
       "llm": {
         "calls": 7,
         "phases": {
           "translation": {
             "calls": 1,
-            "ms": 519.6,
+            "ms": 899.5,
             "prompt_tokens": 120,
             "completion_tokens": 14
           },
           "intent": {
             "calls": 1,
-            "ms": 2840.3,
+            "ms": 5700.2,
             "prompt_tokens": 522,
             "completion_tokens": 6
           },
           "assessment": {
             "calls": 1,
-            "ms": 6752.7,
+            "ms": 14954.3,
             "prompt_tokens": 13785,
             "completion_tokens": 137
           },
           "generation": {
             "calls": 1,
-            "ms": 4007.8,
+            "ms": 7382.4,
             "prompt_tokens": 1995,
-            "completion_tokens": 142
+            "completion_tokens": 105
           },
           "verification": {
             "calls": 3,
-            "ms": 1065.8,
-            "prompt_tokens": 1121,
+            "ms": 1905.2,
+            "prompt_tokens": 1122,
             "completion_tokens": 18
           }
         }
@@ -2259,52 +2263,52 @@
       "assessment": "answer",
       "score": 2.2709479331970215,
       "policy_inherited": false,
-      "seconds": 8.0,
+      "seconds": 16.2,
       "chat_latency": {
-        "rewrite_ms": 477.81,
-        "translation_ms": 477.17,
-        "generation_ms": 1494.38,
-        "verification_ms": 226.34,
-        "total_ms": 7882.74
+        "rewrite_ms": 829.39,
+        "translation_ms": 828.66,
+        "generation_ms": 3647.95,
+        "verification_ms": 468.31,
+        "total_ms": 16191.03
       },
       "retrieval_latency": {
-        "embedding_ms": 42.06,
-        "search_ms": 117.25,
-        "fusion_ms": 84.56,
-        "reranking_ms": 445.45,
-        "sufficiency_ms": 4846.04,
-        "translation_ms": 477.17
+        "embedding_ms": 41.87,
+        "search_ms": 197.76,
+        "fusion_ms": 80.03,
+        "reranking_ms": 1425.32,
+        "sufficiency_ms": 9344.92,
+        "translation_ms": 828.66
       },
       "llm": {
         "calls": 5,
         "phases": {
           "translation": {
             "calls": 1,
-            "ms": 477.1,
+            "ms": 828.6,
             "prompt_tokens": 121,
             "completion_tokens": 12
           },
           "intent": {
             "calls": 1,
-            "ms": 2806.0,
+            "ms": 6357.7,
             "prompt_tokens": 520,
             "completion_tokens": 6
           },
           "assessment": {
             "calls": 1,
-            "ms": 4844.4,
+            "ms": 9343.3,
             "prompt_tokens": 14646,
             "completion_tokens": 59
           },
           "generation": {
             "calls": 1,
-            "ms": 1493.6,
+            "ms": 3647.3,
             "prompt_tokens": 920,
-            "completion_tokens": 53
+            "completion_tokens": 57
           },
           "verification": {
             "calls": 1,
-            "ms": 226.2,
+            "ms": 468.2,
             "prompt_tokens": 446,
             "completion_tokens": 6
           }
@@ -2327,38 +2331,38 @@
       "assessment": "abstain",
       "score": -3.4645676612854004,
       "policy_inherited": null,
-      "seconds": 4.5,
+      "seconds": 6.3,
       "chat_latency": {
-        "rewrite_ms": 444.84,
-        "translation_ms": 444.21,
-        "total_ms": 4460.99
+        "rewrite_ms": 671.18,
+        "translation_ms": 670.53,
+        "total_ms": 6219.16
       },
       "retrieval_latency": {
-        "embedding_ms": 45.75,
-        "search_ms": 185.47,
-        "fusion_ms": 43.98,
-        "reranking_ms": 405.93,
-        "sufficiency_ms": 3225.52,
-        "translation_ms": 444.21
+        "embedding_ms": 46.25,
+        "search_ms": 109.76,
+        "fusion_ms": 42.75,
+        "reranking_ms": 659.88,
+        "sufficiency_ms": 4453.28,
+        "translation_ms": 670.53
       },
       "llm": {
         "calls": 3,
         "phases": {
           "translation": {
             "calls": 1,
-            "ms": 444.1,
+            "ms": 670.5,
             "prompt_tokens": 119,
             "completion_tokens": 14
           },
           "intent": {
             "calls": 1,
-            "ms": 2697.2,
+            "ms": 3649.2,
             "prompt_tokens": 522,
             "completion_tokens": 6
           },
           "assessment": {
             "calls": 1,
-            "ms": 3224.0,
+            "ms": 4451.7,
             "prompt_tokens": 12539,
             "completion_tokens": 21
           }
@@ -2381,32 +2385,32 @@
       "assessment": "clarify",
       "score": -5.188259124755859,
       "policy_inherited": null,
-      "seconds": 4.9,
+      "seconds": 6.6,
       "chat_latency": {
-        "rewrite_ms": 472.49,
-        "translation_ms": 471.88,
-        "total_ms": 4874.29
+        "rewrite_ms": 487.4,
+        "translation_ms": 486.8,
+        "total_ms": 6527.03
       },
       "retrieval_latency": {
-        "embedding_ms": 39.49,
-        "search_ms": 118.01,
-        "fusion_ms": 43.73,
-        "reranking_ms": 479.87,
-        "sufficiency_ms": 3616.12,
-        "translation_ms": 471.88
+        "embedding_ms": 41.53,
+        "search_ms": 112.3,
+        "fusion_ms": 41.63,
+        "reranking_ms": 472.53,
+        "sufficiency_ms": 5240.96,
+        "translation_ms": 486.8
       },
       "llm": {
         "calls": 3,
         "phases": {
           "translation": {
             "calls": 1,
-            "ms": 471.8,
+            "ms": 486.7,
             "prompt_tokens": 120,
             "completion_tokens": 16
           },
           "intent": {
             "calls": 2,
-            "ms": 3615.3,
+            "ms": 5239.8,
             "prompt_tokens": 1152,
             "completion_tokens": 12
           }
@@ -2421,18 +2425,18 @@
   "latency": {
     "all": {
       "n": 40,
-      "p50": 8.2,
-      "p95": 13.3
+      "p50": 16.7,
+      "p95": 27.2
     },
     "answers": {
       "n": 28,
-      "p50": 8.7,
-      "p95": 14.2
+      "p50": 17.8,
+      "p95": 30.2
     },
     "abstentions": {
       "n": 12,
-      "p50": 4.5,
-      "p95": 6.9
+      "p50": 9.2,
+      "p95": 14.9
     },
     "llm": {
       "turns": 40,
@@ -2441,27 +2445,27 @@
       "phases": {
         "assessment": {
           "calls": 34,
-          "mean_ms": 5492
+          "mean_ms": 11539
         },
         "generation": {
           "calls": 28,
-          "mean_ms": 2466
+          "mean_ms": 5082
         },
         "intent": {
           "calls": 46,
-          "mean_ms": 2710
+          "mean_ms": 5524
         },
         "rewrite": {
           "calls": 4,
-          "mean_ms": 757
+          "mean_ms": 1469
         },
         "translation": {
           "calls": 10,
-          "mean_ms": 443
+          "mean_ms": 727
         },
         "verification": {
           "calls": 43,
-          "mean_ms": 304
+          "mean_ms": 617
         }
       }
     }

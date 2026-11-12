@@ -21,7 +21,7 @@
     }
   },
   "model_signature": "2899120c395d40b6a1b7b339c3ee5a7ecea7c6abd63f7a3d358d344356b88f58",
-  "corpus_signature": "8cdbe255db4212dbf2f247e1023861176b074636e6eff9bf7deb1d2a5c90669d",
+  "corpus_signature": "54c394a7a4f0983ba29f4e46ba58dcdb425d3d9b4023a42fee0684294254770e",
   "assessment_version": "h4-sufficiency-v5-parallel-intent",
   "query_mode": "h4_contextual_user_history",
   "limitations": [
@@ -173,14 +173,14 @@
       "VAL2-C002-T3"
     ],
     "train": {
-      "tp": 43,
+      "tp": 44,
       "fp": 0,
-      "fn": 4,
+      "fn": 3,
       "tn": 17,
       "precision": 1.0,
-      "recall": 0.9148936170212766,
-      "f1": 0.9555555555555556,
-      "accuracy": 0.9375,
+      "recall": 0.9361702127659575,
+      "f1": 0.967032967032967,
+      "accuracy": 0.953125,
       "improper_answer_rate": 0.0
     },
     "holdout": {
@@ -196,7 +196,7 @@
     },
     "reason": "empirical_holdout_pass",
     "rejection_reasons": [],
-    "accepted_locator_recall10": 0.9739583333333334,
+    "accepted_locator_recall10": 0.9742268041237113,
     "limitations": [
       "Small bank; no statistical guarantee",
       "Coverage assessment is model-dependent; exact excerpts do not prove semantics"
@@ -218,7 +218,7 @@
           "recall5": 0.9826666666666667,
           "recall10": 0.9853333333333333,
           "mrr10": 0.9893333333333333,
-          "ndcg10": 0.95735686027994
+          "ndcg10": 0.9584446925052656
         },
         "conversation": {
           "count": 26,
@@ -226,7 +226,7 @@
           "recall5": 0.8846153846153846,
           "recall10": 0.9102564102564102,
           "mrr10": 0.967948717948718,
-          "ndcg10": 0.8069143354371626
+          "ndcg10": 0.8116368233087761
         },
         "unanswerable": {
           "count": 24,
@@ -239,29 +239,29 @@
       },
       "latency": {
         "embedding_ms": {
-          "p50": 42.44,
-          "p95": 56.75,
-          "max": 69.54
+          "p50": 44.15,
+          "p95": 62.19,
+          "max": 85.8
         },
         "search_ms": {
-          "p50": 113.88,
-          "p95": 179.12,
-          "max": 201.96
+          "p50": 118.19,
+          "p95": 185.82,
+          "max": 237.26
         },
         "fusion_ms": {
-          "p50": 76.76,
-          "p95": 251.17,
-          "max": 337.58
+          "p50": 72.37,
+          "p95": 259.9,
+          "max": 391.71
         },
         "reranking_ms": {
-          "p50": 445.04,
-          "p95": 520.06,
-          "max": 618.47
+          "p50": 436.06,
+          "p95": 1641.16,
+          "max": 2193.81
         },
         "sufficiency_ms": {
-          "p50": 4919.72,
-          "p95": 8584.51,
-          "max": 18320.54
+          "p50": 4920.31,
+          "p95": 13382.56,
+          "max": 38733.47
         }
       }
     },
@@ -379,11 +379,11 @@
         "usuarios"
       ],
       "d6bf295d-99e7-4d7a-9096-2a772921e495": [
-        "3c6a24de-7803-4fc6-a474-9f58cdccd185",
+        "fc37eb59-2013-4fb3-b2bb-d5ecddbac676",
         "usuarios"
       ],
       "71661691-47a5-4494-a814-a41c79ff88ad": [
-        "86fa7ec0-a3cf-4d38-9a7a-8794d1194c50",
+        "d60fe931-a59f-4ca6-83c5-fed239bcdbbd",
         "usuarios"
       ]
     }
@@ -475,7 +475,7 @@
       "recall5": 1.0,
       "recall10": 1.0,
       "mrr10": 1.0,
-      "ndcg10": 0.9197207891481876,
+      "ndcg10": 0.9060254355346823,
       "answer_eligible": true,
       "assessment_action": "answer",
       "error": null
@@ -514,7 +514,7 @@
       "recall5": 1.0,
       "recall10": 1.0,
       "mrr10": 1.0,
-      "ndcg10": 0.9047172294870751,
+      "ndcg10": 1.0,
       "answer_eligible": true,
       "assessment_action": "answer",
       "error": null
@@ -991,7 +991,7 @@
       "id": "AGN-CAL-A015",
       "kind": "answerable",
       "split": "calibration",
-      "score": 5.487963676452637,
+      "score": 5.486140727996826,
       "recall5": 1.0,
       "recall10": 1.0,
       "mrr10": 1.0,
@@ -1004,7 +1004,7 @@
       "id": "AGN-CAL-A016",
       "kind": "answerable",
       "split": "calibration",
-      "score": 3.508610725402832,
+      "score": 3.4991536140441895,
       "recall5": 1.0,
       "recall10": 1.0,
       "mrr10": 1.0,
@@ -1082,7 +1082,7 @@
       "id": "AGN-CAL-U006",
       "kind": "unanswerable",
       "split": "calibration",
-      "score": -4.223284721374512,
+      "score": -4.4328155517578125,
       "recall5": null,
       "recall10": null,
       "mrr10": 0,
@@ -1151,9 +1151,9 @@
       "recall5": 1.0,
       "recall10": 1.0,
       "mrr10": 1.0,
-      "ndcg10": 0.8772153153380493,
-      "answer_eligible": false,
-      "assessment_action": "abstain",
+      "ndcg10": 1.0,
+      "answer_eligible": true,
+      "assessment_action": "answer",
       "error": null
     },
     {
@@ -1199,7 +1199,7 @@
       "id": "AGN-CAL-C003-T1",
       "kind": "conversation",
       "split": "calibration",
-      "score": 3.005126953125,
+      "score": 3.1817049980163574,
       "recall5": 1.0,
       "recall10": 1.0,
       "mrr10": 1.0,
@@ -1212,7 +1212,7 @@
       "id": "AGN-CAL-C003-T2",
       "kind": "conversation",
       "split": "calibration",
-      "score": 2.704413652420044,
+      "score": 2.940687417984009,
       "recall5": 1.0,
       "recall10": 1.0,
       "mrr10": 1.0,
@@ -1374,7 +1374,7 @@
       "mrr10": 0,
       "ndcg10": 0,
       "answer_eligible": false,
-      "assessment_action": "clarify",
+      "assessment_action": "abstain",
       "error": null
     },
     {
@@ -1771,7 +1771,7 @@
       "id": "AGN-VAL-A010",
       "kind": "answerable",
       "split": "validation",
-      "score": 1.9498947858810425,
+      "score": 1.9581513404846191,
       "recall5": 1.0,
       "recall10": 1.0,
       "mrr10": 1.0,
@@ -1849,7 +1849,7 @@
       "id": "AGN-VAL-A016",
       "kind": "answerable",
       "split": "validation",
-      "score": 6.963698863983154,
+      "score": 6.95557975769043,
       "recall5": 1.0,
       "recall10": 1.0,
       "mrr10": 1.0,
@@ -2044,7 +2044,7 @@
       "id": "AGN-VAL-C003-T2",
       "kind": "conversation",
       "split": "validation",
-      "score": 3.9820821285247803,
+      "score": 3.992382526397705,
       "recall5": 1.0,
       "recall10": 1.0,
       "mrr10": 1.0,
@@ -2057,7 +2057,7 @@
       "id": "AGN-VAL-C003-T3",
       "kind": "conversation",
       "split": "validation",
-      "score": 4.95506477355957,
+      "score": 4.957755088806152,
       "recall5": 1.0,
       "recall10": 1.0,
       "mrr10": 1.0,

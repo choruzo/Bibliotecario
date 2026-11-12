@@ -21,7 +21,7 @@
     }
   },
   "model_signature": "2899120c395d40b6a1b7b339c3ee5a7ecea7c6abd63f7a3d358d344356b88f58",
-  "corpus_signature": "8cdbe255db4212dbf2f247e1023861176b074636e6eff9bf7deb1d2a5c90669d",
+  "corpus_signature": "54c394a7a4f0983ba29f4e46ba58dcdb425d3d9b4023a42fee0684294254770e",
   "assessment_version": "h4-sufficiency-v5-parallel-intent",
   "query_mode": "h4_contextual_user_history",
   "limitations": [
@@ -239,29 +239,29 @@
       },
       "latency": {
         "embedding_ms": {
-          "p50": 41.83,
-          "p95": 55.26,
-          "max": 67.45
+          "p50": 48.67,
+          "p95": 66.19,
+          "max": 95.4
         },
         "search_ms": {
-          "p50": 114.76,
-          "p95": 184.73,
-          "max": 208.66
+          "p50": 121.13,
+          "p95": 211.41,
+          "max": 235.95
         },
         "fusion_ms": {
-          "p50": 68.7,
-          "p95": 269.78,
-          "max": 315.07
+          "p50": 82.03,
+          "p95": 273.55,
+          "max": 362.34
         },
         "reranking_ms": {
-          "p50": 429.28,
-          "p95": 520.2,
-          "max": 570.29
+          "p50": 496.02,
+          "p95": 1435.74,
+          "max": 1568.64
         },
         "sufficiency_ms": {
-          "p50": 4745.28,
-          "p95": 7739.28,
-          "max": 18325.1
+          "p50": 5472.76,
+          "p95": 12859.76,
+          "max": 18403.71
         }
       }
     },
@@ -379,11 +379,11 @@
         "usuarios"
       ],
       "d6bf295d-99e7-4d7a-9096-2a772921e495": [
-        "3c6a24de-7803-4fc6-a474-9f58cdccd185",
+        "fc37eb59-2013-4fb3-b2bb-d5ecddbac676",
         "usuarios"
       ],
       "71661691-47a5-4494-a814-a41c79ff88ad": [
-        "86fa7ec0-a3cf-4d38-9a7a-8794d1194c50",
+        "d60fe931-a59f-4ca6-83c5-fed239bcdbbd",
         "usuarios"
       ]
     }
@@ -393,7 +393,7 @@
       "id": "EVAL-A001",
       "kind": "answerable",
       "split": "calibration",
-      "score": 4.140689849853516,
+      "score": 4.143750190734863,
       "recall5": 1.0,
       "recall10": 1.0,
       "mrr10": 1.0,
@@ -991,7 +991,7 @@
       "id": "AGN-CAL-A015",
       "kind": "answerable",
       "split": "calibration",
-      "score": 5.487963676452637,
+      "score": 5.486140727996826,
       "recall5": 1.0,
       "recall10": 1.0,
       "mrr10": 1.0,
@@ -1004,7 +1004,7 @@
       "id": "AGN-CAL-A016",
       "kind": "answerable",
       "split": "calibration",
-      "score": 3.508610725402832,
+      "score": 3.4991536140441895,
       "recall5": 1.0,
       "recall10": 1.0,
       "mrr10": 1.0,
@@ -1082,7 +1082,7 @@
       "id": "AGN-CAL-U006",
       "kind": "unanswerable",
       "split": "calibration",
-      "score": -4.223284721374512,
+      "score": -4.4328155517578125,
       "recall5": null,
       "recall10": null,
       "mrr10": 0,
@@ -1199,7 +1199,7 @@
       "id": "AGN-CAL-C003-T1",
       "kind": "conversation",
       "split": "calibration",
-      "score": 3.005126953125,
+      "score": 3.1817049980163574,
       "recall5": 1.0,
       "recall10": 1.0,
       "mrr10": 1.0,
@@ -1212,7 +1212,7 @@
       "id": "AGN-CAL-C003-T2",
       "kind": "conversation",
       "split": "calibration",
-      "score": 2.704413652420044,
+      "score": 2.940687417984009,
       "recall5": 1.0,
       "recall10": 1.0,
       "mrr10": 1.0,
@@ -1771,7 +1771,7 @@
       "id": "AGN-VAL-A010",
       "kind": "answerable",
       "split": "validation",
-      "score": 1.9498947858810425,
+      "score": 1.9581513404846191,
       "recall5": 1.0,
       "recall10": 1.0,
       "mrr10": 1.0,
@@ -1849,7 +1849,7 @@
       "id": "AGN-VAL-A016",
       "kind": "answerable",
       "split": "validation",
-      "score": 6.963698863983154,
+      "score": 6.95557975769043,
       "recall5": 1.0,
       "recall10": 1.0,
       "mrr10": 1.0,
@@ -2044,7 +2044,7 @@
       "id": "AGN-VAL-C003-T2",
       "kind": "conversation",
       "split": "validation",
-      "score": 3.9820821285247803,
+      "score": 3.992382526397705,
       "recall5": 1.0,
       "recall10": 1.0,
       "mrr10": 1.0,
@@ -2057,7 +2057,7 @@
       "id": "AGN-VAL-C003-T3",
       "kind": "conversation",
       "split": "validation",
-      "score": 4.95506477355957,
+      "score": 4.957755088806152,
       "recall5": 1.0,
       "recall10": 1.0,
       "mrr10": 1.0,
