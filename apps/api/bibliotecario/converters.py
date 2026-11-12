@@ -4,7 +4,7 @@ from collections import Counter
 
 from markdown_it import MarkdownIt
 
-from .pdf_math_clean import clean_math_emphasis
+from . import pdf_math_clean
 from .storage import InvalidFile, validate_file
 
 
@@ -337,13 +337,21 @@ def convert(path, fmt, settings, filename=None):
             chunks, pdf_layout = pdf_markdown_chunks(document, strategy)
             if strategy == "layout" and pdf_layout == "legacy":
                 diagnostics.append("pdf_layout_unavailable")
+            # Math formatting cleanup before recovery: the marker-only pass
+            # runs on every chunk; the span rebuild (emphasis + glued words)
+            # and the compound-hyphen restore additionally run for documents
+            # whose embedded fonts carry math families (cheap get_fonts gate)
+            # when the legacy renderer produced the chunks, which map
+            # one-to-one to pages. See bibliotecario.pdf_math_clean.
+            span_cleaning = pdf_layout != "layout" and any(
+                pdf_math_clean.page_may_have_math(page) for page in document)
+            vocabulary = (pdf_math_clean.document_compound_vocabulary(
+                [chunk["text"] for chunk in chunks]) if span_cleaning else None)
             for number, chunk in enumerate(chunks):
-                text, cleaned, reverted = clean_math_emphasis(number + 1, chunk["text"])
-                if reverted:
-                    diagnostics.append(f"pdf_math_clean_reverted_page_{number + 1}")
-                elif cleaned:
-                    diagnostics.append(f"pdf_math_emphasis_page_{number + 1}")
-                chunk["text"] = text
+                page = document[number] if span_cleaning and number < document.page_count else None
+                chunk["text"], found = pdf_math_clean.clean_page_markdown(
+                    page, chunk["text"], number + 1, vocabulary)
+                diagnostics.extend(found)
             recovered = [recover_pdf_page(page, chunk["text"]) for page, chunk in zip(document, chunks)]
         for index, chunk in enumerate(chunks):
             leading, trailing, found = recovered[index]
