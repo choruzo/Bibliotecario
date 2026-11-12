@@ -552,7 +552,14 @@ function Resolve-HarnessPairWinner {
 
     $baseStatus = if ([string]$Record.side -eq 'b') { $SiblingStatus } else { $SelfStatus }
     $variantStatus = if ([string]$Record.side -eq 'b') { $SelfStatus } else { $SiblingStatus }
-    $decision = Test-HarnessContrast -Base (Get-SideOutcome $baseSide $baseStatus) -Variant (Get-SideOutcome $variantSide $variantStatus)
+    $baseOutcome = Get-SideOutcome $baseSide $baseStatus
+    $variantOutcome = Get-SideOutcome $variantSide $variantStatus
+    $decision = Test-HarnessContrast -Base $baseOutcome -Variant $variantOutcome
+    # Observabilidad: la linea PAIR_DECISION debe mostrar lo que el arbitraje vio.
+    $decision.baseStatus = $baseStatus
+    $decision.variantStatus = $variantStatus
+    $decision.baseVerdict = $baseOutcome.verdict
+    $decision.variantVerdict = $variantOutcome.verdict
     if ($decision.winner -eq 'none') { $decision.winner = 'base'; $decision.reason = "empate: $($decision.reason); se integra la base" }
     return $decision
 }

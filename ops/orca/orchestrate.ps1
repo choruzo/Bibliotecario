@@ -882,8 +882,14 @@ function Invoke-TaskDelivery {
 
     # Arbitraje de pares [HARNESS-PROBE] (RF1.1): esperar a la hermana y decidir
     # con el verificador existente. La perdedora se cierra sin integrar; la
-    # ganadora sigue el flujo normal de entrega debajo.
+    # ganadora sigue el flujo normal de entrega debajo. Una vez decidido, el
+    # par queda marcado y NUNCA se re-arbitra (evita re-reviews de worktrees
+    # ya borrados por el cierre de la perdedora).
     if ($Record.PSObject.Properties['pairId'] -and $Record.pairId) {
+        if ($Record.PSObject.Properties['pairDecided'] -and $Record.pairDecided) {
+            Write-Host "[loop] PAIR_ALREADY_DECIDED $($Record.taskId)"
+        }
+        else {
         $sibling = Get-PairSibling -Records @($script:Dispatches) -Record $Record
         if (-not $sibling) {
             Write-Warning "Tarea probe $($Record.taskId) sin hermana en el registro; despacho normal"
@@ -909,12 +915,18 @@ function Invoke-TaskDelivery {
                     Write-Host ("[loop] PAIR_REVIEW {0}: {1}" -f $sideRec.taskId, ([regex]::Match($pairReviewOut, 'REVIEW=(ACEPTADO|CAMBIOS)').Groups[1].Value))
                 }
             }
-            $decision = Resolve-HarnessPairWinner -Record $Record -Sibling $sibling
+            $decision = Resolve-HarnessPairWinner -Record $Record -Sibling $sibling -SelfStatus $selfStatus -SiblingStatus $siblingStatus
             $variantRec = if ([string]$Record.side -eq 'b') { $Record } else { $sibling }
             $baseRec = if ([string]$Record.side -eq 'b') { $sibling } else { $Record }
             $winnerRec = if ($decision.winner -eq 'variant') { $variantRec } else { $baseRec }
             $loserRec = if ($decision.winner -eq 'variant') { $baseRec } else { $variantRec }
-            Write-Host "[loop] PAIR_DECISION pair=$($Record.pairId) winner=$($winnerRec.taskId) loser=$($loserRec.taskId) motivo=$($decision.reason)"
+            # El par queda decidido para SIEMPRE: ambas records marcan
+            # pairDecided y las siguientes entregas no re-arbitran.
+            Set-RecordValue -Record $Record -Name 'pairDecided' -Value 'true'
+            Save-Record -Record $Record
+            Set-RecordValue -Record $sibling -Name 'pairDecided' -Value 'true'
+            Save-Record -Record $sibling
+            Write-Host "[loop] PAIR_DECISION pair=$($Record.pairId) winner=$($winnerRec.taskId) loser=$($loserRec.taskId) motivo=$($decision.reason) | estados base=$($decision.baseStatus)/var=$($decision.variantStatus) veredictos base=$($decision.baseVerdict)/var=$($decision.variantVerdict)"
             Write-Audit -RunId $RunId -Actor 'loop' -Action 'probe-pair-decision' -TaskId $winnerRec.taskId -DispatchId $winnerRec.dispatchId -Reason "pair=$($Record.pairId) loser=$($loserRec.taskId) motivo=$($decision.reason)"
             if ($loserRec.taskId -eq $Record.taskId) {
                 # La actual es la perdedora: se cierra aqui y no integra.
@@ -944,6 +956,7 @@ function Invoke-TaskDelivery {
                 if ($branchName) { & git -C (Get-RepoRoot) branch -D $branchName 2>$null }
             }
             catch { }
+        }
         }
     }
 
