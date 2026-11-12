@@ -107,6 +107,9 @@ Assert-Contains (Join-Path $orcaDir 'harnessing-budget.ps1') 'BLOCK reason=no_br
 Assert-Contains (Join-Path $orcaDir 'harnessing-budget.ps1') 'PROCEED domain=' 'el decisor debe devolver PROCEED con dominio'
 # La salida del setup dentro de Invoke-WorkerDispatch debe capturarse (contamino el record: DISPATCH_SUMMARY=2 con 1 tarea).
 Assert-Contains (Join-Path $orcaDir 'dispatch.ps1') '\$setupOut = \(& pwsh' 'el setup del worktree debe capturarse dentro de la funcion de dispatch'
+# Segunda colision case-insensitive: $variantDir local pisaba el param $VariantDir
+# (el smoke lo vio como "sin -VariantDir" con la traza mostrando el valor).
+Assert-NotContains (Join-Path $orcaDir 'dispatch.ps1') '\$variantDir\s*=' 'dispatch no puede asignar $variantDir (pisa el param $VariantDir por case-insensitivity); usa $pairVariantDir'
 Assert-Contains (Join-Path $orcaDir 'harness-probe.ps1') "Action 'lesson-candidate'" 'el probe debe dejar marca para el flujo de lecciones'
 Assert-Contains (Join-Path $orcaDir 'harness-probe.ps1') 'review\.ps1' 'el contraste debe venir del verificador existente'
 $editor = Join-Path $repoRoot '.opencode\agents\harness-editor.md'

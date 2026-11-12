@@ -152,14 +152,17 @@ function Invoke-WorkerDispatch {
 foreach ($task in $ready) {
     # Pares [HARNESS-PROBE]: la tarea se despacha dos veces (base + hermana
     # clonada con la variante) y el bucle arbitra al integrar (RF1.1).
+    # OJO: la local se llama $pairVariantDir, NO $variantDir — en PowerShell
+    # $variantDir y el parametro $VariantDir son LA MISMA variable
+    # (case-insensitive) y asignarla la pisa (bug visto en el smoke).
     $pairId = $null
-    $variantDir = $null
+    $pairVariantDir = $null
     $siblingTask = $null
     if (Test-HarnessProbeSpec -Spec $task.spec) {
         if ($VariantDir -and (Test-Path $VariantDir)) {
             $pairId = "pair-$($task.id)"
-            $variantDir = (Resolve-Path $VariantDir).Path
-            Write-Output "PROBE_PAIR=$($task.id) VARIANT=$variantDir"
+            $pairVariantDir = (Resolve-Path $VariantDir).Path
+            Write-Output "PROBE_PAIR=$($task.id) VARIANT=$pairVariantDir"
             if (-not $DryRun) {
                 $cloneResponse = Invoke-Orca orchestration task-create --from $coordinator --run $RunId --task-title "$($task.task_title)-var" --spec $task.spec --json
                 $cloneResult = Get-OrcaResult $cloneResponse
@@ -175,11 +178,11 @@ foreach ($task in $ready) {
         }
     }
 
-    $record = Invoke-WorkerDispatch -Task $task -Side 'a' -PairId $pairId -VariantDir $variantDir
+    $record = Invoke-WorkerDispatch -Task $task -Side 'a' -PairId $pairId -VariantDir $pairVariantDir
     if ($record) { $dispatches += $record }
 
     if ($siblingTask) {
-        $recordB = Invoke-WorkerDispatch -Task $siblingTask -Side 'b' -PairId $pairId -VariantDir $variantDir
+        $recordB = Invoke-WorkerDispatch -Task $siblingTask -Side 'b' -PairId $pairId -VariantDir $pairVariantDir
         if ($recordB) { $dispatches += $recordB }
     }
     if ($record -or $recordB) {
