@@ -23,6 +23,11 @@ Write-Output "COORDINATOR=$coordinator"
 if ($TaskTitle) {
     if (-not $Spec) { $Spec = "Tarea $TaskTitle" }
     $taskResponse = Invoke-Orca orchestration task-create --from $coordinator --run $run.id --task-title $TaskTitle --spec $Spec --deps $Deps --json
-    $task = (Get-OrcaResult $taskResponse).task
-    Write-Output "TASK=$($task.id)"
+    $taskResult = Get-OrcaResult $taskResponse
+    $taskId = $null
+    if ($taskResult.PSObject.Properties['taskId'] -and $taskResult.taskId) { $taskId = [string]$taskResult.taskId }
+    elseif ($taskResult.PSObject.Properties['task'] -and $taskResult.task.id) { $taskId = [string]$taskResult.task.id }
+    elseif ($taskResult.PSObject.Properties['tasks'] -and @($taskResult.tasks).Count -gt 0) { $taskId = [string]@($taskResult.tasks)[0].id }
+    if (-not $taskId) { throw "Orca creo la tarea pero no devolvio taskId: $($taskResponse | ConvertTo-Json -Compress -Depth 10)" }
+    Write-Output "TASK=$taskId"
 }

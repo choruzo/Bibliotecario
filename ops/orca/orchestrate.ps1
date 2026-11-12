@@ -36,7 +36,8 @@ $cleanupScript = Join-Path $PSScriptRoot 'cleanup.ps1'
 
 function Get-Tasks {
     $response = Invoke-OrcaTaskList -Coordinator $coordinator -RunId $RunId
-    return @((Get-OrcaResult $response).tasks)
+    $tasks = @((Get-OrcaResult $response).tasks)
+    return @($tasks | Where-Object { $_ -and $_.id })
 }
 
 function Get-TaskSnapshot {
@@ -217,7 +218,7 @@ function Handle-Escalation {
 
     switch ($resolution.Action) {
         'ignore' {
-            Write-Output "[loop] ESCALATION_IGNORED $($Message.id): $($resolution.Reason) dispatch=$dispatchId"
+            Write-Host "[loop] ESCALATION_IGNORED $($Message.id): $($resolution.Reason) dispatch=$dispatchId"
             Clear-Escalation -Key $dispatchId
             Write-Audit -RunId $RunId -Actor 'loop' -Action 'escalation-ignored' -TaskId $taskId -DispatchId $dispatchId -Reason $resolution.Reason
             return 'CONTINUE'
@@ -225,21 +226,21 @@ function Handle-Escalation {
         'defer' {
             $count = Register-Escalation -Key $dispatchId -MessageId $Message.id -MinSeconds 30 -Required 2
             if ($count -lt 2) {
-                Write-Output "[loop] ESCALATION_DEFER $($Message.id): $($resolution.Reason) intento=$count"
+                Write-Host "[loop] ESCALATION_DEFER $($Message.id): $($resolution.Reason) intento=$count"
                 Write-Audit -RunId $RunId -Actor 'loop' -Action 'escalation-deferred' -TaskId $taskId -DispatchId $dispatchId -Reason "$($resolution.Reason) intento=$count"
                 return 'CONTINUE'
             }
-            Write-Output "[loop] ESCALATION $($Message.id): $($Message.body)"
+            Write-Host "[loop] ESCALATION $($Message.id): $($Message.body)"
             Write-Audit -RunId $RunId -Actor 'orca' -Action 'escalation' -TaskId $taskId -DispatchId $dispatchId -Reason "confirmada: $($resolution.Reason)"
             return 'ESCALATION'
         }
         'waiting' {
-            Write-Output "[loop] ESCALATION_WAITING $($Message.id): el worker espera aprobacion humana (dispatch=$dispatchId)"
+            Write-Host "[loop] ESCALATION_WAITING $($Message.id): el worker espera aprobacion humana (dispatch=$dispatchId)"
             Write-Audit -RunId $RunId -Actor 'worker' -Action 'waiting-human' -TaskId $taskId -DispatchId $dispatchId -Reason $resolution.Reason
             return 'ESCALATION'
         }
         default {
-            Write-Output "[loop] ESCALATION $($Message.id): $($Message.body)"
+            Write-Host "[loop] ESCALATION $($Message.id): $($Message.body)"
             Write-Audit -RunId $RunId -Actor 'orca' -Action 'escalation' -TaskId $taskId -DispatchId $dispatchId -Reason $resolution.Reason
             return 'ESCALATION'
         }
@@ -348,7 +349,7 @@ function Ensure-WorkerTerminal {
     Set-RecordValue -Record $Record -Name 'workerHandle' -Value $created.Handle
     Set-RecordValue -Record $Record -Name 'terminal' -Value $created.Terminal
     Save-Record -Record $Record
-    Write-Output "[loop] TERMINAL_RECREATED task=$($Record.taskId) handle=$($created.Handle)"
+    Write-Host "[loop] TERMINAL_RECREATED task=$($Record.taskId) handle=$($created.Handle)"
     Write-Audit -RunId $RunId -Actor 'loop' -Action 'worker-terminal-recreated' -TaskId $Record.taskId -DispatchId $Record.dispatchId -Terminal $created.Handle -Reason 'stale-handle'
     return [string]$created.Handle
 }
@@ -416,7 +417,7 @@ function Update-Watchdog {
         if ($evidence -and $evidence.DispatchStatus -in @('completed', 'failed', 'cancelled', 'settled')) { continue }
         if ($evidence -and $evidence.AgentWait) {
             if (-not $state.warnedAt -or ($now - $state.warnedAt).TotalMinutes -ge $StallMinutes) {
-                Write-Output "[loop] WATCHDOG_WAITING task=$($task.id) minutes=$([int]$minutes) (espera humana)"
+                Write-Host "[loop] WATCHDOG_WAITING task=$($task.id) minutes=$([int]$minutes) (espera humana)"
                 $state.warnedAt = $now
             }
             continue
@@ -437,7 +438,7 @@ function Update-Watchdog {
         if ($signalMinutes -lt $StallMinutes) { continue }
 
         if ($StallAction -ne 'restart') {
-            Write-Output "[loop] WATCHDOG task=$($task.id) minutes=$([int]$minutes) signal=$([int]$signalMinutes) terminal=$($record.terminal)"
+            Write-Host "[loop] WATCHDOG task=$($task.id) minutes=$([int]$minutes) signal=$([int]$signalMinutes) terminal=$($record.terminal)"
             $state.warnedAt = $now
             continue
         }
@@ -446,7 +447,7 @@ function Update-Watchdog {
         # autorizan matar a un worker segun el contrato de Orca.
         $provenDead = $evidence -and ($evidence.Liveness -eq 'dead' -or $evidence.DispatchStatus -in @('failed', 'cancelled'))
         if (-not $provenDead) {
-            Write-Output "[loop] WATCHDOG_NO_PROOF task=$($task.id) minutes=$([int]$minutes) signal=$([int]$signalMinutes): no se reinicia"
+            Write-Host "[loop] WATCHDOG_NO_PROOF task=$($task.id) minutes=$([int]$minutes) signal=$([int]$signalMinutes): no se reinicia"
             $state.warnedAt = $now
             Write-Audit -RunId $RunId -Actor 'loop' -Action 'watchdog-no-proof' -TaskId $task.id -DispatchId $record.dispatchId -Reason "liveness=$($evidence.Liveness) activity=$($evidence.Activity)"
             continue
@@ -458,19 +459,19 @@ function Update-Watchdog {
             if (-not $update.ok) { Write-Warning $update.error.message }
             Set-RecordValue -Record $record -Name 'status' -Value 'blocked'
             Save-Record -Record $record
-            Write-Output "[loop] WATCHDOG_BLOCKED task=$($task.id) recoveries=$recoveries"
+            Write-Host "[loop] WATCHDOG_BLOCKED task=$($task.id) recoveries=$recoveries"
             Write-Audit -RunId $RunId -Actor 'loop' -Action 'watchdog-blocked' -TaskId $task.id -DispatchId $record.dispatchId -Reason "max_recoveries=$MaxStallRecoveries"
             $script:WatchdogBlocked = $true
             continue
         }
 
         if (-not $record.dispatchId) {
-            Write-Output "[loop] WATCHDOG_NO_DISPATCH task=$($task.id); no se puede reiniciar"
+            Write-Host "[loop] WATCHDOG_NO_DISPATCH task=$($task.id); no se puede reiniciar"
             $script:WatchdogBlocked = $true
             continue
         }
 
-        Write-Output "[loop] WATCHDOG_STOP task=$($task.id) dispatch=$($record.dispatchId) liveness=$($evidence.Liveness)"
+        Write-Host "[loop] WATCHDOG_STOP task=$($task.id) dispatch=$($record.dispatchId) liveness=$($evidence.Liveness)"
         $stop = Invoke-Orca orchestration worker-stop --dispatch $record.dispatchId --json
         if (-not $stop.ok) {
             Write-Warning "No se pudo parar el worker estancado de $($task.id): $($stop.error.message)"
@@ -491,7 +492,7 @@ function Update-Watchdog {
         $script:StallRecoveries[$task.id] = $recoveries + 1
         $script:WatchdogRestarted = $true
         $state.warnedAt = $now
-        Write-Output "[loop] WATCHDOG_RESTART task=$($task.id) attempt=$($recoveries + 1) terminal=$($record.terminal)"
+        Write-Host "[loop] WATCHDOG_RESTART task=$($task.id) attempt=$($recoveries + 1) terminal=$($record.terminal)"
         Write-Audit -RunId $RunId -Actor 'loop' -Action 'watchdog-restart' -TaskId $task.id -DispatchId $record.dispatchId -Reason "liveness=$($evidence.Liveness)"
     }
 
@@ -854,7 +855,7 @@ function Invoke-TaskDelivery {
         return 'CONTINUE'
     }
     if ($Record.integrationSha -or $Record.status -eq 'integrated') {
-        Write-Output "[loop] DELIVERY_SKIP $TaskId ya integrada"
+        Write-Host "[loop] DELIVERY_SKIP $TaskId ya integrada"
         return 'CONTINUE'
     }
 
@@ -865,7 +866,7 @@ function Invoke-TaskDelivery {
         return 'CONTINUE'
     }
     if (-not (Test-TaskDeliverable -Status $current.status)) {
-        Write-Output "[loop] DELIVERY_STALE $TaskId status=$($current.status)"
+        Write-Host "[loop] DELIVERY_STALE $TaskId status=$($current.status)"
         Write-Audit -RunId $RunId -Actor 'loop' -Action 'worker-done-stale' -TaskId $TaskId -DispatchId $Record.dispatchId -Reason "status=$($current.status)"
         return 'CONTINUE'
     }
@@ -1015,7 +1016,7 @@ function Handle-Done {
     $latestRecord = Get-Record -TaskId $taskId
     if ($latestRecord) {
         if ($context.DispatchId -and $latestRecord.dispatchId -and $context.DispatchId -ne $latestRecord.dispatchId) {
-            Write-Output "[loop] WORKER_DONE_STALE $taskId dispatch=$($context.DispatchId) latest=$($latestRecord.dispatchId)"
+            Write-Host "[loop] WORKER_DONE_STALE $taskId dispatch=$($context.DispatchId) latest=$($latestRecord.dispatchId)"
             Write-Audit -RunId $RunId -Actor 'worker' -Action 'worker-done-stale' -TaskId $taskId -DispatchId $context.DispatchId -Reason "dispatch-not-latest latest=$($latestRecord.dispatchId)"
             return 'CONTINUE'
         }
@@ -1031,17 +1032,17 @@ function Handle-Done {
     # esta blocked/failed/ready. No se entrega: el estado vigente manda.
     $current = Get-TaskSnapshot -TaskId $taskId
     if (-not $current) {
-        Write-Output "[loop] WORKER_DONE_STALE $taskId reason=task-missing"
+        Write-Host "[loop] WORKER_DONE_STALE $taskId reason=task-missing"
         Write-Audit -RunId $RunId -Actor 'worker' -Action 'worker-done-stale' -TaskId $taskId -DispatchId $record.dispatchId -Reason 'task-missing'
         return 'CONTINUE'
     }
     if (-not (Test-TaskDeliverable -Status $current.status)) {
-        Write-Output "[loop] WORKER_DONE_STALE $taskId status=$($current.status)"
+        Write-Host "[loop] WORKER_DONE_STALE $taskId status=$($current.status)"
         Write-Audit -RunId $RunId -Actor 'worker' -Action 'worker-done-stale' -TaskId $taskId -DispatchId $record.dispatchId -Reason "status=$($current.status)"
         return 'CONTINUE'
     }
     if ($context.DispatchId -and $record.dispatchId -and $context.DispatchId -ne $record.dispatchId) {
-        Write-Output "[loop] WORKER_DONE_STALE $taskId dispatch=$($context.DispatchId) record=$($record.dispatchId)"
+        Write-Host "[loop] WORKER_DONE_STALE $taskId dispatch=$($context.DispatchId) record=$($record.dispatchId)"
         Write-Audit -RunId $RunId -Actor 'worker' -Action 'worker-done-stale' -TaskId $taskId -DispatchId $context.DispatchId -Reason "dispatch-mismatch record=$($record.dispatchId)"
         return 'CONTINUE'
     }
@@ -1089,7 +1090,7 @@ function Reconcile-CompletedTasks {
         }
         if ($record.integrationSha -or $record.status -eq 'integrated') { continue }
 
-        Write-Output "[loop] RECONCILE task=$($task.id) completed sin integrar"
+        Write-Host "[loop] RECONCILE task=$($task.id) completed sin integrar"
         Write-Audit -RunId $RunId -Actor 'loop' -Action 'reconcile' -TaskId $task.id -DispatchId $record.dispatchId -Reason 'completed_sin_integracion'
         $outcome = Invoke-TaskDelivery -TaskId $task.id -Record $record
         if ($outcome -eq 'STOP') { break }
@@ -1102,11 +1103,17 @@ function Settle-SettledDispatches {
     param([array]$Tasks)
 
     $byTask = @{}
-    foreach ($task in $Tasks) { $byTask[$task.id] = $task }
+    foreach ($task in @($Tasks)) {
+        if (-not $task -or -not $task.id) { continue }
+        $byTask[[string]$task.id] = $task
+    }
 
     foreach ($record in @($script:Dispatches)) {
         if (-not $record.workerHandle) { continue }
-        $task = $byTask[$record.taskId]
+        $task = $null
+        if ($record.taskId -and $byTask.ContainsKey([string]$record.taskId)) {
+            $task = $byTask[[string]$record.taskId]
+        }
         $settled = $false
 
         if ($record.integrationSha -or $record.status -eq 'integrated') {
@@ -1128,7 +1135,7 @@ function Settle-SettledDispatches {
         if ($script:ClosedTerminals[$record.workerHandle]) { continue }
         if (Close-OrcaTerminal -Handle $record.workerHandle -Quiet) {
             $script:ClosedTerminals[$record.workerHandle] = $true
-            Write-Output "TERMINAL_SETTLED=$($record.workerHandle) task=$($record.taskId)"
+            Write-Host "TERMINAL_SETTLED=$($record.workerHandle) task=$($record.taskId)"
             Write-Audit -RunId $RunId -Actor 'loop' -Action 'terminal-close' -TaskId $record.taskId -DispatchId $record.dispatchId -Terminal $record.workerHandle -Reason 'settled'
         }
     }
@@ -1161,7 +1168,7 @@ function Detect-RuntimeReverts {
             }
             Set-RecordValue -Record $record -Name 'status' -Value 'blocked'
             Save-Record -Record $record
-            Write-Output "[loop] RUNTIME_STOP task=$($task.id): $reason"
+            Write-Host "[loop] RUNTIME_STOP task=$($task.id): $reason"
             Write-Audit -RunId $RunId -Actor 'orca' -Action 'blocked' -TaskId $task.id -DispatchId $record.dispatchId -Reason "runtime_stop: $reason"
         }
     }
@@ -1192,13 +1199,13 @@ function Resume-DeadDispatches {
             $proven = $true
         }
         if (-not $proven) {
-            Write-Output "RESUME_UNPROVEN task=$($task.id) liveness=$liveness dispatch=$dispatchStatus terminal_connected=$connected"
+            Write-Host "RESUME_UNPROVEN task=$($task.id) liveness=$liveness dispatch=$dispatchStatus terminal_connected=$connected"
             Write-Audit -RunId $RunId -Actor 'loop' -Action 'resume-unproven' -TaskId $task.id -DispatchId $record.dispatchId -Reason "liveness=$liveness dispatch=$dispatchStatus"
             continue
         }
 
         $reason = if ($show -and $show.dispatch.lastError) { [string]$show.dispatch.lastError } else { "terminal_connected=$connected liveness=$liveness dispatch=$dispatchStatus" }
-        Write-Output "RESUME_DEAD task=$($task.id) terminal=$($record.terminal) reason=$reason"
+        Write-Host "RESUME_DEAD task=$($task.id) terminal=$($record.terminal) reason=$reason"
         if ($record.dispatchId) {
             [void](Invoke-Orca orchestration worker-stop --dispatch $record.dispatchId --json)
         }
