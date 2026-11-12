@@ -888,11 +888,16 @@ function Invoke-TaskDelivery {
         if (-not $sibling) {
             Write-Warning "Tarea probe $($Record.taskId) sin hermana en el registro; despacho normal"
         }
-        elseif (-not (Test-HarnessPairReady -Record $Record -Sibling $sibling)) {
-            Write-Host "[loop] PAIR_WAIT $($Record.taskId) hermana=$($sibling.taskId) status=$($sibling.status)"
-            return 'CONTINUE'
-        }
         else {
+            # Estados frescos de ORCA: el record local queda rancio hasta la entrega.
+            $selfSnapshot = Get-TaskSnapshot -TaskId $Record.taskId
+            $siblingSnapshot = Get-TaskSnapshot -TaskId $sibling.taskId
+            $selfStatus = if ($selfSnapshot) { [string]$selfSnapshot.status } else { [string]$Record.status }
+            $siblingStatus = if ($siblingSnapshot) { [string]$siblingSnapshot.status } else { [string]$sibling.status }
+            if (-not (Test-HarnessPairReady -SelfStatus $selfStatus -SiblingStatus $siblingStatus)) {
+                Write-Host "[loop] PAIR_WAIT $($Record.taskId) hermana=$($sibling.taskId) status=$siblingStatus"
+                return 'CONTINUE'
+            }
             $decision = Resolve-HarnessPairWinner -Record $Record -Sibling $sibling
             $variantRec = if ([string]$Record.side -eq 'b') { $Record } else { $sibling }
             $baseRec = if ([string]$Record.side -eq 'b') { $sibling } else { $Record }
@@ -1333,7 +1338,13 @@ while (-not $stopReason) {
 
     Write-Output "[loop] tasks=$($tasks.Count) active=$active ready=$($ready.Count) completed=$($completed.Count) blocked=$($blocked.Count)"
 
-    if ($completed.Count -eq $tasks.Count) { $stopReason = 'DONE'; break }
+    # Pares [HARNESS-PROBE] pendientes de arbitraje: mantienen el bucle vivo
+    # aunque ambas tareas esten completed (el arbitraje ocurre en la entrega).
+    $pendingPairs = @($script:Dispatches | Where-Object {
+        $_.pairId -and -not $_.integrationSha -and $_.status -notin @('integrated', 'lost', 'failed')
+    })
+
+    if ($completed.Count -eq $tasks.Count -and $pendingPairs.Count -eq 0) { $stopReason = 'DONE'; break }
 
     if ($active -eq 0 -and $ready.Count -eq 0) {
         $stopReason = if ($blocked.Count -gt 0) { 'BLOCKED' } else { 'DONE' }

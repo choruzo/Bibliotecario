@@ -42,10 +42,11 @@ try {
     if (-not $sib -or $sib.taskId -ne 'task_b') { throw 'El hermano no se resuelve por pairId' }
     if (Get-PairSibling -Records @($a) -Record $a) { throw 'Sin hermano no debe resolverse' }
 
-    # 3. Listos para arbitrar: ambos fuera de vuelo.
-    if (-not (Test-HarnessPairReady -Record $a -Sibling $b)) { throw 'Ambos completed deben estar listos' }
-    $bBusy = New-PairRecord -TaskId 'task_b' -Side 'b' -Status 'dispatched' -Worktree 'w'
-    if (Test-HarnessPairReady -Record $a -Sibling $bBusy) { throw 'Con la hermana en vuelo no se arbitra' }
+    # 3. Listos para arbitrar: estados frescos de ORCA (no records).
+    if (-not (Test-HarnessPairReady -SelfStatus 'completed' -SiblingStatus 'completed')) { throw 'Ambos completed deben estar listos' }
+    if (-not (Test-HarnessPairReady -SelfStatus 'completed' -SiblingStatus 'failed')) { throw 'Terminal+failed debe estar listo' }
+    if (Test-HarnessPairReady -SelfStatus 'completed' -SiblingStatus 'dispatched') { throw 'Con la hermana en vuelo no se arbitra' }
+    if (Test-HarnessPairReady -SelfStatus 'dispatched' -SiblingStatus 'dispatched') { throw 'Ambos en vuelo no se arbitran' }
 
     # 4. Arbitraje: variante aceptada y base con cambios -> variante.
     $wtA1 = New-WorktreeWithReview -Name 'a-cambios' -Verdict 'CAMBIOS' -Defects @('x', 'y')

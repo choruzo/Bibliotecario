@@ -506,12 +506,12 @@ function Get-PairSibling {
 }
 
 function Test-HarnessPairReady {
-    # El arbitraje solo procede cuando ambos lados dejan de estar en vuelo.
-    param($Record, $Sibling)
+    # El arbitraje solo procede cuando ambos lados alcanzaron estado terminal
+    # segun ORCA (estados frescos, no el record local, que se queda rancio:
+    # el worker_done no actualiza record.status hasta la entrega).
+    param([string]$SelfStatus, [string]$SiblingStatus)
 
-    if (-not $Sibling) { return $false }
-    $statuses = @([string]$Record.status, [string]$Sibling.status)
-    $inFlight = $statuses | Where-Object { $_ -in @('dispatched', 'ready') }
+    $inFlight = @([string]$SelfStatus, [string]$SiblingStatus) | Where-Object { $_ -in @('dispatched', 'ready', 'pending') }
     return (-not $inFlight)
 }
 

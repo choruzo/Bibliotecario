@@ -110,6 +110,11 @@ Assert-Contains (Join-Path $orcaDir 'dispatch.ps1') '\$setupOut = \(& pwsh' 'el 
 # Segunda colision case-insensitive: $variantDir local pisaba el param $VariantDir
 # (el smoke lo vio como "sin -VariantDir" con la traza mostrando el valor).
 Assert-NotContains (Join-Path $orcaDir 'dispatch.ps1') '\$variantDir\s*=' 'dispatch no puede asignar $variantDir (pisa el param $VariantDir por case-insensitivity); usa $pairVariantDir'
+# PAIR_WAIT decide con estados frescos de Orca (el record queda rancio) y el
+# bucle no se cierra DONE con pares pendientes de arbitraje.
+Assert-Contains (Join-Path $orcaDir 'lib.ps1') 'SelfStatus' 'Test-HarnessPairReady debe decidir con estados frescos'
+Assert-Contains (Join-Path $orcaDir 'orchestrate.ps1') 'Get-TaskSnapshot -TaskId \$sibling' 'PAIR_WAIT debe consultar el estado fresco de la hermana'
+Assert-Contains (Join-Path $orcaDir 'orchestrate.ps1') 'pendingPairs' 'el bucle no debe cerrarse DONE con pares pendientes'
 Assert-Contains (Join-Path $orcaDir 'harness-probe.ps1') "Action 'lesson-candidate'" 'el probe debe dejar marca para el flujo de lecciones'
 Assert-Contains (Join-Path $orcaDir 'harness-probe.ps1') 'review\.ps1' 'el contraste debe venir del verificador existente'
 $editor = Join-Path $repoRoot '.opencode\agents\harness-editor.md'
