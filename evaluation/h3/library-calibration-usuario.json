@@ -21,7 +21,7 @@
     }
   },
   "model_signature": "2899120c395d40b6a1b7b339c3ee5a7ecea7c6abd63f7a3d358d344356b88f58",
-  "corpus_signature": "79fb58fb7afb7466cab73b67ccb422b794319ad54c0b0a04e14dcd0592ead37f",
+  "corpus_signature": "8cdbe255db4212dbf2f247e1023861176b074636e6eff9bf7deb1d2a5c90669d",
   "assessment_version": "h4-sufficiency-v5-parallel-intent",
   "query_mode": "h4_contextual_user_history",
   "limitations": [
@@ -184,19 +184,19 @@
       "improper_answer_rate": 0.0
     },
     "holdout": {
-      "tp": 52,
+      "tp": 53,
       "fp": 0,
-      "fn": 2,
+      "fn": 1,
       "tn": 19,
       "precision": 1.0,
-      "recall": 0.9629629629629629,
-      "f1": 0.9811320754716981,
-      "accuracy": 0.9726027397260274,
+      "recall": 0.9814814814814815,
+      "f1": 0.9906542056074767,
+      "accuracy": 0.9863013698630136,
       "improper_answer_rate": 0.0
     },
     "reason": "empirical_holdout_pass",
     "rejection_reasons": [],
-    "accepted_locator_recall10": 0.9736842105263158,
+    "accepted_locator_recall10": 0.9739583333333334,
     "limitations": [
       "Small bank; no statistical guarantee",
       "Coverage assessment is model-dependent; exact excerpts do not prove semantics"
@@ -218,7 +218,7 @@
           "recall5": 0.9826666666666667,
           "recall10": 0.9853333333333333,
           "mrr10": 0.9893333333333333,
-          "ndcg10": 0.9586272972201124
+          "ndcg10": 0.95735686027994
         },
         "conversation": {
           "count": 26,
@@ -239,29 +239,29 @@
       },
       "latency": {
         "embedding_ms": {
-          "p50": 43.32,
-          "p95": 59.92,
-          "max": 83.51
+          "p50": 42.44,
+          "p95": 56.75,
+          "max": 69.54
         },
         "search_ms": {
-          "p50": 116.95,
-          "p95": 185.23,
-          "max": 194.12
+          "p50": 113.88,
+          "p95": 179.12,
+          "max": 201.96
         },
         "fusion_ms": {
-          "p50": 79.61,
-          "p95": 262.08,
-          "max": 382.98
+          "p50": 76.76,
+          "p95": 251.17,
+          "max": 337.58
         },
         "reranking_ms": {
-          "p50": 465.17,
-          "p95": 532.81,
-          "max": 925.38
+          "p50": 445.04,
+          "p95": 520.06,
+          "max": 618.47
         },
         "sufficiency_ms": {
-          "p50": 5833.2,
-          "p95": 9808.25,
-          "max": 20583.31
+          "p50": 4919.72,
+          "p95": 8584.51,
+          "max": 18320.54
         }
       }
     },
@@ -338,10 +338,6 @@
         "955a7dc9-058d-45c8-ab40-9fe4a15dd1b5",
         "usuarios"
       ],
-      "d6bf295d-99e7-4d7a-9096-2a772921e495": [
-        "064b0df7-8c02-429e-8833-df9575db9a39",
-        "usuarios"
-      ],
       "a0ae485f-9558-42ff-9e1f-e15931a8300b": [
         "5ff18d73-bc83-4a80-ac0c-5bf5e63ca025",
         "usuarios"
@@ -356,10 +352,6 @@
       ],
       "0228b9f5-3d3a-472f-af58-8390bb6bea14": [
         "03dd36f5-6fe9-4f95-85ac-08230c53bed8",
-        "usuarios"
-      ],
-      "71661691-47a5-4494-a814-a41c79ff88ad": [
-        "58347cfd-3e54-4e47-8d3e-85ec04dba928",
         "usuarios"
       ],
       "85516ca1-2efa-4441-a394-55f5f787e8ea": [
@@ -384,6 +376,14 @@
       ],
       "5bfc0c9a-227c-459c-a095-7457640b3528": [
         "552b3a08-7170-4a13-b690-0dcc6575d506",
+        "usuarios"
+      ],
+      "d6bf295d-99e7-4d7a-9096-2a772921e495": [
+        "3c6a24de-7803-4fc6-a474-9f58cdccd185",
+        "usuarios"
+      ],
+      "71661691-47a5-4494-a814-a41c79ff88ad": [
+        "86fa7ec0-a3cf-4d38-9a7a-8794d1194c50",
         "usuarios"
       ]
     }
@@ -514,7 +514,7 @@
       "recall5": 1.0,
       "recall10": 1.0,
       "mrr10": 1.0,
-      "ndcg10": 1.0,
+      "ndcg10": 0.9047172294870751,
       "answer_eligible": true,
       "assessment_action": "answer",
       "error": null
@@ -991,7 +991,7 @@
       "id": "AGN-CAL-A015",
       "kind": "answerable",
       "split": "calibration",
-      "score": 5.486832618713379,
+      "score": 5.487963676452637,
       "recall5": 1.0,
       "recall10": 1.0,
       "mrr10": 1.0,
@@ -1082,7 +1082,7 @@
       "id": "AGN-CAL-U006",
       "kind": "unanswerable",
       "split": "calibration",
-      "score": -4.223208904266357,
+      "score": -4.223284721374512,
       "recall5": null,
       "recall10": null,
       "mrr10": 0,
@@ -1134,7 +1134,7 @@
       "id": "AGN-CAL-C001-T1",
       "kind": "conversation",
       "split": "calibration",
-      "score": 6.064792633056641,
+      "score": 6.0601091384887695,
       "recall5": 1.0,
       "recall10": 1.0,
       "mrr10": 1.0,
@@ -1771,7 +1771,7 @@
       "id": "AGN-VAL-A010",
       "kind": "answerable",
       "split": "validation",
-      "score": 1.9581513404846191,
+      "score": 1.9498947858810425,
       "recall5": 1.0,
       "recall10": 1.0,
       "mrr10": 1.0,
@@ -1849,7 +1849,7 @@
       "id": "AGN-VAL-A016",
       "kind": "answerable",
       "split": "validation",
-      "score": 6.962795257568359,
+      "score": 6.963698863983154,
       "recall5": 1.0,
       "recall10": 1.0,
       "mrr10": 1.0,
@@ -2031,7 +2031,7 @@
       "id": "AGN-VAL-C003-T1",
       "kind": "conversation",
       "split": "validation",
-      "score": 3.456418037414551,
+      "score": 3.4570932388305664,
       "recall5": 1.0,
       "recall10": 1.0,
       "mrr10": 1.0,
@@ -2101,8 +2101,8 @@
       "recall10": 1.0,
       "mrr10": 1.0,
       "ndcg10": 1.0,
-      "answer_eligible": false,
-      "assessment_action": "abstain",
+      "answer_eligible": true,
+      "assessment_action": "answer",
       "error": null
     },
     {
