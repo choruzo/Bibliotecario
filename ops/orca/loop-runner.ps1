@@ -11,6 +11,7 @@ param(
     [ValidateRange(1, 5)][int]$MaxWorkers = 5,
     [ValidateRange(1, 10)][int]$MaxReviewRounds = 2,
     [string]$BaseBranch = 'main',
+    [string]$VariantDir = '',
     [switch]$KeepWorktrees,
     [switch]$AutoRescue,
     [ValidateRange(1, 5)][int]$MaxRescueRounds = 2,
@@ -107,6 +108,7 @@ try {
             '-MaxReviewRounds', "$MaxReviewRounds",
             '-BaseBranch', $BaseBranch
         )
+        if ($VariantDir) { $orcaArgs += @('-VariantDir', $VariantDir) }
         if ($KeepWorktrees) { $orcaArgs += '-KeepWorktrees' }
         if ($AutoRescue) {
             $orcaArgs += @('-AutoRescue', '-MaxRescueRounds', "$MaxRescueRounds")

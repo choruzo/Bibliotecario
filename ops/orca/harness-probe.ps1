@@ -65,7 +65,7 @@ function Get-ProbeSideResult {
         [string]$PythonExe
     )
 
-    $empty = @{ finished = $false; verdict = 'CAMBIOS'; defects = @(); files = @(); filesExclHarness = 0; reviewFile = ''; evidenceMissing = $null }
+    $empty = @{ finished = $false; verdict = 'CAMBIOS'; defects = @(); files = @(); filesExclHarness = 0; reviewFile = ''; evidenceMissing = $null; trajectory = $null }
     if (-not $Record -or -not $Record.worktree -or -not (Test-Path $Record.worktree)) { return $empty }
 
     $reviewOutput = (& pwsh -NoProfile -File (Join-Path $PSScriptRoot 'review.ps1') -RunId $script:probeRun -TaskId $Record.taskId -Worktree $Record.worktree -BaseBranch $BaseBranch 2>&1 | Out-String)
@@ -115,6 +115,17 @@ function Get-ProbeSideResult {
         Write-Host "[probe] evidencia lado ${Side}: sin medir (report.md no existe en el worktree)"
     }
 
+    # Trayectoria de la sesion (P3): metrica descriptiva (pasos, tools, duracion),
+    # no decisoria. La sesion la registro worker-terminal en .orca-task.
+    $trajectory = $null
+    $sessionId = Get-OpenCodeSessionId -Worktree $Record.worktree
+    if ($sessionId) {
+        $trajectory = Get-SessionTrajectoryStats -SessionId $sessionId
+        if ($trajectory) {
+            Write-Host ("[probe] trayectoria lado {0}: assistants={1} tools={2} dur={3}s" -f $Side, $trajectory.assistantMessages, $trajectory.toolCalls, $trajectory.durationSec)
+        }
+    }
+
     if (-not $verdict) { return $empty }
     return @{
         finished         = $true
@@ -124,6 +135,7 @@ function Get-ProbeSideResult {
         filesExclHarness = $filesExclHarness
         reviewFile       = $reviewFile
         evidenceMissing  = $evidenceMissing
+        trajectory       = $trajectory
         startedAt        = if ($Record.createdAt) { [string]$Record.createdAt } else { '' }
         endedAt          = $endedAt
     }

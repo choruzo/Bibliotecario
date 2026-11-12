@@ -551,6 +551,80 @@ function Resolve-HarnessPairWinner {
     return $decision
 }
 
+# --- Contraste de trayectorias (P3 del roadmap, PRD 08) ---
+
+function ConvertFrom-SessionTrajectory {
+    # Parsea el JSON de mensajes de una sesion OpenCode (GET /api/session/{id}/message)
+    # y devuelve estadisticas de trayectoria: mensajes del asistente, llamadas a
+    # tools, duracion y tokens. Funcion pura (testable con fixture, sin API).
+    # Tolerante a variaciones de esquema entre versiones.
+    param([Parameter(Mandatory)][AllowEmptyString()][string]$JsonText)
+
+    $stats = @{ assistantMessages = 0; userMessages = 0; toolCalls = 0; durationSec = $null; tokensOutput = $null; firstCreated = $null; lastCompleted = $null }
+    if (-not $JsonText.Trim()) { return $stats }
+    try { $payload = $JsonText | ConvertFrom-Json -Depth 40 } catch { return $stats }
+    $messages = @()
+    if ($payload.PSObject.Properties['data'] -and $payload.data) { $messages = @($payload.data) }
+    elseif ($payload -is [array]) { $messages = @($payload) }
+    elseif ($payload.PSObject.Properties['type']) {
+        # ConvertFrom-Json desenvuelve los arrays de un elemento: mensaje unico.
+        $messages = @($payload)
+    }
+
+    $minCreated = $null
+    $maxCompleted = $null
+    foreach ($message in $messages) {
+        $type = if ($message.PSObject.Properties['type']) { [string]$message.type } else { '' }
+        if ($type -eq 'assistant') {
+            $stats.assistantMessages++
+            if ($message.PSObject.Properties['content'] -and $message.content) {
+                foreach ($part in @($message.content)) {
+                    $partType = if ($part.PSObject.Properties['type']) { [string]$part.type } else { '' }
+                    if ($partType -in @('tool', 'tool_use')) { $stats.toolCalls++ }
+                }
+            }
+            if ($message.PSObject.Properties['tokens'] -and $message.tokens -and $message.tokens.PSObject.Properties['output']) {
+                if ($null -eq $stats.tokensOutput) { $stats.tokensOutput = 0 }
+                try { $stats.tokensOutput += [long]$message.tokens.output } catch { }
+            }
+        }
+        elseif ($type -eq 'user') { $stats.userMessages++ }
+
+        if ($message.PSObject.Properties['time'] -and $message.time) {
+            $created = $message.time.PSObject.Properties['created'] ? $message.time.created : $null
+            $completed = $message.time.PSObject.Properties['completed'] ? $message.time.completed : $null
+            if ($created) {
+                $minCreated = if ($null -eq $minCreated) { $created } else { [Math]::Min([long]$minCreated, [long]$created) }
+            }
+            if ($completed) {
+                $maxCompleted = if ($null -eq $maxCompleted) { $completed } else { [Math]::Max([long]$maxCompleted, [long]$completed) }
+            }
+        }
+    }
+    if ($null -ne $minCreated -and $null -ne $maxCompleted) {
+        $stats.firstCreated = $minCreated
+        $stats.lastCompleted = $maxCompleted
+        try { $stats.durationSec = [Math]::Round(([long]$maxCompleted - [long]$minCreated) / 1000.0, 1) } catch { }
+    }
+    return $stats
+}
+
+function Get-SessionTrajectoryStats {
+    # Estadisticas de trayectoria de una sesion real via la API local.
+    # $null si la API no responde o la sesion no existe: metrica descriptiva,
+    # nunca bloquea.
+    param([Parameter(Mandatory)][string]$SessionId)
+
+    try {
+        $raw = & opencode api GET "/api/session/$SessionId/message" 2>$null
+        if ($LASTEXITCODE -ne 0) { return $null }
+        $text = ($raw | Out-String).Trim()
+        if (-not $text) { return $null }
+        return ConvertFrom-SessionTrajectory -JsonText $text
+    }
+    catch { return $null }
+}
+
 function Measure-EvidenceCoverage {    # Metrica de cobertura de evidencia para probes A/B (RF1.6 refinado): ejecuta
     # un auditorOffline (p. ej. el evidence_audit.py de la variante) contra el
     # report de un lado y cuenta los needles MISSING. Es un instrumento neutro:
@@ -631,6 +705,8 @@ function Write-ProbeResultDir {
     )
 
     New-Item -ItemType Directory -Force -Path $Dir | Out-Null
+        $baseTraj = if ($BaseResult.trajectory) { "assistants=$($BaseResult.trajectory.assistantMessages) tools=$($BaseResult.trajectory.toolCalls) dur=$($BaseResult.trajectory.durationSec)s tokens=$($BaseResult.trajectory.tokensOutput)" } else { 'sin sesion' }
+        $variantTraj = if ($VariantResult.trajectory) { "assistants=$($VariantResult.trajectory.assistantMessages) tools=$($VariantResult.trajectory.toolCalls) dur=$($VariantResult.trajectory.durationSec)s tokens=$($VariantResult.trajectory.tokensOutput)" } else { 'sin sesion' }
     $lines = @(
         '# Probe de harness: ' + $Label,
         '',
@@ -643,6 +719,7 @@ function Write-ProbeResultDir {
         '',
         ('- ``side=base`` delivered={0} started_at={1} ended_at={2}' -f ([bool]$BaseResult.finished), $BaseResult.startedAt, $BaseResult.endedAt),
         ('- ``side=variante`` delivered={0} started_at={1} ended_at={2}' -f ([bool]$VariantResult.finished), $VariantResult.startedAt, $VariantResult.endedAt),
+        ("- Trayectoria (descriptiva, no decisiva): base $baseTraj / variante $variantTraj"),
         "- Metrica de evidencia: ``metric_status=$MetricStatus`` ``metric_reason=$MetricReason``",
         '',
         '| Lado | Terminada | Veredicto | Defectos | Archivos | Evidencia |',

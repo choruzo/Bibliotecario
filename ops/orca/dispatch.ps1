@@ -48,7 +48,9 @@ function Invoke-WorkerDispatch {
     $shortId = Get-TaskShortId -TaskId $Task.id
     $name = "$slug-$shortId$(if ($Side -eq 'b') { '-var' } else { '' })"
 
-    Write-Output "DISPATCHING=$($Task.id) NAME=$name SIDE=$Side"
+    # Progreso con Write-Host: los Write-Output dentro de una funcion que
+    # devuelve un objeto contaminan el retorno (bug ya visto en TERMINAL_RECREATED).
+    Write-Host "DISPATCHING=$($Task.id) NAME=$name SIDE=$Side"
 
     if ($DryRun) { return $null }
 
@@ -79,7 +81,7 @@ function Invoke-WorkerDispatch {
         }
         if ($Side -eq 'b' -and $VariantDir) {
             $applied = @(Copy-HarnessVariant -VariantDir $VariantDir -Worktree $worktreePath)
-            Write-Output "VARIANT_APPLIED=$($applied -join ',')"
+            Write-Host "VARIANT_APPLIED=$($applied -join ',')"
         }
 
         $taskDir = Join-Path $worktreePath '.orca-task'
@@ -134,7 +136,7 @@ function Invoke-WorkerDispatch {
             pairId       = $PairId
             variantDir   = $VariantDir
         }
-        Write-Output "DISPATCHED=$($Task.id) DISPATCH_ID=$dispatchId WORKER=$workerHandle WORKTREE=$($worktree.path)"
+        Write-Host "DISPATCHED=$($Task.id) DISPATCH_ID=$dispatchId WORKER=$workerHandle WORKTREE=$($worktree.path)"
         return $record
     }
     catch {

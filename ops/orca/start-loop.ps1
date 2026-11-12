@@ -15,6 +15,9 @@ param(
     [ValidateRange(1, 5)][int]$MaxWorkers = 5,
     [ValidateRange(1, 10)][int]$MaxReviewRounds = 2,
     [string]$BaseBranch = 'main',
+    # Variante del harness para tareas marcadas con [HARNESS-PROBE] (RF1.1):
+    # se propaga a orchestrate -> dispatch para crear el par base/variante.
+    [string]$VariantDir = '',
     [switch]$KeepWorktrees,
     [switch]$AutoRescue,
     [ValidateRange(1, 5)][int]$MaxRescueRounds = 2,
@@ -134,6 +137,7 @@ $runnerArgs = @(
     '-LogPath', $logPath,
     '-MetaPath', $metaPath
 )
+if ($VariantDir) { $runnerArgs += @('-VariantDir', $VariantDir) }
 if ($KeepWorktrees) { $runnerArgs += '-KeepWorktrees' }
 if ($AutoRescue) {
     $runnerArgs += @('-AutoRescue', '-MaxRescueRounds', "$MaxRescueRounds")

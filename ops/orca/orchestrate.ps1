@@ -4,6 +4,9 @@ param(
     [ValidateRange(1, 10)][int]$MaxReviewRounds = 2,
     [int]$WaitTimeoutMs = 900000,
     [string]$BaseBranch = 'main',
+    # Variante del harness para tareas [HARNESS-PROBE]: se pasa a dispatch para
+    # despachar el par base/variante (RF1.1). Vacio = despacho normal.
+    [string]$VariantDir = '',
     [switch]$KeepWorktrees,
     [switch]$AutoRescue,
     [ValidateRange(1, 5)][int]$MaxRescueRounds = 2,
@@ -1337,7 +1340,9 @@ while (-not $stopReason) {
     }
 
     if ($ready.Count -gt 0 -and $active -lt $MaxWorkers) {
-        & pwsh -NoProfile -File (Join-Path $PSScriptRoot 'dispatch.ps1') -RunId $RunId -MaxWorkers $MaxWorkers -BaseBranch $BaseBranch | Out-Host
+        $dispatchArgs = @('-NoProfile', '-File', (Join-Path $PSScriptRoot 'dispatch.ps1'), '-RunId', $RunId, '-MaxWorkers', $MaxWorkers, '-BaseBranch', $BaseBranch)
+        if ($VariantDir) { $dispatchArgs += @('-VariantDir', $VariantDir) }
+        & pwsh @dispatchArgs | Out-Host
         $script:Dispatches = @(Read-Dispatches -RunId $RunId)
         continue
     }
