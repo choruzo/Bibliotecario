@@ -39,6 +39,7 @@ Esta carpeta implementa el ciclo de `docs/01-ciclo.md` usando **Orca como plano 
 | `integrate.ps1` | Merge + `setup-worktree` + checks (`-Full` solo si toca la web) + fast-forward de la base. |
 | `archive.ps1` | Archiva spec, reporte, commit y diff antes de limpiar. |
 | `lesson.ps1` | Librería de lecciones: scaffold con evidencia de auditoría, `-Validate`, `-Index`, `-ListPending`. |
+| `harness-probe.ps1` | Prueba A/B del harness: base vs variante sobre la misma tarea, contraste con el verificador y composición en la librería. |
 | `library/` | Lecciones `EXPERIENCE.md` por dominio, commiteadas; el worker las consulta vía puntero. Ver `library/README.md`. |
 | `cleanup.ps1` | Cierra terminales, reintenta y, opcionalmente, elimina el worktree. |
 | `tests/cap5.ps1` | Prueba de tope: 6 tareas, 5 workers activos y 1 en cola. |
@@ -47,6 +48,7 @@ Esta carpeta implementa el ciclo de `docs/01-ciclo.md` usando **Orca como plano 
 | `tests/delivery-commit.ps1` | Review/commit con worker que commitea y con cambios sin stage. |
 | `tests/kit-regression.ps1` | Invariantes estáticos y sintaxis de todos los scripts. |
 | `tests/lesson.ps1` | Librería de lecciones: scaffold, `NO_ENTRY`, `-Validate` y `-Index` con estado sintético. |
+| `tests/harness-probe.ps1` | Variante válida/inválida, materialización y contraste A/B con casos sintéticos. |
 | `check.ps1` | Checks del repo (whitespace, tests/lint/typecheck si existen). |
 | `setup-worktree.ps1` | Setup idempotente del worktree. |
 | `PROTOCOL.md` | Contrato del worker. |
@@ -517,6 +519,30 @@ pwsh -NoProfile -File ops/orca/lesson.ps1 -Index            # regenera el índic
 - Las lecciones viven en `ops/orca/library/` (commiteadas, viajan con los
   worktrees) y el worker recibe un puntero en su preamble para consultar
   `INDEX.md` antes de empezar. Formato y reglas: `ops/orca/library/README.md`.
+
+### 19. Prueba A/B del harness
+
+Para validar una hipótesis de mejora del worker se ejecuta la misma tarea de
+calibración dos veces en paralelo — base (harness tal cual) y variante — y decide
+el verificador que ya existe:
+
+```powershell
+# La variante la propone el agente harness-editor en .orca-run/harness-variants/<nombre>/
+pwsh -NoProfile -File ops/orca/harness-probe.ps1 -SpecFile <spec.md> -VariantDir <dir> -DryRun
+pwsh -NoProfile -File ops/orca/harness-probe.ps1 -SpecFile <spec.md> -VariantDir <dir> -MaxProbeMinutes 25
+```
+
+- La variante es un directorio de **archivos completos**: lo que incluye
+  sobrescribe, lo que omite se hereda. `Test-HarnessVariant` la rechaza si toca
+  superficies prohibidas, supera el tope always-on (24.000 chars) o pierde las
+  denegaciones del kit (`git commit`, `task-update`).
+- El contraste solo adopta con diferencia **medible**: veredicto del review, gate
+  de checks o número de defectos. Empate → «sin contraste medible», nada se adopta.
+- El resultado se compone en `ops/orca/library/<dominio>/harnesses/<probe>/`:
+  `RESULT.md` siempre y, si la variante gana, `variant/` (árbol adoptado) +
+  `proposal.diff` para que una persona lo aplique al kit. El probe nunca integra
+  ni hace push; deja la marca `lesson-candidate` en la auditoría para el flujo de
+  lecciones.
 
 ## Reglas y límites
 

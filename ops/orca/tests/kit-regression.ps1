@@ -59,6 +59,21 @@ Assert-Contains (Join-Path $repoRoot '.opencode\agents\worker.md') 'ops/orca/lib
 Assert-Contains (Join-Path $repoRoot '.opencode\agents\lider.md') 'lesson\.ps1 -ListPending' 'el lider debe recoger las lecciones pendientes al terminar el bucle'
 Assert-Contains (Join-Path $repoRoot 'ops\orca\library\README.md') 'Evidencia o nada' 'la regla de evidencia debe estar documentada en la libreria'
 
+# Harness probing (Fase 1, PRD docs/08-prd-harnessing.md).
+Assert-Contains (Join-Path $orcaDir 'lib.ps1') 'function Test-HarnessVariant' 'falta el validador de variantes'
+Assert-Contains (Join-Path $orcaDir 'lib.ps1') 'function Test-HarnessContrast' 'falta la decision de contraste A/B'
+Assert-Contains (Join-Path $orcaDir 'dispatch.ps1') 'PrepareWorktree' 'dispatch debe aceptar el hook de materializacion de variante'
+Assert-Contains (Join-Path $orcaDir 'harness-probe.ps1') 'Test-HarnessVariant' 'el probe debe validar la variante antes de gastar workers'
+Assert-Contains (Join-Path $orcaDir 'lib.ps1') 'proposal\.diff' 'la adopcion debe producir un diff de propuesta para una persona'
+Assert-Contains (Join-Path $orcaDir 'harness-probe.ps1') 'Write-ProbeResultDir' 'el probe debe componer la evidencia en la libreria'
+Assert-Contains (Join-Path $orcaDir 'harness-probe.ps1') "Action 'lesson-candidate'" 'el probe debe dejar marca para el flujo de lecciones'
+Assert-Contains (Join-Path $orcaDir 'harness-probe.ps1') 'review\.ps1' 'el contraste debe venir del verificador existente'
+$editor = Join-Path $repoRoot '.opencode\agents\harness-editor.md'
+Assert-Contains $editor 'harness-variants' 'el editor debe escribir sus variantes en .orca-run/harness-variants'
+Assert-Contains $editor 'RATIONALE\.md' 'el editor debe justificar cada cambio con evidencia'
+Assert-Contains $editor 'effect: deny' 'el editor debe tener permisos restrictivos'
+Assert-Contains (Join-Path $repoRoot '.opencode\agents\lider.md') 'harness-probe\.ps1' 'el lider debe poder lanzar probes de calibracion'
+
 $worker = Join-Path $repoRoot '.opencode\agents\worker.md'
 Assert-Contains $worker 'orca orchestration task-update \*' 'worker debe denegar task-update'
 Assert-Contains $worker 'git commit \*' 'worker debe denegar git commit'

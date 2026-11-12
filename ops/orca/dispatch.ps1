@@ -3,6 +3,10 @@ param(
     [ValidateRange(1, 5)][int]$MaxWorkers = 5,
     [string]$BaseBranch = 'main',
     [string]$WorkerAgent = 'worker',
+    # Hook opcional para materializar variantes del harness ANTES de crear la
+    # sesion del worker (pruebas A/B, ver harness-probe.ps1). Recibe
+    # -WorktreePath y -TaskTitle; no altera el comportamiento si no se pasa.
+    [scriptblock]$PrepareWorktree,
     [switch]$DryRun
 )
 
@@ -61,6 +65,10 @@ foreach ($task in $ready) {
 
         & pwsh -NoProfile -File (Join-Path $PSScriptRoot 'setup-worktree.ps1') -Worktree $worktreePath
         if ($LASTEXITCODE -ne 0) { throw "Setup falló para $worktreePath" }
+
+        if ($PrepareWorktree) {
+            & $PrepareWorktree -WorktreePath $worktreePath -TaskTitle $task.task_title
+        }
 
         $taskDir = Join-Path $worktreePath '.orca-task'
         New-Item -ItemType Directory -Force -Path $taskDir | Out-Null

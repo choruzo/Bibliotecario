@@ -396,3 +396,154 @@ Lee ops/orca/library/INDEX.md y abre solo las entradas relevantes a tu tarea.
 Cada leccion lleva evidencia citada; si tu tarea la contradice, comentalo en report.md.
 "@
 }
+
+# --- Harness probing (Fase 1, PRD docs/08-prd-harnessing.md) ---
+
+function Test-HarnessVariant {
+    # Una variante es un directorio con archivos COMPLETOS del arbol editable del
+    # worker: lo que incluye sobrescribe, lo que omite se hereda del checkout.
+    # Solo se permiten superficies orientadas al worker y las reglas duras del
+    # kit (denegar git commit / task-update) deben sobrevivir a la edicion.
+    param([Parameter(Mandatory)][string]$VariantDir)
+
+    $issues = @()
+    if (-not (Test-Path $VariantDir)) { return @('la variante no existe') }
+    $allowed = @(
+        '^\.opencode/agents/worker\.md$',
+        '^\.opencode/skills/[^/]+/SKILL\.md$',
+        '^\.opencode/skills/[^/]+/scripts/[^/]+$',
+        '^AGENTS\.md$'
+    )
+    $files = @(Get-ChildItem $VariantDir -Recurse -File | ForEach-Object { $_.FullName.Substring($VariantDir.Length + 1) -replace '\\', '/' })
+    if (-not $files.Count) { return @('la variante esta vacia') }
+    foreach ($rel in $files) {
+        $ok = $false
+        foreach ($pattern in $allowed) { if ($rel -match $pattern) { $ok = $true; break } }
+        if (-not $ok) { $issues += "ruta no editable por una variante: $rel" }
+    }
+    # Tope de texto always-on: el mismo orden que harness2 aplica a su superficie
+    # OpenCode (cada token aqui compite con la salida del worker).
+    $alwaysOn = 0
+    foreach ($name in @('.opencode/agents/worker.md', 'AGENTS.md')) {
+        $path = Join-Path $VariantDir ($name -replace '/', '\')
+        if (Test-Path $path) { $alwaysOn += (Get-Content $path -Raw -Encoding UTF8).Length }
+    }
+    if ($alwaysOn -gt 24000) { $issues += "el texto always-on supera el tope de 24000 chars ($alwaysOn)" }
+    $workerPath = Join-Path $VariantDir '.opencode\agents\worker.md'
+    if (Test-Path $workerPath) {
+        $raw = Get-Content $workerPath -Raw -Encoding UTF8
+        if ($raw -notmatch 'git commit \*') { $issues += 'worker.md de la variante pierde la denegacion de git commit' }
+        if ($raw -notmatch 'orca orchestration task-update \*') { $issues += 'worker.md de la variante pierde la denegacion de task-update' }
+    }
+    return $issues
+}
+
+function Copy-HarnessVariant {
+    # Materializa la variante en el worktree: archivo completo sobrescribe,
+    # lo ausente se hereda. Devuelve las rutas aplicadas (relativas, con /).
+    param([Parameter(Mandatory)][string]$VariantDir, [Parameter(Mandatory)][string]$Worktree)
+
+    $applied = @()
+    foreach ($file in (Get-ChildItem $VariantDir -Recurse -File)) {
+        $rel = $file.FullName.Substring($VariantDir.Length + 1)
+        $target = Join-Path $Worktree $rel
+        New-Item -ItemType Directory -Force -Path (Split-Path $target -Parent) | Out-Null
+        Copy-Item $file.FullName $target -Force
+        $applied += ($rel -replace '\\', '/')
+    }
+    return $applied
+}
+
+function Test-HarnessContrast {
+    # Decide si hay contraste medible entre los dos probes de una prueba A/B.
+    # Solo hay adopcion con diferencia medible (RF1.6): veredicto del review,
+    # gate de checks o numero de defectos. $Base y $Variant:
+    # @{ finished = bool; verdict = 'ACEPTADO'|'CAMBIOS'; defects = @() }
+    param(
+        [Parameter(Mandatory)][hashtable]$Base,
+        [Parameter(Mandatory)][hashtable]$Variant
+    )
+
+    if (-not $Base.finished -and -not $Variant.finished) { return @{ winner = 'none'; reason = 'ambas incompletas' } }
+    if (-not $Base.finished -and $Variant.finished -and $Variant.verdict -eq 'ACEPTADO') { return @{ winner = 'variant'; reason = 'base incompleta y variante aceptada' } }
+    if (-not $Variant.finished -and $Base.finished -and $Base.verdict -eq 'ACEPTADO') { return @{ winner = 'base'; reason = 'variante incompleta y base aceptada' } }
+    if ($Base.verdict -ne $Variant.verdict) {
+        if ($Variant.verdict -eq 'ACEPTADO') { return @{ winner = 'variant'; reason = 'variante aceptada y base con cambios' } }
+        return @{ winner = 'base'; reason = 'base aceptada y variante con cambios' }
+    }
+    if ($Base.verdict -eq 'ACEPTADO') { return @{ winner = 'none'; reason = 'sin contraste medible' } }
+    $baseDefects = @($Base.defects).Count
+    $variantDefects = @($Variant.defects).Count
+    if ($variantDefects -lt $baseDefects) { return @{ winner = 'variant'; reason = "menos defectos ($variantDefects vs $baseDefects)" } }
+    if ($baseDefects -lt $variantDefects) { return @{ winner = 'base'; reason = "menos defectos ($baseDefects vs $variantDefects)" } }
+    return @{ winner = 'none'; reason = 'sin contraste medible' }
+}
+
+function Write-ProbeResultDir {
+    # Compone la evidencia del probe en la libreria: RESULT.md siempre y, si la
+    # variante gano, el arbol adoptado + el diff de propuesta para adopcion humana.
+    # Puro (sin estado de sesion) para poder testearlo sin Orca.
+    param(
+        [Parameter(Mandatory)][string]$Dir,
+        [Parameter(Mandatory)][hashtable]$BaseResult,
+        [Parameter(Mandatory)][hashtable]$VariantResult,
+        [Parameter(Mandatory)][hashtable]$Decision,
+        [Parameter(Mandatory)][string]$SpecText,
+        [Parameter(Mandatory)][string]$RunId,
+        [Parameter(Mandatory)][string]$Label,
+        [Parameter(Mandatory)][string]$VariantDir,
+        [Parameter(Mandatory)][string]$BaseBranch,
+        [Parameter(Mandatory)][string]$TaskBase,
+        [Parameter(Mandatory)][string]$TaskVariant,
+        [Parameter(Mandatory)][string]$RepoRoot
+    )
+
+    New-Item -ItemType Directory -Force -Path $Dir | Out-Null
+    $lines = @(
+        '# Probe de harness: ' + $Label,
+        '',
+        "- Run: ``$RunId``",
+        "- Rama base: ``$BaseBranch``",
+        "- Variante: ``$VariantDir``",
+        "- Tareas: base ``$TaskBase`` / variante ``$TaskVariant``",
+        "- Decision: **$($Decision.winner)** - $($Decision.reason)",
+        '',
+        '| Lado | Terminada | Veredicto | Defectos | Archivos |',
+        '|---|---|---|---|---|',
+        ("| base | $([bool]$BaseResult.finished) | $($BaseResult.verdict) | $(@($BaseResult.defects).Count) | $(@($BaseResult.files).Count) |"),
+        ("| variante | $([bool]$VariantResult.finished) | $($VariantResult.verdict) | $(@($VariantResult.defects).Count) | $(@($VariantResult.files).Count) |"),
+        '',
+        '## Spec de calibracion',
+        '',
+        $SpecText.Trim()
+    )
+    Set-Content -Path (Join-Path $Dir 'RESULT.md') -Value (($lines -join "`r`n") + "`r`n") -Encoding UTF8
+
+    if ($Decision.winner -eq 'variant') {
+        $adopted = Join-Path $Dir 'variant'
+        New-Item -ItemType Directory -Force -Path $adopted | Out-Null
+        Copy-Item (Join-Path $VariantDir '*') $adopted -Recurse -Force
+        $diffParts = @()
+        foreach ($file in (Get-ChildItem $adopted -Recurse -File)) {
+            $rel = $file.FullName.Substring($adopted.Length + 1) -replace '\\', '/'
+            $orig = Join-Path $RepoRoot ($rel -replace '/', '\')
+            $diff = ''
+            if (Test-Path $orig) {
+                $diff = (& git diff --no-index -- $orig $file.FullName 2>$null | Out-String).TrimEnd()
+            }
+            else {
+                # Archivo nuevo en la variante: diff contra un vacio temporal.
+                $emptyFile = Join-Path ([IO.Path]::GetTempPath()) "probe-empty-$([guid]::NewGuid().ToString('N'))"
+                Set-Content -Path $emptyFile -Value '' -Encoding UTF8
+                $diff = (& git diff --no-index -- $emptyFile $file.FullName 2>$null | Out-String).TrimEnd()
+                Remove-Item $emptyFile -Force -ErrorAction SilentlyContinue
+            }
+            if ($diff) {
+                $diff = $diff -replace [regex]::Escape($orig), "a/$rel" -replace [regex]::Escape($file.FullName), "b/$rel"
+                $diffParts += "### $rel`r`n$diff"
+            }
+        }
+        Set-Content -Path (Join-Path $Dir 'proposal.diff') -Value (($diffParts -join "`r`n`r`n") + "`r`n") -Encoding UTF8
+    }
+    return $Dir
+}
