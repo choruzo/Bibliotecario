@@ -22,6 +22,10 @@ param(
     [string]$BaseBranch = 'main',
     [string]$ProbeLabel,
     [int]$MaxProbeMinutes = 25,
+    # Auditoria offline opcional de cobertura de evidencia (RF1.6 refinado):
+    # se aplica IGUAL a base y variante contra su report.md. Espera exit 0 (todo
+    # capturado) o 1 (faltan needles) y cuenta las lineas 'MISSING'.
+    [string]$EvidenceAudit,
     [switch]$Keep,
     [switch]$DryRun
 )
@@ -45,10 +49,12 @@ function New-ProbeTask {
 
 function Get-ProbeSideResult {
     # Ejecuta el verificador existente sobre el worktree del probe y devuelve
-    # el registro comparable: @{ finished; verdict; defects; files; reviewFile }
-    param($Record, [Parameter(Mandatory)][string]$Side)
+    # el registro comparable: @{ finished; verdict; defects; files; reviewFile;
+    # evidenceMissing }. Preserva report.md y review.json en -ArtifactsDir
+    # (trayectoria completa: sin esto, el cleanup destruye la evidencia).
+    param($Record, [Parameter(Mandatory)][string]$Side, [string]$ArtifactsDir)
 
-    $empty = @{ finished = $false; verdict = 'CAMBIOS'; defects = @(); files = @(); reviewFile = '' }
+    $empty = @{ finished = $false; verdict = 'CAMBIOS'; defects = @(); files = @(); reviewFile = ''; evidenceMissing = $null }
     if (-not $Record -or -not $Record.worktree -or -not (Test-Path $Record.worktree)) { return $empty }
 
     $reviewOutput = (& pwsh -NoProfile -File (Join-Path $PSScriptRoot 'review.ps1') -RunId $script:probeRun -TaskId $Record.taskId -Worktree $Record.worktree -BaseBranch $BaseBranch 2>&1 | Out-String)
@@ -66,13 +72,32 @@ function Get-ProbeSideResult {
         if ($review.PSObject.Properties['defects']) { $defects = @($review.defects | Where-Object { $_ }) }
         if ($review.PSObject.Properties['files']) { $files = @($review.files | Where-Object { $_ }) }
     }
+
+    # Preservar la evidencia del lado antes de que el cleanup borre el worktree.
+    if ($ArtifactsDir) {
+        New-Item -ItemType Directory -Force -Path $ArtifactsDir | Out-Null
+        $reportPath = Join-Path $Record.worktree 'report.md'
+        if (Test-Path $reportPath) { Copy-Item $reportPath (Join-Path $ArtifactsDir 'report.md') -Force }
+        if ($reviewFile -and (Test-Path $reviewFile)) { Copy-Item $reviewFile (Join-Path $ArtifactsDir 'review.json') -Force }
+    }
+
+    $evidenceMissing = $null
+    if ($script:evidenceAudit) {
+        $reportPath = Join-Path $Record.worktree 'report.md'
+        if (Test-Path $reportPath) {
+            $evidenceMissing = Measure-EvidenceCoverage -AuditScript $script:evidenceAudit -SpecPath $script:specFileResolved -ReportPath $reportPath -Python $script:pythonExe
+            Write-Host ("[probe] evidencia lado {0}: MISSING={1}" -f $Side, $(if ($null -eq $evidenceMissing) { 'sin medir' } else { $evidenceMissing }))
+        }
+    }
+
     if (-not $verdict) { return $empty }
     return @{
-        finished   = $true
-        verdict    = $verdict
-        defects    = $defects
-        files      = $files
-        reviewFile = $reviewFile
+        finished        = $true
+        verdict         = $verdict
+        defects         = $defects
+        files           = $files
+        reviewFile      = $reviewFile
+        evidenceMissing = $evidenceMissing
     }
 }
 
@@ -97,6 +122,22 @@ if ($DryRun) {
     Write-Output 'PROBE_DRYRUN_OK'
     return
 }
+
+# Auditoria de evidencia (opcional): fail fast antes de gastar workers.
+$script:evidenceAudit = $null
+if ($EvidenceAudit) {
+    $script:evidenceAudit = (Resolve-Path $EvidenceAudit -ErrorAction SilentlyContinue).Path
+    if (-not $script:evidenceAudit -or -not (Test-Path $script:evidenceAudit)) { throw "No existe el auditor de evidencia: $EvidenceAudit" }
+}
+$script:specFileResolved = (Resolve-Path $SpecFile).Path
+$script:pythonExe = $null
+$venvPython = Join-Path $PSScriptRoot '..\..\.venv\Scripts\python.exe'
+if (Test-Path $venvPython) { $script:pythonExe = (Resolve-Path $venvPython).Path }
+else {
+    $cmd = Get-Command python -ErrorAction SilentlyContinue
+    if ($cmd) { $script:pythonExe = $cmd.Source }
+}
+if ($script:evidenceAudit -and -not $script:pythonExe) { throw 'Se pidio auditoria de evidencia pero no hay python disponible.' }
 
 try {
     $newRun = (& pwsh -NoProfile -File (Join-Path $PSScriptRoot 'new-run.ps1') -Objective "ORCA HARNESS PROBE $($script:probeLabel)" | Out-String)
@@ -143,11 +184,11 @@ try {
         }
     }
 
-    $baseResult = Get-ProbeSideResult -Record $recA -Side 'a'
-    $variantResult = Get-ProbeSideResult -Record $recB -Side 'b'
+    $harnessDir = Join-Path (Join-Path (Join-Path (Get-LibraryRoot) $Domain) 'harnesses') $script:probeLabel
+    $baseResult = Get-ProbeSideResult -Record $recA -Side 'a' -ArtifactsDir (Join-Path $harnessDir 'side-base')
+    $variantResult = Get-ProbeSideResult -Record $recB -Side 'b' -ArtifactsDir (Join-Path $harnessDir 'side-variant')
     $decision = Test-HarnessContrast -Base $baseResult -Variant $variantResult
 
-    $harnessDir = Join-Path (Join-Path (Join-Path (Get-LibraryRoot) $Domain) 'harnesses') $script:probeLabel
     [void](Write-ProbeResultDir -Dir $harnessDir -BaseResult $baseResult -VariantResult $variantResult -Decision $decision -SpecText $specText -RunId $script:probeRun -Label $script:probeLabel -VariantDir $script:variantDirResolved -BaseBranch $BaseBranch -TaskBase $taskA -TaskVariant $taskB -RepoRoot $repoRoot)
 
     Write-Audit -RunId $script:probeRun -Actor 'probe' -Action 'probe-result' -TaskId $taskA -DispatchId $recA.dispatchId -Reason "decision=$($decision.winner) motivo=$($decision.reason)"
@@ -156,8 +197,8 @@ try {
 
     Write-Output "PROBE_LABEL=$($script:probeLabel)"
     Write-Output "PROBE_RUN=$script:probeRun"
-    Write-Output "PROBE_BASE verdict=$($baseResult.verdict) defects=$(@($baseResult.defects).Count) finished=$([bool]$baseResult.finished)"
-    Write-Output "PROBE_VARIANT verdict=$($variantResult.verdict) defects=$(@($variantResult.defects).Count) finished=$([bool]$variantResult.finished)"
+    Write-Output "PROBE_BASE verdict=$($baseResult.verdict) defects=$(@($baseResult.defects).Count) finished=$([bool]$baseResult.finished) evidence=$(if ($null -eq $baseResult.evidenceMissing) { '-' } else { $baseResult.evidenceMissing })"
+    Write-Output "PROBE_VARIANT verdict=$($variantResult.verdict) defects=$(@($variantResult.defects).Count) finished=$([bool]$variantResult.finished) evidence=$(if ($null -eq $variantResult.evidenceMissing) { '-' } else { $variantResult.evidenceMissing })"
     Write-Output "PROBE_WINNER=$($decision.winner)"
     Write-Output "PROBE_REASON=$($decision.reason)"
     Write-Output "PROBE_ADOPTED=$(if ($decision.winner -eq 'variant') { (Join-Path $harnessDir 'variant') } else { '-' })"

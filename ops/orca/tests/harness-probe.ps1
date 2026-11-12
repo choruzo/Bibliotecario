@@ -72,7 +72,11 @@ try {
         @{ base = @{ finished = $true; verdict = 'CAMBIOS'; defects = @('a') }; variant = @{ finished = $true; verdict = 'CAMBIOS'; defects = @('a') }; expected = 'none' },
         @{ base = @{ finished = $false; verdict = 'CAMBIOS'; defects = @() }; variant = @{ finished = $true; verdict = 'ACEPTADO'; defects = @() }; expected = 'variant' },
         @{ base = @{ finished = $true; verdict = 'ACEPTADO'; defects = @() }; variant = @{ finished = $false; verdict = 'CAMBIOS'; defects = @() }; expected = 'base' },
-        @{ base = @{ finished = $false; verdict = 'CAMBIOS'; defects = @() }; variant = @{ finished = $false; verdict = 'CAMBIOS'; defects = @() }; expected = 'none' }
+        @{ base = @{ finished = $false; verdict = 'CAMBIOS'; defects = @() }; variant = @{ finished = $false; verdict = 'CAMBIOS'; defects = @() }; expected = 'none' },
+        @{ base = @{ finished = $true; verdict = 'ACEPTADO'; defects = @(); evidenceMissing = 5 }; variant = @{ finished = $true; verdict = 'ACEPTADO'; defects = @(); evidenceMissing = 0 }; expected = 'variant' },
+        @{ base = @{ finished = $true; verdict = 'ACEPTADO'; defects = @(); evidenceMissing = 0 }; variant = @{ finished = $true; verdict = 'ACEPTADO'; defects = @(); evidenceMissing = 3 }; expected = 'base' },
+        @{ base = @{ finished = $true; verdict = 'ACEPTADO'; defects = @(); evidenceMissing = 0 }; variant = @{ finished = $true; verdict = 'ACEPTADO'; defects = @(); evidenceMissing = 0 }; expected = 'none' },
+        @{ base = @{ finished = $true; verdict = 'ACEPTADO'; defects = @(); evidenceMissing = 2 }; variant = @{ finished = $true; verdict = 'CAMBIOS'; defects = @('x'); evidenceMissing = 0 }; expected = 'base' }
     )
     foreach ($case in $cases) {
         $decision = Test-HarnessContrast -Base $case.base -Variant $case.variant

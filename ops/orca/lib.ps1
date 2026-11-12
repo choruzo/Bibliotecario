@@ -459,6 +459,28 @@ function Copy-HarnessVariant {
     return $applied
 }
 
+function Measure-EvidenceCoverage {
+    # Metrica de cobertura de evidencia para probes A/B (RF1.6 refinado): ejecuta
+    # un auditorOffline (p. ej. el evidence_audit.py de la variante) contra el
+    # report de un lado y cuenta los needles MISSING. Es un instrumento neutro:
+    # se aplica IGUAL a base y variante. Devuelve el numero de MISSING, o $null
+    # si no hay audit/python/report (la metrica es opcional, nunca bloquea).
+    param(
+        [Parameter(Mandatory)][string]$AuditScript,
+        [Parameter(Mandatory)][string]$SpecPath,
+        [Parameter(Mandatory)][string]$ReportPath,
+        [Parameter(Mandatory)][string]$Python
+    )
+
+    if (-not (Test-Path $AuditScript) -or -not (Test-Path $ReportPath)) { return $null }
+    try {
+        $raw = & $Python $AuditScript --spec $SpecPath --report $ReportPath 2>$null
+        if ($LASTEXITCODE -notin @(0, 1)) { return $null }
+        return @($raw | Where-Object { $_ -match '^MISSING\b' }).Count
+    }
+    catch { return $null }
+}
+
 function Test-HarnessContrast {
     # Decide si hay contraste medible entre los dos probes de una prueba A/B.
     # Solo hay adopcion con diferencia medible (RF1.6): veredicto del review,
@@ -476,7 +498,18 @@ function Test-HarnessContrast {
         if ($Variant.verdict -eq 'ACEPTADO') { return @{ winner = 'variant'; reason = 'variante aceptada y base con cambios' } }
         return @{ winner = 'base'; reason = 'base aceptada y variante con cambios' }
     }
-    if ($Base.verdict -eq 'ACEPTADO') { return @{ winner = 'none'; reason = 'sin contraste medible' } }
+    if ($Base.verdict -eq 'ACEPTADO') {
+        # Desempate por cobertura de evidencia (ambos lados medidos con el mismo
+        # auditorOffline). Solo si la diferencia existe: veredictos iguales y
+        # evidencia distinta es contraste medible.
+        $bm = $Base.evidenceMissing
+        $vm = $Variant.evidenceMissing
+        if ($null -ne $bm -and $null -ne $vm -and $bm -ne $vm) {
+            if ($vm -lt $bm) { return @{ winner = 'variant'; reason = "menos evidencia faltante ($vm vs $bm MISSING)" } }
+            return @{ winner = 'base'; reason = "menos evidencia faltante ($bm vs $vm MISSING)" }
+        }
+        return @{ winner = 'none'; reason = 'sin contraste medible' }
+    }
     $baseDefects = @($Base.defects).Count
     $variantDefects = @($Variant.defects).Count
     if ($variantDefects -lt $baseDefects) { return @{ winner = 'variant'; reason = "menos defectos ($variantDefects vs $baseDefects)" } }
@@ -513,10 +546,12 @@ function Write-ProbeResultDir {
         "- Tareas: base ``$TaskBase`` / variante ``$TaskVariant``",
         "- Decision: **$($Decision.winner)** - $($Decision.reason)",
         '',
-        '| Lado | Terminada | Veredicto | Defectos | Archivos |',
-        '|---|---|---|---|---|',
-        ("| base | $([bool]$BaseResult.finished) | $($BaseResult.verdict) | $(@($BaseResult.defects).Count) | $(@($BaseResult.files).Count) |"),
-        ("| variante | $([bool]$VariantResult.finished) | $($VariantResult.verdict) | $(@($VariantResult.defects).Count) | $(@($VariantResult.files).Count) |"),
+        '| Lado | Terminada | Veredicto | Defectos | Archivos | Evidencia |',
+        '|---|---|---|---|---|---|',
+        ("| base | $([bool]$BaseResult.finished) | $($BaseResult.verdict) | $(@($BaseResult.defects).Count) | $(@($BaseResult.files).Count) | $(if ($null -eq $BaseResult.evidenceMissing) { 'sin medir' } else { "MISSING=$($BaseResult.evidenceMissing)" }) |"),
+        ("| variante | $([bool]$VariantResult.finished) | $($VariantResult.verdict) | $(@($VariantResult.defects).Count) | $(@($VariantResult.files).Count) | $(if ($null -eq $VariantResult.evidenceMissing) { 'sin medir' } else { "MISSING=$($VariantResult.evidenceMissing)" }) |"),
+        '',
+        'La columna Evidencia cuenta needles MISSING segun el auditor offline aplicado igual a los dos lados; `sin medir` = no se pidio auditoria. Los artefactos de cada lado (`report.md`, `review.json`) quedan en `side-base/` y `side-variant/` junto a este fichero.',
         '',
         '## Spec de calibracion',
         '',
