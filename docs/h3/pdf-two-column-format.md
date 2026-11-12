@@ -1,4 +1,4 @@
-# Énfasis tipográfico inyectado en las ecuaciones del PDF (T2d, extendido en T2e)
+# Énfasis tipográfico inyectado en las ecuaciones del PDF (T2d, extendido en T2e; port T2c)
 
 ## Objetivo
 
@@ -270,3 +270,211 @@ bloque; la `**26.4**` posterior no se toca), heading tras una ecuación (cierra 
 bloque), líneas en blanco que tienden el bloque pero la prosa lo cierra, y los
 fragmentos multi-head con la línea de prosa conservando `_W_ _[Q]_`. Todos con
 aserto del token-stream.
+
+---
+
+## Reconstrucción por spans y palabras pegadas (port T2c)
+
+El port manual de la implementación T2c (commits `ed1dd7f`/`8e91625`, ref
+`t2c-safety/8e91625`, prohibido fusionar por la deriva del kit) convierte
+`pdf_math_clean.py` en **un único pipeline de tres etapas con un invariante**:
+conserva las reglas integradas (énfasis marker-only T2d/T2e) y añade lo que
+midió T2c: reconstruir las líneas matemáticas desde los spans de
+`page.get_text("dict")` y despegar las palabras que el conversor pega
+(junction de spans entre líneas dict distintas y guion de compuesto destruido
+por `replace("-\n", "")`).
+
+### Mecanismos reales del defecto (verificados con spans)
+
+1. **Énfasis sobre fuentes matemáticas** (CMMI/CMSY/CMEX/CMR/MSAM/STIX llevan
+   flags de cursiva/negrita/tachado): `Attention( _Q, K, V_ ) = softmax( _[QK]_ ~~_V_~~ _[T]_`.
+2. **Junction de spans**: el sanitizador de `pymupdf4llm` concatena spans
+   solapados en X de líneas dict distintas (un `√` alto actúa de puente entre
+   dos líneas visuales): `dimensionquery`, `thelues`.
+3. **`replace("-\n", "")` global**: destruye el guion de compuestos
+   (`self-` + `attention` → `selfattention`; `left-to-` + `right` →
+   `left-toright`) aunque es correcto para cortes de sílaba
+   (`representa-`/`tion`).
+
+### Diseño (`pdf_math_clean.py`, un módulo, un cableado)
+
+- **Puerta por documento** (`page_may_have_math`, `get_fonts`): familias
+  CMMI/CMSY/CMEX/CMR/MSAM/MSBM/STIX/EUFM. Sin fuentes matemáticas las etapas
+  que necesitan la página no corren y el markdown queda byte-idéntico (los
+  otros 15 PDF: SHA idéntico). La pasada marker-only corre siempre, como
+  antes del port.
+- **1. Rebuild por spans** (`clean_math_lines`, corre primero y sobre el
+  markdown tal como lo produjo el conversor): extrae los spans con los flags
+  del conversor (`TEXT_MEDIABOX_CLIP | TEXT_COLLECT_STYLES`), reagrupa por
+  proximidad vertical y re-renderiza cada candidato (el grupo completo o el
+  tramo de columna antes/después del canal) primero como el conversor (glue
+  retenido) y luego con el glue partido y las marcas fuera de los spans
+  matemáticos. La línea se sustituye solo si su clave normalizada (sin
+  marcas, minúsculas) coincide con **un único** candidato no ambiguo; las
+  líneas de tabla/heading/bullet/enlace nunca se tocan. El orden de lectura
+  de los spans no se reordena.
+- **2. Pasada marker-only** (`clean_math_emphasis`, reglas T2d/T2e intactas):
+  limpia el énfasis de las líneas matemáticas y de los bloques de
+  continuación para toda línea que el rebuild no pudo reproducir.
+- **3. Compuestos** (`compound_fixes`): restaura el guion solo con evidencia —
+  la forma con guion ya usada en el documento (`document_compound_vocabulary`)
+  o un fragmento que continúa una cadena (`left-to-` + `right`); nunca
+  `201-`/`8` (año envuelto) ni una sílaba sin evidencia. La sustitución es
+  word-bounded.
+- **Invariante único por página**: `tokens_preserved` (misma secuencia de
+  tokens, salvo marcas eliminadas y despegues 1→2; fusiones, borrados,
+  movimientos e inserciones fallan) con reversión entera y diagnóstico
+  `pdf_math_clean_reverted_page_N`.
+- **Diagnósticos** (todos con prefijo `pdf_math_`): `pdf_math_emphasis_page_N`,
+  `pdf_math_glue_space_page_N` (despegue por junction),
+  `pdf_math_compound_hyphen_page_N` (guion restaurado),
+  `pdf_math_clean_reverted_page_N`.
+- **Cableado único** en `converters.convert()`: tras `pdf_markdown_chunks()`
+  y antes de `recover_pdf_page()`; la recuperación compara palabras, así que
+  sus decisiones no cambian.
+
+### Antes / después (conversión real, muestras)
+
+```
+ANTES:   Attention( _Q, K, V_ ) = softmax( _[QK]_ ~~_V_~~ _[T]_
+DESPUÉS: Attention( Q, K, V ) = softmax( [QK] √ [T]
+
+ANTES:   queries and keys of dimensionquery with all keys, … the weights on thelues of dimension dv .
+DESPUÉS: queries and keys of dimension query with all keys, … the weights on the lues of dimension dv .
+
+ANTES:   less time to train. Our model achieves 28.4 BLEU on the WMT 2014 Englishto-German translation task
+DESPUÉS: less time to train. Our model achieves 28.4 BLEU on the WMT 2014 English-to-German translation task
+
+ANTES:   …the second is a simple, positionwise fully connected feed-forward network.
+DESPUÉS: …the second is a simple, position-wise fully connected feed-forward network.
+
+ANTES:   Fine-tuning is straightforward since the selfattention mechanism in the Transformer allows BERT…
+DESPUÉS: Fine-tuning is straightforward since the self-attention mechanism in the Transformer allows BERT…
+
+ANTES:   we simply plug in the taskspecific inputs and outputs into BERT and finetune all the parameters
+DESPUÉS: we simply plug in the task-specific inputs and outputs into BERT and fine-tune all the parameters
+
+ANTES:   in OpenAI GPT, the authors use a left-toright architecture
+DESPUÉS: in OpenAI GPT, the authors use a left-to-right architecture
+```
+
+La prosa de la misma línea conserva sus marcas (`**Ashish Vaswani** [∗]`) y
+los corchetes de superíndice `[T]` son texto: se mantienen.
+
+### Recuentos (detector `scripts/h3/pdf_math_census.py`)
+
+Tres etapas censadas por archivo: `raw` (conversor + recuperación, sin
+limpieza — el estado T0), `text` (solo pasada marker-only — el estado de
+`main` antes del port) y `full` (pipeline completo). Comando:
+
+```
+.venv/Scripts/python.exe scripts/h3/pdf_math_census.py \
+  --corpus D:/Archivos/Javier/Proyectos/Bibliotecario/.artifacts/agnostic-corpus \
+  --files arxiv-attention-is-all-you-need-en.pdf,arxiv-bert-en.pdf \
+  --json .orca-task/pdf-math-census.json
+```
+
+| defecto | attention ANTES → DESPUÉS | bert ANTES → DESPUÉS |
+|---|---|---|
+| líneas matemáticas con énfasis matemático | 59 → **0** | 20 → **0** |
+| pares de énfasis matemático | 209 → **0** | 52 → **0** |
+| palabras pegadas (junction de spans) | 2 (`dimensionquery`, `thelues`) → **0** | 0 → 0 |
+| palabras pegadas (guion de compuesto) | 2 (`Englishto`, `positionwise`) → **0** | 38 ocurrencias / 17 formas (`selfattention`, `finetune`, `taskspecific`, `leftto`, `pretrain`…) → **0** |
+
+En la etapa `text` el énfasis ya es 0 (lo limpió T2d/T2e) pero el pegado
+permanece: es exactamente la parte que aporta el port. El censo original de
+T2c contó 84/12 líneas matemáticas y 36 palabras pegadas con su propio detector
+por spans sobre el mismo corpus; el estado DESPUÉS es 0 en ambas mediciones.
+
+### Invariante de tokens
+
+- Por página, dentro del pipeline, con reversión entera: **0 reversiones** en
+  los 17 PDF × 2 pasadas del arnés.
+- Markdown final verificado externamente (`.orca-task/verify_tokens.py`):
+  attention 6 668 → 6 673 palabras (+5 despegues 1→2), bert 11 125 → 11 153
+  (+38 despegues y 8 copias redundantes de recuperación dedup, el
+  comportamiento preexistente de `recover_pdf_page` en p1/p2/p3/p13). Ningún
+  token del ANTES queda sin correspondencia salvo las formas pegadas
+  restauradas (`dimensionquery`, `selfattention`, `leftto`…): no se pierde ni
+  duplica palabra; las diferencias de tipos NFKC son exactamente las formas
+  pegadas que se despegan.
+
+### SHAs del markdown (arnés, 2 pasadas, `PYTHONHASHSEED=0`)
+
+| archivo | baseline T0 | pasada 1 == pasada 2 | veredicto |
+|---|---|---|---|
+| arxiv-attention-is-all-you-need-en.pdf | `19295e10…a03cb` (42 870 B) | `92c741592ba720a3d58bd9b8fb086628e2ff38aeb43297c176920b9ebc6e990b` (42 280 B) | **CAMBIA (objetivo)** |
+| arxiv-bert-en.pdf | `3740d86f…5c8d` (69 813 B) | `e8b9fc5b1602964f14dcfafe79ee191ee78e3f1df37dc52a9cadf05c81fdb99d` (69 600 B) | **CAMBIA (objetivo)** |
+| boe-constitucion-1978.pdf | `bfea8bb9…fd1` | igual | idéntico |
+| boe-ley-propiedad-horizontal.pdf | `c1a3ba97…d8e` | igual | idéntico |
+| wiki-Apis_mellifera.pdf | `de476865…8a6` | igual | idéntico |
+| wiki-Café.pdf | `0124aa26…e8c` | igual | idéntico |
+| wiki-Copa_Mundial_de_Fútbol.pdf | `14342a0f…2c77` (254 200 B) | igual | idéntico |
+| wiki-Diabetes_mellitus.pdf | `37762fbe…0ca` | igual | idéntico |
+| wiki-Dieta_mediterránea.pdf | `b6962aab…07e` | igual | idéntico |
+| wiki-Fotosíntesis.pdf | `4f22e854…d25` | igual | idéntico |
+| wiki-Impuesto_sobre_la_renta…pdf | `2e0164c4…668` | igual | idéntico |
+| wiki-Inflación.pdf | `ebf99de8…ea7` | igual | idéntico |
+| wiki-Python.pdf | `002b71de…d47` | igual | idéntico |
+| wiki-Revolución_francesa.pdf | `2ffd12df…3ba` | igual | idéntico |
+| wiki-Sistema_solar.pdf | `66986542…a36` | igual | idéntico |
+| wiki-Tabla_periódica_de_los_elementos.pdf | `87acf721…e50` | igual | idéntico |
+| wiki-Volcán.pdf | `596fb533…d7` | igual | idéntico |
+
+Los únicos archivos cuyo SHA cambia son los 2 arXiv objetivo. La oscilación
+preexistente entre procesos (Copa 254200/254203, bert ±4 B) sigue documentada;
+con la semilla del arnés las dos pasadas produjeron los valores de la tabla.
+
+### Auditoría de pérdida real (`pdf_audit`, `--audit-json`, 2 pasadas)
+
+| archivo | real_prose | real_equation | missing_symbols | duplicate_layer |
+|---|---|---|---|---|
+| arxiv-attention | 0 | 0 | 0 | 357 líneas (estado T1, sin delta) |
+| arxiv-bert | 0 | 0 | 0 | 263 líneas (estado T1, sin delta) |
+
+Corpus completo: `real_prose_words = 0`, `real_equation_lines = 0`.
+`pages_text_loss` baja de 26 (baseline) a 25: bert p6 mejora al restaurar los
+compuestos. `tables_rebuilt = 29`, `pages_text_recovered = 95`,
+`table_words_lost = 1496`: iguales al baseline.
+
+### Tiempo del arnés
+
+| pasada | baseline (s) | port T2c (s) | delta |
+|---|---|---|---|
+| 1 | 127.872 | 107.314 (94.779 conv + 12.535 audit) | −16.1 % |
+| 2 | 148.181 | 109.683 (97.102 conv + 12.581 audit) | −26.0 % |
+| total | 276.053 | 216.997 | **−21.4 %** |
+
+Sin regresión (tope +10 %); el coste del rebuild por spans es de ~1 s por
+archivo arXiv y la varianza del baseline lo supera.
+
+### Limitaciones conocidas
+
+1. **Puerta conservadora por fuentes**: un PDF con fuentes matemáticas
+   renombradas (subset con nombre irreconocible) no activa las etapas que
+   necesitan la página (rebuild y compuestos); la pasada marker-only sigue
+   corriendo. Es un fallo conservador: no limpia en lugar de limpiar mal.
+2. **Orden de lectura**: el artefacto preexistente de los glifos altos (`√`
+   de puente entre dos líneas; en p5 de attention el `oftmax` de
+   `pre-softmax` continúa en el borde de columna y la línea dice
+   `the pre-s linear transformation` en ambos estados) permanece: los
+   despegues siguen la evidencia de los spans y no reordenan nada.
+3. El énfasis de prosa (autores, etiquetas) y el resto de limitaciones de
+   T2d/T2e se conservan sin cambio.
+
+### Paso T3 pendiente (fuera de esta tarea)
+
+Republicar los 2 documentos arXiv (su SHA cambia) y recalibrar la ventana de
+corpus (`agnostic-calibration-v1.jsonl`, `agnostic-validation-v1.jsonl` y
+`agnostic_corpus_catalog.json`). Los otros 15 no requieren republicación.
+
+### Tests añadidos (31 en total)
+
+A los 17 de T2d/T2e se incorporan los 14 del original T2c: spans sintéticos
+con énfasis matemático y negrita de prosa conservada, superíndice/tachado,
+página de prosa intacta, cursiva de prosa con operandos intacta, junction de
+spans cruzando líneas (espacio insertado), compuesto con evidencia de
+documento y por cadena, `201-`/`8` sin restaurar, sílaba sin evidencia,
+`tokens_preserved` (splits OK; merge/reorden/borrado/inserción NO),
+`page_may_have_math`, reversión ante limpieza rota, PDF sintético de dos
+columnas con ecuación en cursiva y el gate de fuentes de `convert()`.
