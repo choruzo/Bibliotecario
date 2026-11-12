@@ -50,6 +50,7 @@ Esta carpeta implementa el ciclo de `docs/01-ciclo.md` usando **Orca como plano 
 | `tests/lesson.ps1` | Librería de lecciones: scaffold, `NO_ENTRY`, `-Validate` y `-Index` con estado sintético. |
 | `tests/harness-probe.ps1` | Variante válida/inválida, materialización y contraste A/B con casos sintéticos. |
 | `tests/session-evidence.ps1` | Registro de sesión del worker y degradación de la señal de sesión. |
+| `tests/junction-safety.ps1` | El desmontador de junctions no toca el destino compartido. |
 | `check.ps1` | Checks del repo (whitespace, tests/lint/typecheck si existen). |
 | `setup-worktree.ps1` | Setup idempotente del worktree. |
 | `PROTOCOL.md` | Contrato del worker. |

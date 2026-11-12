@@ -466,6 +466,27 @@ function Copy-HarnessVariant {
     return $applied
 }
 
+function Remove-SharedLinks {
+    # Desmonta los enlaces compartidos (.venv, node_modules) de un worktree
+    # ANTES de cualquier borrado: atravesar una junction destruye el destino
+    # compartido del checkout principal (reproducido y confirmado: un
+    # `git worktree remove --force` vacio un .venv de 4325 ficheros a traves
+    # de la junction de un worktree). [IO.Directory]::Delete quita el enlace,
+    # nunca su destino. Devuelve los enlaces desmontados.
+    param([Parameter(Mandatory)][string]$Path)
+
+    $detached = @()
+    if (-not (Test-Path $Path)) { return $detached }
+    foreach ($link in @(Get-ChildItem $Path -Recurse -Force -Attributes ReparsePoint -ErrorAction SilentlyContinue)) {
+        try {
+            [IO.Directory]::Delete($link.FullName)
+            $detached += $link.FullName
+        }
+        catch { }
+    }
+    return $detached
+}
+
 function Measure-EvidenceCoverage {
     # Metrica de cobertura de evidencia para probes A/B (RF1.6 refinado): ejecuta
     # un auditorOffline (p. ej. el evidence_audit.py de la variante) contra el

@@ -41,22 +41,10 @@ function Remove-OraWorktree {
         return $true
     }
 
-    # Desmonta ANTES de borrar los enlaces compartidos (.venv, node_modules):
-    # atravesar una junction destruye el destino compartido del checkout
-    # principal (reproducido hoy: git worktree remove --force vacio un .venv
-    # completo a traves de la junction de un worktree de probe).
-    # [IO.Directory]::Delete quita el enlace, nunca su destino.
-    $sharedLinks = @(Get-ChildItem $Path -Recurse -Force -Attributes ReparsePoint -ErrorAction SilentlyContinue)
-    foreach ($link in $sharedLinks) {
-        try {
-            [IO.Directory]::Delete($link.FullName)
-            Write-Output "DETACHED_LINK=$($link.FullName)"
-        }
-        catch {
-            Write-Warning "No se pudo desmontar el enlace $($link.FullName): $($_.Exception.Message)"
-        }
-    }
-
+    # Desmonta ANTES de borrar (incluido el orca worktree rm) los enlaces
+    # compartidos; la funcion vive en lib.ps1 y tiene test propio.
+    $detached = @(Remove-SharedLinks -Path $Path)
+    foreach ($link in $detached) { Write-Output "DETACHED_LINK=$link" }
     for ($attempt = 1; $attempt -le 3; $attempt++) {
         $orArgs = @('worktree', 'rm', '--worktree', "path:$Path", '--json')
         if ($Force) { $orArgs += '--force' }

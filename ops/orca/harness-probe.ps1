@@ -149,6 +149,8 @@ else {
 }
 if ($script:evidenceAudit -and -not $script:pythonExe) { throw 'Se pidio auditoria de evidencia pero no hay python disponible.' }
 if ($script:evidenceAudit) { Write-Host "[probe] auditor de evidencia activo: $($script:evidenceAudit)" }
+# El A/B exige que los dos lados ejecuten la MISMA spec: sellamos su contenido.
+Write-Output "PROBE_SPEC_SHA256=$((Get-FileHash $script:specFileResolved -Algorithm SHA256).Hash.ToLower())"
 
 function Test-VenvSanity {
     # Integridad del entorno del repo (parametro -SanityImport del lider):
