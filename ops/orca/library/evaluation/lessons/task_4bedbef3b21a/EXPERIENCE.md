@@ -1,19 +1,19 @@
 ---
 task: task_4bedbef3b21a
 run: run_6c32899d3c9c
-date: 2026-11-13T16:36:51.4527498Z
-domain: default
-confidence: low
+date: 11/13/2026 19:23:35.ToUniversalTime().ToString('o')
+domain: evaluation
+confidence: high
 status: draft
 ---
 
 ## Cue
 
-TODO: describe la situacion que dispara esta leccion (que reconoceria el worker antes de actuar).
+Hace falta un banco que mida cobertura multi-documento y los bancos existentes son de un documento o de un solo tema.
 
 ## Lesson
 
-TODO: indica la operacion a hacer, nombrando el componente del kit al que afecta.
+Autoriza cada caso leyendo el corpus convertido, no de memoria, y verifica el par cruzando el hecho del documento B dentro del documento A (grep) para descartar pseudo-multidocumento; usa preguntas de ordenación o comparación entre dos documentos (fechas, magnitudes) que se respondan por yuxtaposición, no por causalidad; expected_sections vacío salvo encabezado literal; y fija los mínimos del banco en un test (tests/) para que no se degrade.
 
 ## Evidence
 
@@ -28,4 +28,3 @@ TODO: indica la operacion a hacer, nombrando el componente del kit al que afecta
 - [worktree-remove] 11/13/2026 16:34:10 actor=cleanup motivo: C:/Users/javie/orca/workspaces/Bibliotecario/h7-concept-bank-4bedbe-11
 - [terminal-close] 11/13/2026 16:34:20 actor=loop motivo: settled
 - [worker-report] # Reporte · task_4bedbef3b21a (h7-concept-bank) ## Resultado Creado el banco de preguntas de concepto H7: `evaluation/h3/concept-calibration-v1.jsonl` y `evaluation/h3/concept-validation-v1.jsonl` (12 casos cada uno, ids `CON-CAL-*`/`CON-VAL-*` únicos), el contrato `tests/test_concept_banks.py` (6 tests, pasa en el gate) y la documentación con evidencia `docs/h7/concept-bank.md`. Cada hecho bisagra se verificó leyendo el texto convertido del corpus (arnés `pdf_conversion_report.py`, una pasada, 17 ficheros); para cada par multi-documento se grepeó cada documento buscando el hecho del otro para descartar pseudo-multidocumento. Sin cambios en bancos existentes, catálogo, `apps/` ni `evaluation/h3/*acceptance*` (todo lo entregado es nuevo y sin stage).
-

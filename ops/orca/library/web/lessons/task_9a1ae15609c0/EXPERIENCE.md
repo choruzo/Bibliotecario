@@ -1,19 +1,19 @@
 ---
 task: task_9a1ae15609c0
 run: run_1aab5f1a2c1d
-date: 2026-11-13T09:29:15.4639706Z
-domain: default
-confidence: low
+date: 11/13/2026 19:21:20.ToUniversalTime().ToString('o')
+domain: web
+confidence: high
 status: draft
 ---
 
 ## Cue
 
-TODO: describe la situacion que dispara esta leccion (que reconoceria el worker antes de actuar).
+Una tarea web añade un parámetro al cuerpo de una petición existente (modo, idioma, variante) y solo lo comprueba en pantalla.
 
 ## Lesson
 
-TODO: indica la operacion a hacer, nombrando el componente del kit al que afecta.
+Haz que el test del mock capture postDataJSON y afirme el valor enviado —también el valor por defecto, explícito— y no solo que el control se vea; el control debe estar deshabilitado mientras hay respuesta en curso y ser usable con teclado. No presentes el parámetro como un ajuste persistente de la conversación si la API no lo guarda.
 
 ## Evidence
 
@@ -27,4 +27,3 @@ TODO: indica la operacion a hacer, nombrando el componente del kit al que afecta
 - [worktree-remove] 11/13/2026 09:27:38 actor=cleanup motivo: C:/Users/javie/orca/workspaces/Bibliotecario/h6-web-mode-9a1ae1-2
 - [terminal-close] 11/13/2026 09:27:59 actor=loop motivo: settled
 - [worker-report] # Reporte · task_9a1ae15609c0 Task: `task_9a1ae15609c0` · dispatch `ctx_fa4dda86f11f` · worktree `h6-web-mode-9a1ae1-2` (branch `choruzo/h6-web-mode-9a1ae1-2`) ## Resultado
-
