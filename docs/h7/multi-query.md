@@ -58,3 +58,44 @@ Apagar la bandera: `BIB_MULTI_QUERY=false` (o simplemente retirarla; el defecto 
 
 - `apps/api/tests/test_multi_query.py` (15): esquema cerrado y acotado; facets autocontenidas con dedup, descarte de repeticiones y tope de 2; `decompose` nunca lanza (error de proveedor, timeout, conexión, JSON inválido, fuera de esquema) y registra un código fijo; bandera apagada no invoca `decompose` y mantiene el camino de hoy; firma golden (apagada == `main`, encendida != `main`); 2 facets → una sola llamada de embed, tres pools con vectores propios, unión sin duplicados, un solo rerank con la consulta compuesta y un `expand_context`; fragmento compartido entre pools contado una vez con canales de ambos; `assess` recibe la unión ordenada con la pregunta original y conserva su tope de 60; fallo y crash de `decompose` degradan al camino de hoy con `facet_error` registrado; diagnóstico sin textos de pasajes; tabla de coste.
 - Regresión: `test_h4.py`, `test_sufficiency.py`, `test_retrieval_context.py`, `test_domain_agnostic.py` sin cambios y en verde.
+
+
+## Resultado de la activación (2026-11-13): rechazada, bandera apagada
+
+| Paso | Resultado |
+|---|---|
+| Firma | `model_signature` 2899120c → 08750c2e; `corpus_signature` 54c394a7 sin cambio |
+| Calibración | aprobada en `admin` y `usuario` (`empirical_holdout_pass`, holdout tp 57 / fp 0 / tn 22, `improper_answer_rate 0.0`) |
+| Regresión coloquial | 13/13; p50 10,5 s; fase `facets` 13 llamadas, 781 ms |
+| Regresión agnóstica | **34/40**: los cuatro fallos históricos (`T002`, `T008`, `U002`, `U003`) más `A002` (`calibrated_score`) y `T003` (abstención del evaluador) |
+| Banco de concepto | 9/12, 0 indebidas, 0 cifras sin respaldo; los tres fallos son `expected_answer` abstenidos |
+| Multi-documento | 4 casos con dos o más documentos citados (`A001`, `A002`, `A004`, `A005`); el criterio era 5 |
+| Preguntas objetivo | abejas+fotosíntesis y Revolución **abstienen** en `explain` y en `answer`, con facets generados (2 y 1) y pool unido de 65 y 38 |
+
+**Decisión: rechazada.** Dos fallos nuevos en el banco agnóstico son una regresión
+funcional y las preguntas objetivo siguen absteniendo. La bandera vuelve a `0`, la
+calibración no se commitea y los artefactos de política vuelven a su estado aprobado.
+La política del intento v1 queda en la base de datos como historia, inalcanzable con
+la bandera apagada.
+
+**Causas, separadas por lo que está medido.** (1) `A002` cae por `calibrated_score`:
+con facets el rerank compuesto bajó el score por debajo del umbral de una pregunta que
+antes pasaba. Es un efecto real del rerank con la consulta concatenada. (2) Las
+preguntas objetivo **no** caen por score: la traza muestra
+`assessment={action: abstain, coverage_complete: false, support: []}` con
+`decision.reason=evidence_assessed`, que es el **evaluador** diciendo que no cubre; y
+el mismo patrón aparece con `BIB_MULTI_QUERY=0`. La pregunta de abejas+fotosíntesis,
+tal como está redactada, pide una relación causal que el corpus no afirma. (3) La traza
+guardada muestra `merged=65` y `candidates=0`, lo que es incompatible con que `assess`
+haya recibido fuentes; el único punto que vacía la lista es el control de visibilidad
+posterior a la evaluación, que no registra cuántos descartó. Queda como incógnita
+abierta, no como causa atribuida al multi-query.
+
+**Qué se conserva.** La descomposición (`facets.py`), la unión por `chunk_id`, el
+diagnóstico `retrieval` y el golden de firma. La v2 (`h7-multi-query-v2.md`) queda
+**aparcada**: no ataca ninguna de las dos causas medidas. Antes hay que instrumentar
+las etapas (`h7-retrieval-trace.md`) y, según lo que salga, decidir entre el control de
+visibilidad, el criterio de cobertura o responder por facet.
+
+**No hay regresión introducida por H7 en las preguntas objetivo**: fallan igual con la
+bandera apagada.
