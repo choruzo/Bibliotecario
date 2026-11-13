@@ -198,6 +198,22 @@ function Resolve-Escalation {
         return [pscustomobject]@{ Action = 'ignore'; Reason = "dispatch $dispatchStatus"; Context = $context; DispatchId = $dispatchId }
     }
 
+    # msg_stop (falso positivo visto en h6/h7): Orca interpreta una sesion
+    # OpenCode ejecutando un comando largo como "stopped at a prompt that needs
+    # a person". Evidencia real: la sesion del worker sigue running y el
+    # dispatch activo. Con dispatch vivo + sesion activa se difiere (nunca se
+    # escala en la primera), y la segunda alarma en >=30s con la sesion sigue
+    # activa se ignora.
+    $msgType = if ($Message.PSObject.Properties['type']) { [string]$Message.type } else { '' }
+    $workerSessionActive = $false
+    if ($record -and $record.worktree) {
+        $sid = Get-OpenCodeSessionId -Worktree $record.worktree
+        if ($sid) {
+            $active = Get-OpenCodeSessionsActive
+            $workerSessionActive = ($active -contains $sid)
+        }
+    }
+
     $liveness = [string]$show.projection.liveness.verdict
     $activity = [string]$show.projection.stage.activity
     $wait = $show.observation.agentWait
@@ -206,6 +222,11 @@ function Resolve-Escalation {
     }
     if ($liveness -eq 'live' -or $activity -eq 'working') {
         return [pscustomobject]@{ Action = 'ignore'; Reason = "worker $liveness/$activity"; Context = $context; DispatchId = $dispatchId }
+    }
+    if ($msgType -eq 'escalation' -and $workerSessionActive) {
+        # El prompt "necesita persona" es espureo: la sesion del worker sigue
+        # ejecutando. Ignorar con evidencia.
+        return [pscustomobject]@{ Action = 'ignore'; Reason = "msg_stop espureo: sesion del worker activa (liveness=$liveness activity=$activity)"; Context = $context; DispatchId = $dispatchId }
     }
     if ($liveness -in @('', 'unknown', 'unverifiable')) {
         return [pscustomobject]@{ Action = 'defer'; Reason = "liveness $liveness"; Context = $context; DispatchId = $dispatchId }
@@ -1348,6 +1369,20 @@ while (-not $stopReason) {
     if ($script:IntegrityBlocked) { $stopReason = 'BLOCKED'; break }
     Settle-SettledDispatches -Tasks $tasks
 
+    # Guard de integridad: main debe seguir descendiendo de cada integrationSha
+    # que el bucle dio por integrado (incidente 13-11: commits en main durante
+    # un run activo dejaron fuera los merges de T3/T4 sin que nadie lo notara).
+    $ancestorFailures = @(Test-IntegrationAncestors -Records $script:Dispatches -BaseBranch $BaseBranch)
+    if ($ancestorFailures.Count) {
+        foreach ($failure in $ancestorFailures) {
+            Write-Host "[loop] INTEGRITY_ANCESTOR_FAIL run=$($failure.run) task=$($failure.task) sha=$($failure.sha) base=$($failure.base)"
+            Write-Audit -RunId $RunId -Actor 'loop' -Action 'integrity-ancestor-fail' -TaskId $failure.task -Reason "sha=$($failure.sha) base=$($failure.base)"
+        }
+        Write-Output "INTEGRITY_ANCESTOR_FAIL count=$($ancestorFailures.Count)"
+        $stopReason = 'BLOCKED'
+        break
+    }
+
     Update-Watchdog -Tasks $tasks
     if ($script:WatchdogBlocked) { $stopReason = 'BLOCKED'; break }
     if ($script:WatchdogRestarted) {
@@ -1436,6 +1471,18 @@ while (-not $stopReason) {
     }
 
     Ack-Delivery -DeliveryId $result.deliveryId
+}
+
+# Guard de cierre (segunda pasada): la integracion puede haber ocurrido durante
+# la iteracion; si main ya no desciende de un SHA, el cierre no puede ser DONE.
+$closeFailures = @(Test-IntegrationAncestors -Records $script:Dispatches -BaseBranch $BaseBranch)
+if ($closeFailures.Count -and $stopReason -eq 'DONE') {
+    foreach ($failure in $closeFailures) {
+        Write-Host "[loop] INTEGRITY_ANCESTOR_FAIL run=$($failure.run) task=$($failure.task) sha=$($failure.sha) base=$($failure.base)"
+        Write-Audit -RunId $RunId -Actor 'loop' -Action 'integrity-ancestor-fail' -TaskId $failure.task -Reason "sha=$($failure.sha) base=$($failure.base) cierre"
+    }
+    Write-Output "INTEGRITY_ANCESTOR_FAIL count=$($closeFailures.Count)"
+    $stopReason = 'BLOCKED'
 }
 
 Write-Output "LOOP=$stopReason"

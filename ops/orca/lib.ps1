@@ -666,6 +666,35 @@ function Test-TaskDepsIntegrated {
     return $true
 }
 
+# --- Guard de integridad de main (incidente 13-11, PRD 08) ---
+
+function Test-IntegrationAncestors {
+    # Por cada record con integrationSha, verifica que el SHA siga siendo
+    # ancestro de la rama base. Devuelve la lista de fallos. Barato: un
+    # git merge-base por dispatch integrado. $Records vacio es valido
+    # (primer intento del bucle, sin records).
+    param([Parameter(Mandatory)][AllowEmptyCollection()][array]$Records, [string]$BaseBranch = 'main')
+
+    $failures = @()
+    if (-not $Records.Count) { return $failures }
+    $repoRoot = Get-RepoRoot
+    foreach ($record in $Records) {
+        if (-not $record.integrationSha) { continue }
+        $sha = [string]$record.integrationSha
+        $base = if ($record.PSObject.Properties['baseBranch'] -and $record.baseBranch) { [string]$record.baseBranch } else { $BaseBranch }
+        & git -C $repoRoot merge-base --is-ancestor $sha $base 2>$null
+        if ($LASTEXITCODE -ne 0) {
+            $failures += [pscustomobject]@{
+                run  = [string]$record.runId
+                task = [string]$record.taskId
+                sha  = $sha
+                base = $base
+            }
+        }
+    }
+    return $failures
+}
+
 function Measure-EvidenceCoverage {    # Metrica de cobertura de evidencia para probes A/B (RF1.6 refinado): ejecuta
     # un auditorOffline (p. ej. el evidence_audit.py de la variante) contra el
     # report de un lado y cuenta los needles MISSING. Es un instrumento neutro:
@@ -817,6 +846,23 @@ function Get-OpenCodeSessionId {
     try {
         $record = Get-Content $file -Raw -Encoding UTF8 | ConvertFrom-Json
         if ($record.PSObject.Properties['sessionId'] -and $record.sessionId) { return [string]$record.sessionId }
+    }
+    catch { }
+    return $null
+}
+
+function Get-OpenCodeSessionsActive {
+    # IDs de sesiones OpenCode en ejecucion (GET /api/session/active).
+    # $null si la API no responde: evidencia ausente nunca decide.
+    try {
+        $raw = & opencode api GET '/api/session/active' 2>$null
+        if ($LASTEXITCODE -ne 0) { return $null }
+        $text = ($raw | Out-String).Trim()
+        if (-not $text) { return $null }
+        $payload = $text | ConvertFrom-Json -Depth 20
+        if ($payload.PSObject.Properties['data'] -and $payload.data) {
+            return @($payload.data.PSObject.Properties.Name)
+        }
     }
     catch { }
     return $null
