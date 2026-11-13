@@ -189,45 +189,97 @@ el 32.
 | `not_number` | `value` no numérico, booleano o no finito |
 | `unsupported_number` | número no presente en la unión de `allowed_numbers` de las citas de su dato |
 
-## Generación en modo explicar
+## Generación en dos llamadas
 
-El modo `explain` genera **una** respuesta JSON que contiene la síntesis y,
-opcionalmente, una figura: la figura viaja en la misma generación (cero
-llamadas extra al modelo) y nunca es un documento aparte.
+El modo `explain` ya no pide la figura dentro de la generación de la síntesis:
+medido en producción, la figura competía con la síntesis (1–4 secciones,
+1–14 frases con citas y auditoría por frase) en la misma generación y el
+modelo dejaba de emitir la clave (`chat_outcome.figure = {present: false}`,
+sin `figure_rejected` de contenido). Ahora el turno explain genera en **dos
+llamadas**, y `figures.py` no cambia: `validate_figure` sigue siendo la única
+puerta, venga la figura de una llamada o de dos.
 
-### Orden de validación
+1. **Síntesis.** La primera llamada genera solo `sections`: `synthesis_schema`
+   ya no declara `figure` y `EXPLAIN_SYSTEM` ya no la pide. `validate_synthesis`
+   sigue tolerando una clave `figure` residual y la ignora — su contenido no se
+   lee, así que una clave muerta de un payload antiguo no tumba el texto al
+   extracto.
+2. **Pista determinista.** `explain.figure_hint(sources)` es una función pura
+   (sin red, modelo ni base de datos) que mira solo los pasajes del turno
+   (`quote`, título, `section_path`) y devuelve `"steps" | "timeline" |
+   "table" | "bars" | None` con la primera regla que se cumpla, en este orden:
+   - `steps`: una fuente con 3+ líneas que abran una enumeración numerada
+     («1. », «2) », «Paso 3», «·»); solo las líneas del propio pasaje.
+   - `timeline`: 3+ años distintos (1000–2100) en el conjunto de pasajes.
+   - `table`: 2+ fuentes distintas, cada una con al menos una cifra con unidad
+     del catálogo cerrado `% kg km cm m² °C años euros`.
+   - `bars`: dentro de una misma fuente, 2+ cifras que compartan una unidad
+     del mismo catálogo.
+   Sin coincidencia → `None`: no hay segunda llamada. Los umbrales son
+   deliberadamente altos para que la pista no sea una fábrica de figuras que
+   gaste una llamada por explicación; están fijados con tests
+   (`apps/api/tests/test_figure_emission.py`) y no se ajustan para que un caso
+   pase.
+3. **Segunda llamada.** Solo con pista y texto aceptado (`grounded`): una
+   llamada con `FIGURE_SYSTEM`, `max_tokens` 2000 y el mismo
+   `reasoning_effort` que las auditorías de frase. La petición lleva la
+   pregunta original, los textos ya validados de las frases, los pasajes
+   citados con su `citation_id`, el `kind` sugerido y el esquema
+   `figure_call_schema`:
 
-1. `validate_synthesis` valida el sobre completo: `sections` siempre y
-   `figure` opcional, **solo como objeto**. Un `figure` que no sea objeto
-   (`figure: []`, una lista con dos figuras) o una segunda figura bajo otra
-   clave raíz (`figures`) viola el esquema entero → `invalid_synthesis` →
-   extracto: no es un motivo de figura, es un fallo del sobre.
-2. `verify_synthesis` audita cada frase contra la unión de sus citas.
-3. Solo si el texto se mantiene (`grounded`), `validate_figure` valida la
-   figura contra las fuentes del turno: `source_citations` deben existir entre
-   las `sources` y cada dato se comprueba con las cifras de **sus** citas
-   (`allowed_numbers` por cita: pasaje + título + `section_path`, extraído con
-   `textnums.numbers`).
-4. Publicación: la figura válida se guarda en `Message.figures` (lista de
-   exactamente uno) y viaja en el evento `done` dentro de `message_json`.
+   ```json
+   {"type": "object",
+    "properties": {"decline": {"type": "boolean"}, "figure": <figure_schema>},
+    "required": ["decline"], "additionalProperties": false}
+   ```
+
+   La regla del prompt: usa solo cifras que aparezcan literalmente en los
+   pasajes citados por cada dato; si habría que inventar, convertir o
+   redondear, `decline=true`.
+4. **Validación.** `decline=true` gana sobre una figura presente; una
+   respuesta sin `figure` queda también sin figura, con `declined`. Con
+   figura, `validate_figure(figure, [c["citation_id"] for c in sources],
+   allowed_numbers)` aplica el contrato de arriba sin cambios
+   (`source_citations` deben existir entre las `sources` y cada dato se
+   comprueba con las cifras de **sus** citas: `allowed_numbers` por cita,
+   pasaje + título + `section_path`, con `textnums.numbers`).
+5. **Publicación.** La figura válida se guarda en `Message.figures` (lista de
+   exactamente uno) y viaja en el evento `done` dentro de `message_json`. Si el
+   texto cae a `grounded_extract` no hay segunda llamada y
+   `figure_rejected = "text_fallback"`.
 
 ### Política de descarte
 
 - Una figura inválida **nunca** cambia el destino del turno: la respuesta se
   publica `completed` con su texto y el motivo queda en
   `chat_outcome.figure_rejected` (`unsupported_number`, `citation_unknown`,
-  `extra_field`, `too_large`, …). La figura se descarta entera: no se trunca
-  ni se repara. `chat_outcome.figure` documenta la ranura como
-  `{"present": bool, "kind": str|null}`, y solo se escribe cuando el modelo
-  produjo figura: un turno sin figura mantiene el resultado anterior.
-- Si el texto cae a `grounded_extract` (rechazo de `validate_synthesis` o del
-  verificador), la figura cae con él: `figure_rejected = "text_fallback"`. El
-  extracto literal no sostiene la síntesis y tampoco su figura, aunque la
-  figura en sí fuera válida.
+  `extra_field`, `too_large`, `declined`, `figure_call_failed`, …). La figura
+  se descarta entera: no se trunca ni se repara. `chat_outcome.figure`
+  documenta la ranura como `{"present": bool, "kind": str|null}`,
+  `chat_outcome.figure_hint` registra la pista de cada turno explain (`null`
+  sin coincidencia) y ambos se escriben en cuanto hubo intento o motivo: un
+  turno sin pista y sin figura mantiene el resto del resultado anterior.
+- `declined` cubre `decline=true` del modelo y una respuesta sin `figure`;
+  `figure_call_failed` cubre una segunda llamada que falla (proveedor, JSON
+  ilegible): el texto queda intacto y la llamada aparece en la traza `llm`
+  con la fase `figure`.
+- Si el texto cae a `grounded_extract`, la figura cae con él:
+  `figure_rejected = "text_fallback"`. El extracto literal no sostiene la
+  síntesis y tampoco su figura, aunque la pista hubiera disparado: la segunda
+  llamada nunca llega a hacerse.
 - El modo `answer` no cambia: su esquema cerrado `{"evidence":[…]}` no admite
-  `figure` ni siquiera opcional; si el modelo la devuelve, el turno cae por
-  `invalid_answer` como con cualquier campo extra (abstinencia) y no se
-  publica ninguna figura.
+  `figure` ni siquiera opcional, no tiene pista ni segunda llamada, y su
+  `chat_outcome` queda byte-idéntico al anterior.
+
+### Coste
+
++1 llamada de modelo por turno, y solo cuando la pista dispara y el texto se
+acepta. `max_tokens` 2000; la llamada se registra en la traza `llm` con la
+fase `figure`, así que el p50 por turno se mide igual que el resto. Si el
+coste sube, la siguiente decisión es bajar `reasoning_effort` a `disabled` en
+esa llamada o cachear, no relajar la validación. Si aun así el modelo no
+emite, el problema es del proveedor con `response_schema` anidados y la
+decisión será otra (figura por plantilla determinista, sin modelo).
 
 ### Ejemplo aceptado
 

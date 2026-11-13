@@ -21,9 +21,12 @@ En `explain` el turno pide al modelo una **síntesis por secciones** con esquema
 ```
 
 Entre 1 y 4 secciones, entre 1 y 14 frases en total (comprobado en el validador, que es quien puede
-ver el total cruzado), entre 1 y 3 citas por frase y sin citas repetidas dentro de una frase. No hay
-`figure`: llega en otra tarea. La respuesta publicada es exactamente `render_synthesis`: el `heading`
+ver el total cruzado), entre 1 y 3 citas por frase y sin citas repetidas dentro de una frase. La
+respuesta publicada es exactamente `render_synthesis`: el `heading`
 como `**heading**` y cada frase terminada en `[C1][C3]`, en orden de aparición.
+La figura no viaja en la síntesis: cuando la pista determinista `figure_hint` detecta datos graficables
+en los pasajes del turno, una segunda llamada corta pide UNA figura o un declive explícito y se valida
+con el mismo contrato (`docs/h6/figures-contract.md`).
 
 ## Garantías: frase → citas → verificador
 
@@ -69,7 +72,10 @@ parte de la firma (ya era así desde H4, ver `docs/h3/general-explanation.md`). 
 - No cambia el cuerpo de la respuesta de la API ni el esquema del modo `answer`; no toca
   `apps/web`. El cliente elige el modo: no hay activación por palabras clave ni valor por defecto
   distinto de `answer`.
-- No introduce figuras (`figure`) ni resúmenes sin cita.
+- No introduce resúmenes sin cita. La figura es una vía acotada, no un canal libre: solo hay
+  segunda llamada cuando la pista determinista dispara y el texto se mantiene; el modelo puede
+  declinar (`figure_rejected: "declined"`) y una cifra que no esté literalmente en los pasajes
+  citados la descarta igual.
 
 ## Medición
 
