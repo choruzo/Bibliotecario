@@ -295,6 +295,9 @@ progress.active::-moz-progress-bar { background: linear-gradient(90deg, var(--ve
 .chat-composer button[type=submit] { background: var(--verde2); border: 0; color: var(--on-verde); font-weight: 600; font-size: .92rem; padding: .55rem 1.1rem; border-radius: 8px; }
 .chat-composer button[type=submit]:hover:not(:disabled) { filter: brightness(1.15); }
 .chat-composer button[type=submit]:disabled { background: var(--panel2); color: var(--dim); }
+.mode-toggle { align-items: center; }
+.mode-toggle label { cursor: pointer; }
+.mode-help { flex-basis: 100%; overflow-wrap: anywhere; }
 .chat-panel > p[role=status] { color: var(--azul); font-size: .85rem; }
 .source-view { margin-top: 1.2rem; padding: 1.2rem; background: var(--panel); border: 1px solid var(--azul2); border-left: 3px solid var(--azul); border-radius: 10px; min-width: 0; animation: fadeUp .3s ease both; }
 .source-view:focus-visible { outline: 2px solid var(--verde); }

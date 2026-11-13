@@ -81,6 +81,24 @@ anteriores), `chat_latency` (`generation_ms`, `verification_ms`) y la traza de l
 latencia y de recursos al extracto sobre el banco real de aceptación queda pendiente del ciclo de
 evaluación; con los dobles de test se comprueba el contrato, no el rendimiento.
 
+## UI
+
+La web solicita el modo con una casilla en el compositor del chat (`apps/web/app/chat/chat-view.tsx`):
+`<input type="checkbox">` con etiqueta visible «Explicar concepto» y un texto de ayuda corto
+(«Respuesta didáctica por secciones, con citas y figuras si aportan»). El valor por defecto es
+`answer`: la casilla nace desmarcada y el turno se envía siempre con `mode` explícito en el cuerpo
+del POST (`{ content, mode }`), marcada o no.
+
+- **El modo es una intención del turno, no un ajuste de la conversación.** No se persiste ni se
+  guarda en la conversación: la casilla conserva su estado entre turnos mientras el componente
+  viva (no se resetea al enviar), pero recargar la página vuelve a `answer`. No hay campo
+  en el mensaje para recuperarlo y las respuestas antiguas no muestran insignia de modo.
+- La casilla se deshabilita mientras hay una respuesta en curso y vuelve a activarse al terminar.
+- La respuesta en modo explicar se pinta con el render existente (markdown y chips de cita que
+  abren «Fragmento citado»); si la síntesis cae a `grounded_extract`, el extracto se muestra igual
+  y la UI no promete una explicación que no llegó.
+- Los tests están en `apps/web/tests/chat-mode.spec.ts` (proyectos `desktop` y `mobile`).
+
 ## Pendiente
 
 - Cobertura multi-documento en la recuperación (otro conjunto `support`) y su recalibración:
