@@ -7,6 +7,7 @@ Regenerado por `lesson.ps1 -Index`. No editar a mano.
 | api | task_7832bedbdc99 | Una tarea añade una columna a un modelo y con ella una mi... | high | api/lessons/task_7832bedbdc99/EXPERIENCE.md |
 | chat | task_d21aa5cbd7fb | Una tarea añade a una respuesta generada un artefacto opc... | high | chat/lessons/task_d21aa5cbd7fb/EXPERIENCE.md |
 | orchestration | task_440d58ac8ee8 | Una tarea lleva [HARNESS-PROBE] en su spec: el bucle la d... | high | orchestration/lessons/task_440d58ac8ee8/EXPERIENCE.md |
+| orchestration | task_440d58ac8ee8-spec-inexistente | El `## Checks obligatorios` de la spec apunta a una ruta ... | high | orchestration/lessons/task_440d58ac8ee8-spec-inexistente/EXPERIENCE.md |
 | orchestration | task_7000f0aad22d | Primer review de una tarea despierta: `REVIEW=ACEPTADO` p... | high | orchestration/lessons/task_7000f0aad22d/EXPERIENCE.md |
 | orchestration | task_8cba7ea2d0d2 | Dos tareas hermanas se despachan en paralelo desde el mis... | medium | orchestration/lessons/task_8cba7ea2d0d2/EXPERIENCE.md |
 | orchestration | task_ac91e49ebd62 | Un worker manda `worker_done` con el árbol limpio (solo `... | medium | orchestration/lessons/task_ac91e49ebd62/EXPERIENCE.md |
