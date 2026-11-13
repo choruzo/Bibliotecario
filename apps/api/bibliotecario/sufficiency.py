@@ -7,6 +7,7 @@ from typing import Literal
 import httpx
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
+from .facets import DECOMPOSE_MAX_TOKENS, DECOMPOSE_PROMPT, Facets
 from .indexing import model_signature
 from .language import TRANSLATION_MAX_TOKENS, TRANSLATION_PROMPT
 from .providers import LLM_PHASE, ProviderError
@@ -96,6 +97,11 @@ def policy_signature(settings):
                 settings.translate_first_turn, settings.translation_timeout_seconds,
                 model_signature(settings), settings.llm_base_url, settings.llm_model, settings.llm_upstream_model,
                 settings.model_timeout_seconds, settings.sufficiency_reasoning_effort]
+    if settings.multi_query:
+        # H7: the decomposition contract joins the evidence policy only while the
+        # flag is on. With it off, not one byte changes and the calibrated H4
+        # policy keeps validating (guarded by a golden test against main).
+        contract += [DECOMPOSE_PROMPT, DECOMPOSE_MAX_TOKENS, Facets.model_json_schema()]
     return hashlib.sha256(json.dumps(contract).encode()).hexdigest()
 
 

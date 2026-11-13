@@ -32,6 +32,11 @@ class Settings(BaseSettings):
     # pregunta no está en español. Desactivable por entorno (BIB_TRANSLATE_FIRST_TURN).
     translate_first_turn: bool = True
     translation_timeout_seconds: float = Field(default=8, gt=0, le=60)
+    # Recuperación multi-consulta (H7): descompone la pregunta en facets para
+    # preguntas que necesitan evidencia de varios documentos. Apagada por
+    # defecto: el umbral calibrado solo vale para el score de consulta única, así
+    # que exige recalibración antes de encenderla. Ver docs/h7/multi-query.md.
+    multi_query: bool = False
     sufficiency_reasoning_effort: str = Field(default="low", pattern="^(low|medium|high|disabled)$")
     worker_interval_seconds: float = Field(default=15, ge=1, le=60)
     upload_max_bytes: int = Field(default=100 * 1024 * 1024, ge=1024, le=1024 * 1024 * 1024)

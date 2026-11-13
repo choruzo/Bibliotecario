@@ -1,3 +1,4 @@
+import asyncio
 import hashlib
 import json
 import time
@@ -12,6 +13,7 @@ from sqlalchemy import select, text
 from sqlalchemy.exc import SQLAlchemyError
 
 from .auth import administrator, database, require_csrf
+from .facets import decompose
 from .indexing import model_signature
 from .models import Chunk, Document, DocumentVersion, EvidencePolicy, RetrievalRun
 from .providers import LLM_TRACE, ProviderError, summarize_calls
@@ -183,19 +185,79 @@ async def retrieve(db, settings, clients, query, limit=10, document_id=None, adm
     started = perf_counter()
     if await clients.embedding_tokens("search_query: " + query) > 1000:
         raise ValueError("query_context_exceeded")
-    vector = (await clients.embed([query], query=True))[0]
-    timing["embedding_ms"] = (perf_counter() - started) * 1000
-    started = perf_counter()
-    # Do not retain the auth read's old transaction during external inference.
-    db.rollback()
-    db.execute(text("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ"))
-    corpus = corpus_signature(db)
-    vector_rows, text_rows = candidate_pools(db, vector, query, model_signature(settings), document_id, admin)
-    timing["search_ms"] = (perf_counter() - started) * 1000
-    started = perf_counter()
-    fused = fuse(vector_rows, text_rows)
+    facets, facet_error, pool_sizes = [], None, []
+    facet_diagnostics = {}
+    facets_task = (asyncio.create_task(decompose(clients, query, facet_diagnostics))
+                   if settings.multi_query else None)
+    if facets_task is None:
+        # Single-query turn: the H4 path, unchanged while the flag is off.
+        vector = (await clients.embed([query], query=True))[0]
+        timing["embedding_ms"] = (perf_counter() - started) * 1000
+        started = perf_counter()
+        # Do not retain the auth read's old transaction during external inference.
+        db.rollback()
+        db.execute(text("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ"))
+        corpus = corpus_signature(db)
+        vector_rows, text_rows = candidate_pools(db, vector, query, model_signature(settings), document_id, admin)
+        timing["search_ms"] = (perf_counter() - started) * 1000
+        started = perf_counter()
+        fused = fuse(vector_rows, text_rows)
+        pool_sizes.append(len(fused))
+        merged = {cid: (score, channels) for cid, score, channels in fused}
+        pools = {"vector": vector_rows, "text": text_rows}
+    else:
+        # Multi-query (H7): decomposition overlaps the snapshot below (its LLM call
+        # starts only after the auth transaction is released), and the original
+        # question is embedded once, together with its facets, in a single embed
+        # call. See docs/h7/multi-query.md.
+        try:
+            db.rollback()
+            db.execute(text("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ"))
+            corpus = corpus_signature(db)
+            decomposition = perf_counter()
+            try:
+                facets = await facets_task
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                # decompose promises never to raise; if it ever breaks that promise
+                # the turn still degrades to the single-query path.
+                facets, facet_error = [], "facets_crashed"
+            facet_error = facet_diagnostics.get("error") if facet_error is None else facet_error
+            timing["decompose_ms"] = (perf_counter() - decomposition) * 1000
+            started = perf_counter()
+            queries = [query, *facets]
+            vectors = await clients.embed(queries, query=True)
+        except BaseException:
+            facets_task.cancel()
+            raise
+        timing["embedding_ms"] = (perf_counter() - started) * 1000
+        started = perf_counter()
+        merged, raw_pools = {}, []
+        for index, (candidate_query, vector) in enumerate(zip(queries, vectors)):
+            vector_rows, text_rows = candidate_pools(db, vector, candidate_query,
+                                                     model_signature(settings), document_id, admin)
+            raw_pools.append({"vector": vector_rows, "text": text_rows})
+            fused = fuse(vector_rows, text_rows)
+            pool_sizes.append(len(fused))
+            # With facets gone (failure or single topic) the single pool keeps the
+            # unprompted H4 channel labels, so the degraded turn stays identical.
+            prefix = "" if len(queries) == 1 else f"q{index}:"
+            for cid, score, channels in fused:
+                slot = merged.get(cid)
+                if slot is None:
+                    # Per-query channel labels keep each pool's provenance inside
+                    # the union; expand_context adds its own "context" label.
+                    merged[cid] = [score, {prefix + name: detail for name, detail in channels.items()}]
+                else:
+                    slot[0] = max(slot[0], score)
+                    for name, detail in channels.items():
+                        slot[1].setdefault(prefix + name, detail)
+        timing["search_ms"] = (perf_counter() - started) * 1000
+        started = perf_counter()
+        pools = raw_pools
     candidates = []
-    for cid, score, channels in fused:
+    for cid, (score, channels) in sorted(merged.items(), key=lambda item: (-item[1][0], item[0])):
         chunk = db.get(Chunk, cid)
         version = db.get(DocumentVersion, chunk.version_id)
         candidates.append({"chunk_id": cid, "document_id": version.document_id,
@@ -207,7 +269,12 @@ async def retrieve(db, settings, clients, query, limit=10, document_id=None, adm
     timing["fusion_ms"] = (perf_counter() - started) * 1000
     started = perf_counter()
     if candidates:
-        ranking = await clients.rerank(query, [c["search_content"] for c in candidates])
+        # One single rerank over the whole union. With facets the composite query
+        # makes rerank_score measure relevance to the set of aspects, not to the
+        # question alone: the calibrated single-query threshold no longer applies,
+        # which is why multi_query stays off until recalibration.
+        rerank_query = query + " " + " ".join(facets) if facets else query
+        ranking = await clients.rerank(rerank_query, [c["search_content"] for c in candidates])
         candidates = [candidates[row["index"]] | {"rerank_score": row["relevance_score"]} for row in ranking]
     timing["reranking_ms"] = (perf_counter() - started) * 1000
     started = perf_counter()
@@ -229,8 +296,10 @@ async def retrieve(db, settings, clients, query, limit=10, document_id=None, adm
     results = ([c for c in candidates if c["chunk_id"] in supporting]
                if assessment["action"] == "answer" else candidates)[:limit]
     return {"query": query, "candidates": candidates, "results": results,
-            "pools": {"vector": vector_rows, "text": text_rows}, "decision": decision,
+            "pools": pools, "decision": decision,
             "scope": {"admin": admin, "document_id": document_id},
+            "retrieval": {"facets": facets, "facet_error": facet_error, "merged": len(merged),
+                          "pools": pool_sizes},
             "latency": {key: round(value, 2) for key, value in timing.items()},
             "corpus_signature": corpus, "model_signature": policy_signature(settings), "assessment": assessment}
 
