@@ -2,9 +2,12 @@
 import { useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { parseFigure } from './figures/types';
+import type { Figure, FigureSource } from './figures/types';
+import { FigureBlock } from './figures/figure-block';
 
-type Source = { citation_id: string; title: string; version: number; quote: string; locator: { page?: number; section_path?: string[]; line_start?: number; line_end?: number } };
-type Message = { id: string; role: string; content: string; status: string; sources: Source[] };
+type Source = FigureSource;
+type Message = { id: string; role: string; content: string; status: string; sources: Source[]; figures?: Figure[] };
 type Conversation = { id: string; title: string };
 type Detail = Conversation & { preferences: string; busy: boolean; messages: Message[] };
 
@@ -111,6 +114,13 @@ export default function ChatView({ csrf }: { csrf: string }) {
       }
     }}>{markdown}</ReactMarkdown></div>{general && <aside className="general-explanation"><strong>Explicación general</strong><p>{general}</p></aside>}</>;
   }
+  function renderFigures(message: Message) {
+    // El guarda es la barrera de la web: lo que no encaje con el contrato no se pinta.
+    const figures = (message.figures ?? []).map(parseFigure).filter((figure): figure is Figure => figure !== null);
+    if (!figures.length) return null;
+    return <div className="figure-list">{figures.map((figure, index) => <FigureBlock key={index}
+      figure={figure} figureIndex={index} messageId={message.id} sources={message.sources} onShowSource={showSource} />)}</div>;
+  }
   return <section className="chat-layout"><aside className="conversation-list">
     <button onClick={create} disabled={busy}>Nueva conversación</button>
     <nav aria-label="Conversaciones">{items.map(item => <button key={item.id} disabled={busy} aria-pressed={current?.id === item.id}
@@ -124,6 +134,7 @@ export default function ChatView({ csrf }: { csrf: string }) {
       <section className="chat-messages" aria-label="Mensajes">{current.messages.map(message => <article key={message.id} className={`chat-message ${message.role}`}>
         <strong>{message.role === 'user' ? 'Tú' : 'Bibliotecario'}</strong>
         {message.status === 'pending' ? <p>{current.busy ? 'Respuesta en curso…' : 'Respuesta interrumpida. Puedes volver a preguntar.'}</p> : renderContent(message)}
+        {renderFigures(message)}
         {message.sources.length > 0 && <div className="citation-list">{message.sources.map(s => <button key={s.citation_id} data-citation={`${message.id}-${s.citation_id}-list`} onClick={() => showSource(message.id, s)}>[{s.citation_id}] {s.title} · v{s.version}</button>)}</div>}
       </article>)}{draft && <div className="chat-text">{draft}</div>}</section>
       {progress && <p role="status">{progress}</p>}
