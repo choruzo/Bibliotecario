@@ -301,7 +301,8 @@ def test_explain_turn_publishes_the_sectioned_synthesis(application, monkeypatch
     assert len(audited) == 2 and audited[0]['claim'] == 'El sistema tiene 3 módulos.'
     with sessions() as db:
         result = db.get(RetrievalRun, message['retrieval_run_id']).result
-    assert result['chat_outcome'] == {'status': 'completed', 'reason': 'grounded', 'mode': 'explain'}
+    assert result['chat_outcome'] == {'status': 'completed', 'reason': 'grounded', 'mode': 'explain',
+                                      'figure_hint': None}
     assert 'generation_ms' in result['chat_latency'] and 'verification_ms' in result['chat_latency']
 
 
@@ -318,6 +319,8 @@ def test_verifier_rejection_topples_the_whole_synthesis_to_the_extract(applicati
     assert [source['citation_id'] for source in message['sources']] == ['C1', 'C2']
     assert stored_outcome(sessions, message) == {
         'status': 'completed', 'reason': 'grounded_extract', 'mode': 'explain',
+        'figure_hint': None, 'figure': {'present': False, 'kind': None},
+        'figure_rejected': 'text_fallback',
         'fallback': {'reason': 'grounding_rejected',
                      'detail': {'supported': False, 'claims': 2, 'rejected': [2]}}}
 
@@ -336,6 +339,8 @@ def test_added_figure_turn_falls_back_with_the_motivo(application, monkeypatch):
     assert 'necesita 7 componentes' not in message['content']  # no partial prose survives
     assert stored_outcome(sessions, message) == {
         'status': 'completed', 'reason': 'grounded_extract', 'mode': 'explain',
+        'figure_hint': None, 'figure': {'present': False, 'kind': None},
+        'figure_rejected': 'text_fallback',
         'fallback': {'reason': 'unsupported_number', 'detail': {
             'where': 'sentence', 'position': 1, 'citations': ['C1', 'C2'], 'added': [7.0]}}}
 

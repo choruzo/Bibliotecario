@@ -13,8 +13,8 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func, select, update
 
 from .auth import current_identity, database, require_csrf
-from .explain import (EXPLAIN_SYSTEM, context_numbers, synthesis_fallback, synthesis_schema,
-                      validate_synthesis, verify_synthesis)
+from .explain import (EXPLAIN_SYSTEM, FIGURE_SYSTEM, context_numbers, figure_call_schema, figure_hint,
+                      synthesis_fallback, synthesis_schema, validate_synthesis, verify_synthesis)
 from .figures import validate_figure
 from .models import (Chunk, Conversation, Document, DocumentFile, DocumentVersion,
                      Message, NormalizedRevision, RetrievalRun, new_id)
@@ -310,26 +310,41 @@ def attach_quotes(raw, sources):
     return json.dumps(payload, ensure_ascii=False)
 
 
-def turn_figure(raw, sources, text_held):
-    """Validate the one optional figure of an explain generation, once the text is settled.
+async def figure_turn(clients, question, validation, sources, hint):
+    """The second, small call: its only job is one figure or an explicit decline.
 
-    Returns (figure, rejected): the cleaned contract figure (or None) and why a
-    generated figure was dropped. The extract that replaces a rejected synthesis
-    carries no figure (text_fallback): literal passages do not support the
-    synthesis the figure illustrated. Numbers are judged per citation — passage,
-    title and section_path — with the same textnums extraction as the grounding.
+    The synthesis no longer asks for a figure — measured, the model never
+    emitted the key when the figure competed with the sentence-level grounding
+    contract inside the same generation. A deterministic hint (figure_hint) may
+    open this one extra call, whose schema is decline-first: decline=true wins
+    over a present figure, and a missing figure is a decline. Numbers are
+    judged per citation — passage, title and section_path — with the same
+    textnums extraction as the grounding, through the unchanged validate_figure.
     Never raises: a figure may complete a completed turn, never change its fate.
     """
-    try:
-        payload = json.loads(raw)
-    except ValueError:
-        payload = None
-    if not isinstance(payload, dict) or "figure" not in payload:
-        return None, None
-    if not text_held:
-        return None, "text_fallback"
+    LLM_PHASE.set("figure")
     allowed = {source["citation_id"]: context_numbers(source, numbers) for source in sources}
-    return validate_figure(payload["figure"], [s["citation_id"] for s in sources], allowed)
+    prompt = [
+        {"role": "system", "content": FIGURE_SYSTEM},
+        {"role": "user", "content": json.dumps({
+            "question": question,
+            "sentences": validation["sections"],
+            "passages": [{"citation_id": source["citation_id"], "quote": source["quote"],
+                          "title": source.get("title", ""),
+                          "section_path": source.get("locator", {}).get("section_path", [])}
+                         for source in sources],
+            "kind": hint}, ensure_ascii=False)}]
+    try:
+        raw = await clients.generate(prompt, max_tokens=2000,
+            reasoning_effort="medium" if clients.settings.sufficiency_reasoning_effort != "disabled" else "disabled",
+            response_schema=figure_call_schema([source["citation_id"] for source in sources]))
+        value = json.loads(raw)
+    except Exception:
+        # A failed second call sheds only the figure slot, never the turn.
+        return None, "figure_call_failed"
+    if not isinstance(value, dict) or value.get("decline") is True or not isinstance(value.get("figure"), dict):
+        return None, "declined"
+    return validate_figure(value["figure"], [source["citation_id"] for source in sources], allowed)
 
 
 def event(kind, data):
@@ -399,14 +414,14 @@ def send(cid: str, body: Turn, request: Request, identity=Depends(require_csrf),
                 content, used, status = ABSTENTION, [], "abstained"
                 outcome_reason = result["decision"].get("reason", "insufficient_evidence")
                 fallback = None
-                figure, figure_rejected = None, None
+                figure, figure_rejected, hint = None, None, None
+                explain = body.mode == "explain"
                 if result["decision"]["action"] == "clarify":
                     content, status, outcome_reason = CLARIFICATION, "abstained", "clarification_required"
                 if result["decision"]["action"] == "answer":
                     yield event("status", {"message": "Preparando y validando las citas…"})
                     phase = perf_counter()
                     LLM_PHASE.set("generation")
-                    explain = body.mode == "explain"
                     prompt = [{"role": "system", "content": EXPLAIN_SYSTEM if explain else SYSTEM},
                               {"role": "user", "content": json.dumps({
                         "question": question, "query": query, "preferences": preferences,
@@ -445,10 +460,18 @@ def send(cid: str, body: Turn, request: Request, identity=Depends(require_csrf),
                                 content, used, validation = extractive_answer(sources)
                                 fallback = {"reason": outcome_reason, "detail": exc.args[1] if len(exc.args) > 1 else None}
                                 status, outcome_reason = 'completed', 'grounded_extract'
-                    # One figure, validated only after the text held: a figure can
+                    # One figure, and only through the deterministic hint's
+                    # second call once the text has held: a figure can
                     # complete a completed turn, never change its fate.
+                    hint = figure_hint(sources) if explain else None
                     if explain:
-                        figure, figure_rejected = turn_figure(raw, sources, outcome_reason == "grounded")
+                        if outcome_reason == "grounded" and hint is not None:
+                            figure, figure_rejected = await figure_turn(
+                                clients, question, validation, sources, hint)
+                        elif outcome_reason != "grounded":
+                            # The extract that replaced the prose carries no
+                            # figure, whether or not the hint fired.
+                            figure_rejected = "text_fallback"
                 with sessions() as work:
                     conv = work.scalar(select(Conversation).where(Conversation.id == cid).with_for_update())
                     if conv.turn_token != token or conv.busy_until <= time.time():
@@ -475,13 +498,16 @@ def send(cid: str, body: Turn, request: Request, identity=Depends(require_csrf),
                         saved.figures = [figure]
                     recorded = work.get(RetrievalRun, run_id)
                     timing["total_ms"] = (perf_counter() - started) * 1000
-                    # The figure slot is documented only when the model produced a
-                    # figure: turns without one keep the previous result shape.
+                    # The figure slot is documented only when a figure was
+                    # produced or rejected; figure_hint documents the hint for
+                    # every explain turn, so the emission is observable.
                     figure_outcome = {}
-                    if figure is not None or figure_rejected is not None:
-                        figure_outcome["figure"] = {"present": published, "kind": figure["kind"] if published else None}
-                        if figure_rejected is not None:
-                            figure_outcome["figure_rejected"] = figure_rejected
+                    if explain:
+                        figure_outcome["figure_hint"] = hint
+                        if figure is not None or figure_rejected is not None:
+                            figure_outcome["figure"] = {"present": published, "kind": figure["kind"] if published else None}
+                            if figure_rejected is not None:
+                                figure_outcome["figure_rejected"] = figure_rejected
                     recorded.result = recorded.result | {"chat_outcome": {"status": status, "reason": outcome_reason}
                                                          | ({"fallback": fallback} if fallback and status == "completed" else {})
                                                          # The mode is only written for «explain»: an absent key
