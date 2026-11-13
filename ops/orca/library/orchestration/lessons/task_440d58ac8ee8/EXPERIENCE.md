@@ -1,19 +1,19 @@
 ---
 task: task_440d58ac8ee8
 run: run_bc7e29e5e432
-date: 2026-11-13T08:25:09.4548347Z
-domain: default
-confidence: low
+date: 11/13/2026 09:30:30.ToUniversalTime().ToString('o')
+domain: orchestration
+confidence: high
 status: draft
 ---
 
 ## Cue
 
-TODO: describe la situacion que dispara esta leccion (que reconoceria el worker antes de actuar).
+Una tarea lleva [HARNESS-PROBE] en su spec: el bucle la despacha dos veces (base y hermana -var con la variante) y, mientras se arbitra el par, la base figura completed sin integrationSha durante varios minutos.
 
 ## Lesson
 
-TODO: indica la operacion a hacer, nombrando el componente del kit al que afecta.
+No la reabras ni la trates como atascada: el par se decide al integrar y, con empate, se integra la base y la hermana se cierra como probe-loser. Su worker_done tardío llega con la tarea ya cerrada y se descarta (worker-done-stale). Presupuesta dos plazas de worker por tarea probe: con -MaxWorkers 2 el otro carril no arranca hasta que un lado del par termina.
 
 ## Evidence
 
@@ -28,4 +28,5 @@ TODO: indica la operacion a hacer, nombrando el componente del kit al que afecta
 - [worktree-remove] 11/13/2026 07:40:04 actor=cleanup motivo: C:/Users/javie/orca/workspaces/Bibliotecario/h6-explain-mode-440d58
 - [terminal-close] 11/13/2026 07:50:46 actor=loop motivo: settled
 - [worker-report] # Reporte · task_440d58ac8ee8 (h6-explain-mode) ## Resultado Implementado el modo `mode="explain"` en el chat de la API: turno con síntesis didáctica por
-
+- [probe-loser] 11/13/2026 07:36:50 actor=loop motivo: empate: sin contraste medible; se integra la base
+- [worker-done-stale] 11/13/2026 07:41:05 actor=worker motivo: status=failed

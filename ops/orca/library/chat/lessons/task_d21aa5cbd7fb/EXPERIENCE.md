@@ -1,19 +1,19 @@
 ---
 task: task_d21aa5cbd7fb
 run: run_bc7e29e5e432
-date: 2026-11-13T08:25:11.3525069Z
-domain: default
-confidence: low
+date: 11/13/2026 09:30:30.ToUniversalTime().ToString('o')
+domain: chat
+confidence: high
 status: draft
 ---
 
 ## Cue
 
-TODO: describe la situacion que dispara esta leccion (que reconoceria el worker antes de actuar).
+Una tarea añade a una respuesta generada un artefacto opcional (figura, tabla, resumen) que puede contener cifras y que no debe degradar el turno.
 
 ## Lesson
 
-TODO: indica la operacion a hacer, nombrando el componente del kit al que afecta.
+Valida el artefacto después de validar el texto y antes de publicar, aplicando la regla numérica a las citas de cada dato, no a las del turno. Si falla, descarta el artefacto con su motivo (figure_rejected) y publica el texto: un opcional nunca convierte un turno correcto en abstención. Si el texto cae a extracto, el artefacto cae con él (text_fallback). El modo sin artefacto (answer) mantiene su esquema cerrado y rechaza la clave extra.
 
 ## Evidence
 
@@ -25,4 +25,3 @@ TODO: indica la operacion a hacer, nombrando el componente del kit al que afecta
 - [worktree-remove] 11/13/2026 08:22:45 actor=cleanup motivo: C:/Users/javie/orca/workspaces/Bibliotecario/h6-figure-generation-d21aa5
 - [terminal-close] 11/13/2026 08:22:58 actor=loop motivo: settled
 - [worker-report] # Reporte — task_d21aa5cbd7fb (h6-figure-generation) ## Resultado El modo `explain` genera ahora **una** figura declarativa opcional en la misma generación que la síntesis (cero llamadas extra al modelo). La figura se valida después de que el texto se mantiene (`validate_synthesis` + `verify_synthesis`) y antes de publicar: una figura válida se guarda en `Message.figures` (lista de uno) y viaja en el evento `done`; cualquier figura inválida se descarta con su motivo en `chat_outcome.figure_rejected` sin tocar el texto (`completed`), y si el texto cae a extracto la figura cae con él (`text_fallback`). El modo `answer` no cambia: su esquema cerrado sigue sin `figure` y un intento cae por `invalid_answer` (abstinencia). Los checks obligatorios pasan: gate `CHECK_OK`, 14 tests nuevos y 56 de no regresión (`test_explain.py` + `test_figures.py`, sin modificar).
-
