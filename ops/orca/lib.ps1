@@ -638,6 +638,32 @@ function Get-SessionTrajectoryStats {
     catch { return $null }
 }
 
+# --- Deps por entrega real (bug h6: T3 escalo porque su dep estaba completed
+# --- pero sin integrar) ---
+
+function Test-TaskDepsIntegrated {
+    # Las deps de Orca se satisfacen con 'completed' (worker_done), que NO es
+    # entrega (invariante del kit: completed != integrationSha). Un dependiente
+    # de una tarea de par [HARNESS-PROBE] se despacharia antes de que la
+    # ganadora este en main. Devuelve $true si todas las deps tienen
+    # integrationSha en los registros locales.
+    param([Parameter(Mandatory)]$Task, [Parameter(Mandatory)][array]$Records)
+
+    $rawDeps = $null
+    if ($Task.PSObject.Properties['deps']) { $rawDeps = $Task.deps }
+    if (-not $rawDeps) { return $true }
+    $depIds = @()
+    try { $depIds = @(($rawDeps | ConvertFrom-Json)) } catch { return $true }
+    if (-not $depIds.Count) { return $true }
+    foreach ($depId in $depIds) {
+        $depId = [string]$depId
+        if (-not $depId) { continue }
+        $depRecord = @($Records | Where-Object { [string]$_.taskId -eq $depId }) | Select-Object -Last 1
+        if (-not $depRecord -or -not $depRecord.integrationSha) { return $false }
+    }
+    return $true
+}
+
 function Measure-EvidenceCoverage {    # Metrica de cobertura de evidencia para probes A/B (RF1.6 refinado): ejecuta
     # un auditorOffline (p. ej. el evidence_audit.py de la variante) contra el
     # report de un lado y cuenta los needles MISSING. Es un instrumento neutro:

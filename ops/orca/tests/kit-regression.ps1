@@ -119,6 +119,10 @@ Assert-Contains (Join-Path $orcaDir 'orchestrate.ps1') 'pendingPairs' 'el bucle 
 # PAIR_WAIT nunca llego a review por su cuenta).
 Assert-Contains (Join-Path $orcaDir 'orchestrate.ps1') 'PAIR_REVIEW' 'el arbitraje debe revisar los lados sin review antes de decidir'
 Assert-Contains (Join-Path $orcaDir 'orchestrate.ps1') 'lost=' 'el tally debe separar las perdedoras lost de los bloqueos'
+# Las deps se satisfacen con entrega real (integrationSha), no con worker_done
+# (bug h6: T3 escalo porque su dep estaba completed sin integrar).
+Assert-Contains (Join-Path $orcaDir 'lib.ps1') 'function Test-TaskDepsIntegrated' 'falta el guard de deps por integrationSha'
+Assert-Contains (Join-Path $orcaDir 'orchestrate.ps1') 'DEPS_HELD' 'el bucle debe retener las tareas con deps sin integrar'
 Assert-Contains (Join-Path $orcaDir 'harness-probe.ps1') "Action 'lesson-candidate'" 'el probe debe dejar marca para el flujo de lecciones'
 Assert-Contains (Join-Path $orcaDir 'harness-probe.ps1') 'review\.ps1' 'el contraste debe venir del verificador existente'
 $editor = Join-Path $repoRoot '.opencode\agents\harness-editor.md'

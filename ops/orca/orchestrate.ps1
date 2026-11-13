@@ -1356,7 +1356,17 @@ while (-not $stopReason) {
     }
 
     $active = @($tasks | Where-Object { $_.status -eq 'dispatched' }).Count
+    # Deps por entrega real: una tarea 'ready' cuyas deps no tienen
+    # integrationSha en los registros se retiene hasta que esten integradas
+    # (bug h6: T3 se despacho con su dep 'completed' pero sin integrar y escalo).
     $ready = @($tasks | Where-Object { $_.status -eq 'ready' })
+    $heldDeps = @()
+    $ready = @($ready | Where-Object {
+        if (Test-TaskDepsIntegrated -Task $_ -Records $script:Dispatches) { return $true }
+        $heldDeps += $_.id
+        return $false
+    })
+    if ($heldDeps.Count) { Write-Output "[loop] DEPS_HELD tasks=$($heldDeps -join ',') (deps sin integrationSha)" }
     $completed = @($tasks | Where-Object { $_.status -eq 'completed' })
     # Las perdedoras de pares (estado local lost, tarea failed en Orca) son el
     # desenlace esperado, no un bloqueo del bucle.
