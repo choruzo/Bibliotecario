@@ -4,6 +4,10 @@ Regenerado por `lesson.ps1 -Index`. No editar a mano.
 
 | Dominio | Tarea | Cue | Confidence | Ruta |
 |---|---|---|---|---|
+| default | task_440d58ac8ee8 | TODO: describe la situacion que dispara esta leccion (que... | low | default/lessons/task_440d58ac8ee8/EXPERIENCE.md |
+| default | task_7832bedbdc99 | TODO: describe la situacion que dispara esta leccion (que... | low | default/lessons/task_7832bedbdc99/EXPERIENCE.md |
+| default | task_d21aa5cbd7fb | TODO: describe la situacion que dispara esta leccion (que... | low | default/lessons/task_d21aa5cbd7fb/EXPERIENCE.md |
+| default | task_fa35dc8f492d | TODO: describe la situacion que dispara esta leccion (que... | low | default/lessons/task_fa35dc8f492d/EXPERIENCE.md |
 | orchestration | task_7000f0aad22d | Primer review de una tarea despierta: `REVIEW=ACEPTADO` p... | high | orchestration/lessons/task_7000f0aad22d/EXPERIENCE.md |
 | orchestration | task_8cba7ea2d0d2 | Dos tareas hermanas se despachan en paralelo desde el mis... | medium | orchestration/lessons/task_8cba7ea2d0d2/EXPERIENCE.md |
 | orchestration | task_ac91e49ebd62 | Un worker manda `worker_done` con el árbol limpio (solo `... | medium | orchestration/lessons/task_ac91e49ebd62/EXPERIENCE.md |
