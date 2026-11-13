@@ -9,7 +9,7 @@ import json
 ROOT = Path(__file__).resolve().parents[1]
 BANK = ROOT / "evaluation" / "h3" / "facet-validation-v1.jsonl"
 CATALOG = ROOT / "evaluation" / "h3" / "agnostic_corpus_catalog.json"
-MINIMUMS = {"both": 8, "partial": 1, "none": 1}
+MINIMUMS = {"both": 8, "partial": 2, "none": 1}
 
 
 def load(path: Path) -> list[dict]:
@@ -28,9 +28,9 @@ class FacetBankContractTests(unittest.TestCase):
         self.catalog = {source["id"] for source in json.loads(
             CATALOG.read_text(encoding="utf-8"))["documents"]}
 
-    def test_bank_has_ten_cases_with_unique_ids(self) -> None:
-        self.assertEqual(len(self.cases), 10)
-        self.assertEqual(len({case["id"] for case in self.cases}), 10)
+    def test_bank_has_eleven_cases_with_unique_ids(self) -> None:
+        self.assertEqual(len(self.cases), 11)
+        self.assertEqual(len({case["id"] for case in self.cases}), 11)
         for case in self.cases:
             self.assertEqual(case["language"], "es", case["id"])
             self.assertEqual(case["kind"], case["expected"], case["id"])
@@ -41,7 +41,7 @@ class FacetBankContractTests(unittest.TestCase):
         for kind, minimum in MINIMUMS.items():
             self.assertGreaterEqual(counts[kind], minimum, kind)
         self.assertEqual(counts["both"], 8)
-        self.assertEqual(counts["partial"], 1)
+        self.assertEqual(counts["partial"], 2)
         self.assertEqual(counts["none"], 1)
 
     def test_every_case_has_two_parts(self) -> None:
@@ -77,13 +77,31 @@ class FacetBankContractTests(unittest.TestCase):
                               f"la parte no está en la pregunta compuesta: {case['id']}")
 
     def test_first_case_is_the_product_question(self) -> None:
+        # FAC-VAL-001 asks two facts the corpus asserts (pollination of crops,
+        # photosynthesis products), verified against the converted corpus.
         first = self.cases[0]
         self.assertEqual(first["id"], "FAC-VAL-001")
         self.assertEqual(first["kind"], "both")
         folded = plain(first["query"])
         self.assertIn("abejas", folded)
+        self.assertIn("cosechas", folded)
         self.assertIn("fotosintesis", folded)
+        self.assertNotIn("reproduccion", folded)
+
+    def test_over_specified_original_is_the_partial_control(self) -> None:
+        # The pre-fix FAC-VAL-001 question stays as FAC-VAL-011: the corpus only
+        # mentions pollination, it never asserts the bees' role in plant
+        # reproduction, so the bees part must abstain while the photosynthesis
+        # part answers — the documented corpus limit, measured as `partial`.
+        control = next(case for case in self.cases if case["id"] == "FAC-VAL-011")
+        self.assertEqual(control["kind"], "partial")
+        folded = plain(control["query"])
+        self.assertIn("abejas", folded)
         self.assertIn("reproduccion", folded)
+        self.assertIn("fotosintesis", folded)
+        bees, photosynthesis = control["parts"]
+        self.assertEqual(bees["expected_documents"], [])
+        self.assertEqual(photosynthesis["expected_documents"], ["AGN-008"])
 
 
 if __name__ == "__main__":

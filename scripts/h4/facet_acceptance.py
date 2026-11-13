@@ -146,7 +146,11 @@ def check_case(case, message, trace, mapping):
 
 
 def catalog_mapping(inspector, catalog, credentials, origin):
-    """Catalog source id -> published document id, matched by original SHA-256."""
+    """Catalog source id -> published document id, matched by original SHA-256.
+
+    Also returns the inspector's authenticated headers so the caller can log
+    the inspector out (the login here would otherwise leak a session).
+    """
     _, inspector_headers = login(inspector, origin, credentials)
     documents = published_documents(inspector)
     mapping = {}
@@ -156,7 +160,7 @@ def catalog_mapping(inspector, catalog, credentials, origin):
         if len(matches) != 1:
             raise ValueError('Se requiere exactamente una fuente publicada para ' + source['id'])
         mapping[source['id']] = matches[0]
-    return mapping
+    return mapping, inspector_headers
 
 
 def part_states(outcome_parts):
@@ -164,6 +168,40 @@ def part_states(outcome_parts):
     return [{'status': part.get('status'), 'reason': part.get('reason'),
              'citations': part.get('citations'), 'documents': part.get('documents')}
             for part in outcome_parts or []]
+
+
+def build_summary(rows, banks, scope, date=None):
+    """The public summary from the run rows; pure, so the rules test it offline.
+
+    Percentiles measure ``chat_latency.total_ms`` of the rows that carry a
+    trace; rows without one (a failed trace load) still count for the pass
+    totals and the failure counters, but not for the latency percentiles.
+    """
+    latencies = [row['chat_latency']['total_ms'] for row in rows if row.get('chat_latency')]
+    summary = {'date': date or datetime.now(ZoneInfo('Europe/Madrid')).date().isoformat(), 'scope': scope,
+               'banks': banks,
+               'passed': sum(row['passed'] for row in rows), 'total': len(rows),
+               'improper': sum('improper_answer' in row['failures'] or 'part_outside_document' in row['failures']
+                               for row in rows),
+               'latency': {'n': len(latencies), 'p50': percentile(latencies, .5), 'p95': percentile(latencies, .95)},
+               'by_kind': {}, 'failures': dict(collections.Counter(f for row in rows for f in row['failures'])),
+               'cases': [{key: row[key] for key in ('id', 'kind', 'language', 'domain', 'tags', 'status', 'parts',
+                                                    'chat_outcome', 'chat_latency', 'seconds', 'failures', 'passed')}
+                         for row in rows]}
+    for row in rows:
+        entry = summary['by_kind'].setdefault(row['kind'], {'passed': 0, 'total': 0})
+        entry['total'] += 1
+        entry['passed'] += row['passed']
+    return summary
+
+
+def close_sessions(logouts):
+    """Log every session out; a failing close is a warning, never a lost run."""
+    for label, client, auth_headers in logouts:
+        try:
+            client.post('/auth/logout', headers=auth_headers)
+        except httpx.HTTPError as exc:
+            print(f'aviso: el logout de {label} falló: {exc}', file=sys.stderr)
 
 
 def main():
@@ -189,7 +227,7 @@ def main():
         identity, headers = login(client, args.origin, args.credentials)
         if identity['role'] != args.scope:
             raise ValueError('El ámbito de la prueba debe coincidir con el rol de la cuenta')
-        mapping = catalog_mapping(inspector, catalog, admin_credentials, args.origin)
+        mapping, inspector_headers = catalog_mapping(inspector, catalog, admin_credentials, args.origin)
         for case in cases:
             response = client.post('/chat/conversations', json={'title': 'Aceptación por facetas: ' + case['id']},
                                    headers=headers)
@@ -220,35 +258,27 @@ def main():
             rows.append(row | {'question': case['query'], 'query': case['query'], 'content': message.get('content'),
                                'sources': message.get('sources'),
                                'parts_debug': [{'pool_documents': sorted({r['document_id'] for r in part.get('results') or []}),
-                                                'cited_documents': sorted(part_cited_documents(trace, message.get('sources') or [], index))}
+                                                'cited_documents': sorted(part_cited_documents(trace, message.get('sources') or [], index) or [])}
                                                for index, part in enumerate(trace.get('parts') or [])]})
             private.write_text(json.dumps(rows, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
             print(f"{'PASS' if row['passed'] else 'FAIL'} {case['id']} [{domain}] {row['status']} "
                   f"{[part['status'] for part in row['parts']]} {failures} {elapsed:.0f}s | {case['query']} -> "
                   f"{(message.get('content') or '')[:160]!r}", flush=True)
-        client.post('/auth/logout', headers=headers)
-        inspector.post('/auth/logout', headers=inspector_headers)
-    latencies = [row['chat_latency']['total_ms'] for row in rows if row.get('chat_latency')]
-    summary = {'date': datetime.now(ZoneInfo('Europe/Madrid')).date().isoformat(), 'scope': args.scope,
-               'banks': [str(p) for p in args.bank],
-               'passed': sum(row['passed'] for row in rows), 'total': len(rows),
-               'improper': sum('improper_answer' in row['failures'] or 'part_outside_document' in row['failures']
-                               for row in rows),
-               'latency': {'n': len(latencies), 'p50': percentile(latencies, .5), 'p95': percentile(latencies, .95)},
-               'by_kind': {}, 'failures': dict(collections.Counter(f for row in rows for f in row['failures'])),
-               'cases': [{key: row[key] for key in ('id', 'kind', 'language', 'domain', 'tags', 'status', 'parts',
-                                                    'chat_outcome', 'chat_latency', 'seconds', 'failures', 'passed')}
-                         for row in rows]}
-    for row in rows:
-        entry = summary['by_kind'].setdefault(row['kind'], {'passed': 0, 'total': 0})
-        entry['total'] += 1
-        entry['passed'] += row['passed']
-    public = ROOT / f'evaluation/h3/facet-acceptance-{args.scope}.json'
-    public.write_text(json.dumps(summary, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
-    print(f"{summary['passed']}/{summary['total']} correctas, {summary['improper']} impropias "
-          f"(respondida sin abstenerse o cita fuera de sus documentos); fallos={summary['failures']}")
-    print('latencia chat (ms):', json.dumps(summary['latency'], ensure_ascii=False))
-    sys.exit(0 if summary['passed'] == summary['total'] else 1)
+        # The summary and both reports are written BEFORE the logout, inside a
+        # try/finally: a failing close (network, session already dead) must not
+        # lose the run's evidence or its exit code.
+        exit_code = 1
+        try:
+            summary = build_summary(rows, [str(p) for p in args.bank], args.scope)
+            public = ROOT / f'evaluation/h3/facet-acceptance-{args.scope}.json'
+            public.write_text(json.dumps(summary, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+            print(f"{summary['passed']}/{summary['total']} correctas, {summary['improper']} impropias "
+                  f"(respondida sin abstenerse o cita fuera de sus documentos); fallos={summary['failures']}")
+            print('latencia chat (ms):', json.dumps(summary['latency'], ensure_ascii=False))
+            exit_code = 0 if summary['passed'] == summary['total'] else 1
+        finally:
+            close_sessions([('client', client, headers), ('inspector', inspector, inspector_headers)])
+    sys.exit(exit_code)
 
 
 if __name__ == '__main__':

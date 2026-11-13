@@ -44,19 +44,19 @@ def enable_facets(app, monkeypatch):
     monkeypatch.setattr(app.state.settings, "answer_per_facet", True)
 
 
-def mock_decompose(monkeypatch, facets=(), error=None, crash=False):
+def mock_plan_parts(monkeypatch, facets=(), error=None, crash=False):
     calls = []
 
-    async def decompose(clients, question, diagnostics=None):
+    async def plan_parts(clients, question, diagnostics=None):
         calls.append(question)
         if crash:
-            raise RuntimeError("promesa rota de decompose")
+            raise RuntimeError("promesa rota de plan_parts")
         if error:
             diagnostics["error"] = error
             return []
         return list(facets)
 
-    monkeypatch.setattr("bibliotecario.chat.decompose", decompose)
+    monkeypatch.setattr("bibliotecario.chat.plan_parts", plan_parts)
     return calls
 
 
@@ -181,7 +181,7 @@ def test_plan_facets_only_fires_with_exactly_two():
     assert asyncio.run(plan_facets(Clients('{"facets": ["una sola consulta"]}'), QUESTION, timing)) == ("not_two", [])
     assert asyncio.run(plan_facets(Clients('{"facets": ["una consulta", "otra distinta"]}'),
                                    QUESTION, timing)) == ("two", ["una consulta", "otra distinta"])
-    assert "decompose_ms" in timing and timing["decompose_ms"] >= 0
+    assert "plan_ms" in timing and timing["plan_ms"] >= 0
 
 
 def test_plan_facets_reports_failure_and_never_raises():
@@ -194,8 +194,8 @@ def test_plan_facets_reports_failure_and_never_raises():
             raise RuntimeError("bug inesperado")
 
     plan, facets = asyncio.run(plan_facets(Timeout(), QUESTION, {}))
-    assert plan == "decompose_failed" and facets == []
-    assert asyncio.run(plan_facets(Broken(), QUESTION, {})) == ("decompose_failed", [])
+    assert plan == "plan_failed" and facets == []
+    assert asyncio.run(plan_facets(Broken(), QUESTION, {})) == ("plan_failed", [])
 
 
 def test_compose_facets_contract():
@@ -211,15 +211,15 @@ def test_compose_facets_contract():
     assert FACET_CLOSING not in none
 
 
-def test_flag_off_never_decomposes_and_keeps_the_explain_path_intact(application, monkeypatch):
+def test_flag_off_never_plans_and_keeps_the_explain_path_intact(application, monkeypatch):
     app, client, sessions = application
     login(client)
-    decompose_calls = mock_decompose(monkeypatch, crash=True)  # must never run
+    plan_calls = mock_plan_parts(monkeypatch, crash=True)  # must never run
     _, candidates = publish(application, DOC_A)
     mock_facet_retrieval(monkeypatch, {QUESTION: candidates})
     mock_facet_generation(monkeypatch, app)
     message = explain_turn(client, conversation(client))[-1]["message"]
-    assert decompose_calls == []
+    assert plan_calls == []
     assert message["status"] == "completed"
     with sessions() as db:
         outcome = db.get(RetrievalRun, message["retrieval_run_id"]).result["chat_outcome"]
@@ -227,11 +227,11 @@ def test_flag_off_never_decomposes_and_keeps_the_explain_path_intact(application
     assert outcome == {"status": "completed", "reason": "grounded", "mode": "explain", "figure_hint": None}
 
 
-def test_answer_mode_never_decomposes_and_stays_byte_identical(application, monkeypatch):
+def test_answer_mode_never_plans_and_stays_byte_identical(application, monkeypatch):
     app, client, sessions = application
     login(client)
     enable_facets(app, monkeypatch)
-    decompose_calls = mock_decompose(monkeypatch, crash=True)
+    plan_calls = mock_plan_parts(monkeypatch, crash=True)
     _, candidates = publish(application, DOC_A)
     mock_facet_retrieval(monkeypatch, {QUESTION: candidates})
 
@@ -247,7 +247,7 @@ def test_answer_mode_never_decomposes_and_stays_byte_identical(application, monk
     monkeypatch.setattr(app.state.clients, "stream_generate", stream)
     monkeypatch.setattr(app.state.clients, "generate", generate)
     message = explain_turn(client, conversation(client), mode="answer")[-1]["message"]
-    assert decompose_calls == []
+    assert plan_calls == []
     assert message["status"] == "completed"
     assert message["content"].startswith("# Guia del sistema")  # quote restated with its heading
     assert ", y así se explica. [C1]" in message["content"]
@@ -259,12 +259,12 @@ def test_single_topic_question_keeps_the_normal_explain_path(application, monkey
     app, client, sessions = application
     login(client)
     enable_facets(app, monkeypatch)
-    decompose_calls = mock_decompose(monkeypatch, [])
+    plan_calls = mock_plan_parts(monkeypatch, [])
     _, candidates = publish(application, DOC_A)
     retrieval_calls, _, _ = mock_facet_retrieval(monkeypatch, {QUESTION: candidates})
     mock_facet_generation(monkeypatch, app)
     message = explain_turn(client, conversation(client))[-1]["message"]
-    assert decompose_calls == [QUESTION] and retrieval_calls == [QUESTION]
+    assert plan_calls == [QUESTION] and retrieval_calls == [QUESTION]
     assert message["status"] == "completed"
     assert FACET_INTRO not in message["content"] and message["content"].startswith("**Parte**")
     outcome = stored_result(sessions, message)["chat_outcome"]
@@ -277,7 +277,7 @@ def test_one_facet_keeps_the_normal_path_with_the_original_query(application, mo
     app, client, sessions = application
     login(client)
     enable_facets(app, monkeypatch)
-    mock_decompose(monkeypatch, [FACET_A])
+    mock_plan_parts(monkeypatch, [FACET_A])
     _, candidates = publish(application, DOC_A)
     retrieval_calls, _, _ = mock_facet_retrieval(monkeypatch, {QUESTION: candidates})
     mock_facet_generation(monkeypatch, app)
@@ -287,18 +287,18 @@ def test_one_facet_keeps_the_normal_path_with_the_original_query(application, mo
 
 
 @pytest.mark.parametrize("kwargs", [{"error": "provider_timeout"}, {"error": "invalid_facets"}, {"crash": True}])
-def test_decompose_failure_degrades_to_the_normal_explain_path(application, monkeypatch, kwargs):
+def test_plan_failure_degrades_to_the_normal_explain_path(application, monkeypatch, kwargs):
     app, client, sessions = application
     login(client)
     enable_facets(app, monkeypatch)
-    mock_decompose(monkeypatch, **kwargs)
+    mock_plan_parts(monkeypatch, **kwargs)
     _, candidates = publish(application, DOC_A)
     retrieval_calls, _, _ = mock_facet_retrieval(monkeypatch, {QUESTION: candidates})
     mock_facet_generation(monkeypatch, app)
     message = explain_turn(client, conversation(client))[-1]["message"]
     assert retrieval_calls == [QUESTION]
     assert message["status"] == "completed"
-    assert stored_result(sessions, message)["chat_outcome"]["facet_plan"] == "decompose_failed"
+    assert stored_result(sessions, message)["chat_outcome"]["facet_plan"] == "plan_failed"
 
 
 def test_two_facets_retrieve_concurrently_with_own_sessions(application, monkeypatch):
@@ -307,7 +307,7 @@ def test_two_facets_retrieve_concurrently_with_own_sessions(application, monkeyp
     enable_facets(app, monkeypatch)
     _, candidates_a = publish(application, DOC_A)
     _, candidates_b = publish(application, DOC_B)
-    mock_decompose(monkeypatch, [FACET_A, FACET_B])
+    mock_plan_parts(monkeypatch, [FACET_A, FACET_B])
     calls, windows, sessions_used = mock_facet_retrieval(
         monkeypatch, {FACET_A: candidates_a, FACET_B: candidates_b}, sleep=0.05)
     mock_facet_generation(monkeypatch, app)
@@ -327,7 +327,7 @@ def test_both_facets_answer_compose_with_global_citations(application, monkeypat
     enable_facets(app, monkeypatch)
     doc_a, candidates_a = publish(application, DOC_A)
     doc_b, candidates_b = publish(application, DOC_B)
-    mock_decompose(monkeypatch, [FACET_A, FACET_B])
+    mock_plan_parts(monkeypatch, [FACET_A, FACET_B])
     mock_facet_retrieval(monkeypatch, {FACET_A: candidates_a, FACET_B: candidates_b})
     prompts, audited = mock_facet_generation(monkeypatch, app)
     message = explain_turn(client, conversation(client))[-1]["message"]
@@ -353,7 +353,7 @@ def test_message_sources_are_unique_global_and_painted_by_the_web(application, m
     enable_facets(app, monkeypatch)
     doc_a, candidates_a = publish(application, DOC_A)
     doc_b, candidates_b = publish(application, DOC_B)
-    mock_decompose(monkeypatch, [FACET_A, FACET_B])
+    mock_plan_parts(monkeypatch, [FACET_A, FACET_B])
     mock_facet_retrieval(monkeypatch, {FACET_A: candidates_a, FACET_B: candidates_b})
     mock_facet_generation(monkeypatch, app)
     message = explain_turn(client, conversation(client))[-1]["message"]
@@ -371,7 +371,7 @@ def test_one_facet_abstains_publishes_partial_facets(application, monkeypatch):
     enable_facets(app, monkeypatch)
     _, candidates_a = publish(application, DOC_A)
     _, candidates_b = publish(application, DOC_B)
-    mock_decompose(monkeypatch, [FACET_A, FACET_B])
+    mock_plan_parts(monkeypatch, [FACET_A, FACET_B])
     mock_facet_retrieval(monkeypatch, {FACET_A: candidates_a, FACET_B: candidates_b},
                          decisions={FACET_B: {"action": "abstain", "reason": "partial_evidence"}})
     prompts, _ = mock_facet_generation(monkeypatch, app)
@@ -386,7 +386,7 @@ def test_one_facet_abstains_publishes_partial_facets(application, monkeypatch):
     result = stored_result(sessions, message)
     outcome = result["chat_outcome"]
     assert outcome["reason"] == "partial_facets" and outcome["status"] == "completed"
-    assert [part["status"] for part in outcome["parts"]] == ["answered", "abstained"]
+    assert [part["status"] for part in outcome["parts"]] == ["completed", "abstained"]
     assert outcome["parts"][1]["reason"] == "partial_evidence" and outcome["parts"][1]["citations"] == 0
     assert result["decision"] == {"action": "answer", "reason": "partial_facets"}
     assert [payload["query"] for payload, _ in prompts] == [FACET_A]  # no generation for the abstaining facet
@@ -398,7 +398,7 @@ def test_both_facets_abstain_publishes_facets_uncovered(application, monkeypatch
     enable_facets(app, monkeypatch)
     _, candidates_a = publish(application, DOC_A)
     _, candidates_b = publish(application, DOC_B)
-    mock_decompose(monkeypatch, [FACET_A, FACET_B])
+    mock_plan_parts(monkeypatch, [FACET_A, FACET_B])
     mock_facet_retrieval(monkeypatch, {FACET_A: candidates_a, FACET_B: candidates_b},
                          decisions={FACET_A: {"action": "abstain", "reason": "partial_evidence"},
                                     FACET_B: {"action": "abstain", "reason": "uncalibrated"}})
@@ -422,7 +422,7 @@ def test_verifier_rejection_topples_only_that_facet_to_the_extract(application, 
     enable_facets(app, monkeypatch)
     _, candidates_a = publish(application, DOC_A)
     _, candidates_b = publish(application, DOC_B)
-    mock_decompose(monkeypatch, [FACET_A, FACET_B])
+    mock_plan_parts(monkeypatch, [FACET_A, FACET_B])
     mock_facet_retrieval(monkeypatch, {FACET_A: candidates_a, FACET_B: candidates_b})
     _, audited = mock_facet_generation(
         monkeypatch, app, rejected={"El sistema tiene modulos independientes.",
@@ -448,7 +448,7 @@ def test_corpus_change_abstains_and_publishes_no_sources(application, monkeypatc
     enable_facets(app, monkeypatch)
     _, candidates_a = publish(application, DOC_A)
     _, candidates_b = publish(application, DOC_B)
-    mock_decompose(monkeypatch, [FACET_A, FACET_B])
+    mock_plan_parts(monkeypatch, [FACET_A, FACET_B])
     mock_facet_retrieval(monkeypatch, {FACET_A: candidates_a, FACET_B: candidates_b})
     mock_facet_generation(monkeypatch, app, mutate=lambda: add_document(sessions))
     message = explain_turn(client, conversation(client))[-1]["message"]
@@ -465,7 +465,7 @@ def test_preferences_and_original_question_reach_every_facet(application, monkey
     enable_facets(app, monkeypatch)
     _, candidates_a = publish(application, DOC_A)
     _, candidates_b = publish(application, DOC_B)
-    mock_decompose(monkeypatch, [FACET_A, FACET_B])
+    mock_plan_parts(monkeypatch, [FACET_A, FACET_B])
     mock_facet_retrieval(monkeypatch, {FACET_A: candidates_a, FACET_B: candidates_b})
     prompts, _ = mock_facet_generation(monkeypatch, app)
     cid = conversation(client)
@@ -485,7 +485,7 @@ def test_trace_records_two_parts_with_facet_latencies(application, monkeypatch):
     enable_facets(app, monkeypatch)
     _, candidates_a = publish(application, DOC_A)
     _, candidates_b = publish(application, DOC_B)
-    decompose_calls = mock_decompose(monkeypatch, [FACET_A, FACET_B])
+    plan_calls = mock_plan_parts(monkeypatch, [FACET_A, FACET_B])
     retrieval_calls, _, _ = mock_facet_retrieval(monkeypatch, {FACET_A: candidates_a, FACET_B: candidates_b})
     prompts, audited = mock_facet_generation(monkeypatch, app)
     message = explain_turn(client, conversation(client))[-1]["message"]
@@ -501,14 +501,14 @@ def test_trace_records_two_parts_with_facet_latencies(application, monkeypatch):
     assert [part["citations"] for part in outcome["parts"]] == [2, 2]
     assert [part["documents"] for part in outcome["parts"]] == [1, 1]
     latency = result["chat_latency"]
-    assert {"decompose_ms", "facets_retrieval_ms", "facet0_generation_ms", "facet0_verification_ms",
+    assert {"plan_ms", "facets_retrieval_ms", "facet0_generation_ms", "facet0_verification_ms",
             "facet1_generation_ms", "facet1_verification_ms", "rewrite_ms", "total_ms"} <= set(latency)
     assert "generation_ms" not in latency  # the facet route measures per facet
-    # Model calls of the turn, counted by the doubles: one decompose, two
+    # Model calls of the turn, counted by the doubles: one plan call, two
     # retrievals (one per facet), two generations and one audit per sentence
     # (two per facet). A real retrieval adds embed + rerank + intent +
     # assessment per facet; the doubles here replace the whole retrieval.
-    assert len(decompose_calls) == 1 and len(retrieval_calls) == 2
+    assert len(plan_calls) == 1 and len(retrieval_calls) == 2
     assert len(prompts) == 2 and len(audited) == 4
 
 

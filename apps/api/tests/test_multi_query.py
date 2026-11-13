@@ -7,7 +7,7 @@ import httpx
 import pytest
 
 from test_h1 import settings  # noqa: F401  (Settings builder for fixed values)
-from bibliotecario.facets import DECOMPOSE_MAX_TOKENS, DECOMPOSE_PROMPT, Facets, decompose
+from bibliotecario.facets import DECOMPOSE_MAX_TOKENS, DECOMPOSE_PROMPT, PLAN_PROMPT, Facets, decompose, plan_parts
 from bibliotecario.models import Chunk, DocumentVersion
 from bibliotecario.providers import ProviderError
 from bibliotecario.retrieval import retrieve
@@ -211,6 +211,98 @@ def test_decompose_deduplicates_drops_question_repeats_and_caps_at_two():
     # Two cleaned facets are the maximum the schema admits.
     raw = json.dumps({"facets": ["cómo pican las abejas", "proceso de la fotosíntesis"]}, ensure_ascii=False)
     assert facets(raw) == [FACET_A, FACET_F]
+
+
+def test_plan_parts_uses_its_own_prompt_with_the_closed_schema():
+    """plan_parts is decompose's sibling, not a flag on it: own prompt, same schema."""
+    recorded = []
+
+    class Generate:
+        async def generate(self, messages, **kwargs):
+            recorded.append((messages, kwargs))
+            return '{"facets": ["cómo pican las abejas", "proceso de la fotosíntesis"]}'
+
+    assert asyncio.run(plan_parts(Generate(), "¿Pican las abejas y cómo funciona la fotosíntesis?")) == \
+        ["cómo pican las abejas", "proceso de la fotosíntesis"]
+    messages, kwargs = recorded[0]
+    assert messages[0]["content"] == PLAN_PROMPT and messages[1]["content"].startswith("¿Pican")
+    assert kwargs["max_tokens"] == DECOMPOSE_MAX_TOKENS
+    assert kwargs["response_schema"] == Facets.model_json_schema()
+    # The two contracts live in the two prompts, verbatim: decompose drops a
+    # facet that repeats the question (multi-query retrieves the original
+    # anyway); plan_parts keeps literal fragments (H8 never retrieves it) and
+    # must not invent topics for a single-topic question.
+    assert "No repitas la pregunta original como facet" in DECOMPOSE_PROMPT
+    assert "no la descartes ni la parafrasees por aparecer en la pregunta" in PLAN_PROMPT
+    assert 'Si la pregunta tiene un solo tema, devuelve {"facets": []}' in PLAN_PROMPT
+
+
+def test_plan_parts_keeps_a_question_fragment_that_decompose_drops():
+    """The golden pair: one doubled answer, one part equal to a literal chunk
+    of the question. decompose discards it (multi-query already retrieves the
+    original); plan_parts conserves it (the facet route needs both answers)."""
+    raw = json.dumps({"facets": [QUESTION, FACET_F]}, ensure_ascii=False)
+
+    class Generate:
+        async def generate(self, messages, **kwargs):
+            return raw
+
+    assert asyncio.run(decompose(Generate(), QUESTION)) == [FACET_F]
+    assert asyncio.run(plan_parts(Generate(), QUESTION)) == [QUESTION, FACET_F]
+
+
+def test_plan_parts_deduplicates_between_parts_and_caps_at_two():
+    class Generate:
+        def __init__(self, raw):
+            self.raw = raw
+
+        async def generate(self, messages, **kwargs):
+            return self.raw
+
+    def parts(raw):
+        return asyncio.run(plan_parts(Generate(raw), QUESTION))
+
+    # Whitespace is collapsed; case/accent variants deduplicate between parts.
+    raw = json.dumps({"facets": ["  cómo pican las abejas  ", "Cómo PICAN las abejas"]}, ensure_ascii=False)
+    assert parts(raw) == [FACET_A]
+    raw = json.dumps({"facets": ["cómo pican las abejas", "proceso de la fotosíntesis"]}, ensure_ascii=False)
+    assert parts(raw) == [FACET_A, FACET_F]
+    # Only duplicates BETWEEN the parts are dropped: a part contained in the
+    # question itself is a valid sub-question here, unlike in decompose.
+    raw = json.dumps({"facets": ["las abejas y la fotosíntesis", "las abejas"]}, ensure_ascii=False)
+    assert parts(raw) == ["las abejas y la fotosíntesis", "las abejas"]
+
+
+def test_plan_parts_single_topic_returns_empty():
+    class Generate:
+        async def generate(self, messages, **kwargs):
+            return '{"facets": []}'
+
+    assert asyncio.run(plan_parts(Generate(), "¿Cuántos días vive una abeja reina?")) == []
+
+
+def test_plan_parts_never_raises_and_reports_a_fixed_error_code():
+    class Generate:
+        def __init__(self, raw, fail):
+            self.raw, self.fail = raw, fail
+
+        async def generate(self, messages, **kwargs):
+            if self.fail:
+                raise self.fail
+            return self.raw
+
+    for clients, expected in [
+            (Generate(None, ProviderError("incomplete_generation")), "incomplete_generation"),
+            (Generate(None, httpx.TimeoutException("slow")), "provider_timeout"),
+            (Generate(None, httpx.ConnectError("down")), "provider_error"),
+            (Generate("no soy json", None), "invalid_facets"),
+            (Generate(json.dumps({"facets": ["ab"]}), None), "invalid_facets"),
+            (Generate(json.dumps({"facets": ["a" * 121]}), None), "invalid_facets")]:
+        diagnostics = {}
+        assert asyncio.run(plan_parts(clients, QUESTION, diagnostics)) == []
+        assert diagnostics["error"] == expected
+    # Without a diagnostics dict the degradation is silent, never an exception.
+    assert asyncio.run(plan_parts(Generate(None, ProviderError("invalid_generation")), QUESTION)) == []
 
 
 def test_decompose_never_raises_and_reports_a_fixed_error_code():

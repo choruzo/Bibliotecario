@@ -11,10 +11,24 @@ Medido en H7: con 60 candidatos delante y 0 descartes, el evaluador de cobertura
 Solo en la ruta `mode="explain"` de `chat.py`, **antes de recuperar** y solo con `settings.answer_per_facet` encendida:
 
 1. `contextual_query` produce la consulta del turno (reescritura y traducción de siempre, sin cambios).
-2. `plan_facets` llama a `facets.decompose(clients, query, diagnostics)` (0-2 facetas, nunca lanza, sin modificar).
-3. **Solo con exactamente 2 facetas no vacías y distintas** se entra en la ruta por facetas. Con 0 o 1 faceta, o con fallo, el turno sigue por el camino `explain` normal y `chat_outcome.facet_plan` registra `"not_two"` (tema único) o `"decompose_failed"` (proveedor, timeout o JSON inválido).
+2. `plan_facets` llama a `facets.plan_parts(clients, query, diagnostics)` (0-2 partes, nunca lanza). `plan_parts` divide la pregunta en **hasta dos partes autocontenidas tal y como las escribiría el usuario**: una parte puede ser un **fragmento literal de la pregunta** y se conserva tal cual, porque esta ruta **no recupera la pregunta original** — a diferencia de multi-query, aquí la cláusula repetida es una de las dos respuestas. `plan_parts` no añade temas que la pregunta no tenga (una pregunta de un solo tema devuelve `[]` — el hueco medido: «¿Cómo polinizan las abejas las flores?» se partía en mecanismo + anatomía) y solo descarta duplicados **entre** las dos partes.
+3. **Solo con exactamente 2 partes no vacías y distintas** se entra en la ruta por facetas. Con 0 o 1 parte, o con fallo, el turno sigue por el camino `explain` normal y `chat_outcome.facet_plan` registra `"not_two"` (tema único) o `"plan_failed"` (proveedor, timeout o JSON inválido).
 
-La bandera es **independiente de `multi_query`**: esta ruta no toca `retrieval.py` ni depende de `BIB_MULTI_QUERY`. Con `mode="answer"` o con la bandera apagada no se llama a `decompose` ni se escribe ninguna clave nueva: ambos caminos quedan byte a byte idénticos.
+### `plan_parts` frente a `decompose`: dos contratos, no una bandera
+
+`facets.py` tiene ahora dos funciones con dos prompts y dos reglas de deduplicación, y `decompose` queda **byte-idéntico** (multi-query depende de él y hay un golden que lo prueba):
+
+| | `decompose` (multi-query, H7) | `plan_parts` (facetas, H8) |
+|---|---|---|
+| Qué genera | consultas de **búsqueda** por aspecto | las **partes de la pregunta** como las escribiría el usuario |
+| Parte que repite la pregunta | **se descarta**: en multi-query la pregunta original ya tiene su propio pool, y repetirla solo lo engorda | **se conserva**: en la ruta por facetas la pregunta original no se recupera, así que la cláusula literal es una sub-consulta válida — descartarla pierde una de las dos respuestas (medido en la aceptación: 003/006/008 producían dos facetas correctas y el dedup dejaba una → `not_two` → abstención) |
+| Tema único | `[]` | `[]`, y el prompt prohíbe añadir temas que la pregunta no mencione |
+| Duplicados | contra la pregunta original y entre facetas | solo entre las dos partes |
+| Fallos (proveedor, timeout, JSON) | `[]` + código fijo en `diagnostics["error"]` | `[]` + código fijo en `diagnostics["error"]` |
+
+La tentación de meter un booleano en `decompose` se evita con dos funciones y dos prompts: ningún parámetro nuevo cruza la frontera entre multi-query y facetas.
+
+La bandera es **independiente de `multi_query`**: esta ruta no toca `retrieval.py` ni depende de `BIB_MULTI_QUERY`. Con `mode="answer"` o con la bandera apagada no se llama a `plan_parts` ni se escribe ninguna clave nueva: ambos caminos quedan byte a byte idénticos.
 
 ## La faceta es un turno normal
 
@@ -66,13 +80,13 @@ Un único `RetrievalRun` por turno (`run.query` es la consulta contextual de la 
 
 - `result.parts`: una entrada por faceta con `{"query", "stages", "decision", "assessment", "candidates", "results", "corpus_signature", "latency"}` — la misma estructura de etapas de H7 (`stages`), sin retrazar nada.
 - `result.decision`: resumen `{"action": "answer"|"abstain", "reason": "facets_composed"|"partial_facets"|"facets_uncovered"}`.
-- `result.chat_outcome`: `facet_plan="two"`, `facet_concurrency`, y `parts` con consulta, estado (`answered`/`abstained`), motivo, nº de citas y nº de documentos de cada faceta.
-- `result.chat_latency`: `decompose_ms`, `facets_retrieval_ms`, `facet{i}_generation_ms`, `facet{i}_verification_ms` y `total_ms` — la generación y la verificación se miden **por faceta**, no agregadas.
+- `result.chat_outcome`: `facet_plan="two"`, `facet_concurrency`, y `parts` con consulta, estado (`completed`/`abstained`, el mismo vocabulario de `status` del mensaje y del banco), motivo, nº de citas y nº de documentos de cada faceta.
+- `result.chat_latency`: `plan_ms`, `facets_retrieval_ms`, `facet{i}_generation_ms`, `facet{i}_verification_ms` y `total_ms` — la generación y la verificación se miden **por faceta**, no agregadas. `plan_ms` es la planificación de `plan_parts`; la clave `decompose_ms` sigue siendo de multi-query (`retrieval.py`), que no corre en esta ruta.
 - Sin figuras en esta ruta (v1): el bloque por faceta no pide figura y `chat_outcome` no incluye claves de figura (`figure_hint` solo se escribe en el camino explain de un turno).
 
 ## Coste
 
-Por turno con dos facetas que responden: 1 descomposición + 2 retrievals completas (cada una: embed, rerank, intent, assessment) + 2 generaciones + 1 verificación por frase (hasta 14 por faceta). Las dos evaluaciones de cobertura son la parte cara; la concurrencia solapa sus tramos de modelo. El tope de producto es p50 ≤ 25 s: si secuencial no cabría, concurrente con dos sesiones es el modo por defecto de esta implementación. No se recorta la verificación; si aun así no cupiera, se medirá y se decidirá con datos.
+Por turno con dos facetas que responden: 1 planificación (`plan_parts`) + 2 retrievals completas (cada una: embed, rerank, intent, assessment) + 2 generaciones + 1 verificación por frase (hasta 14 por faceta). Las dos evaluaciones de cobertura son la parte cara; la concurrencia solapa sus tramos de modelo. El tope de producto es p50 ≤ 25 s: si secuencial no cabría, concurrente con dos sesiones es el modo por defecto de esta implementación. No se recorta la verificación; si aun así no cupiera, se medirá y se decidirá con datos.
 
 ## Regla de firma
 
@@ -80,4 +94,4 @@ Por turno con dos facetas que responden: 1 descomposición + 2 retrievals comple
 
 ## Fuera de alcance (v1)
 
-`assess`, `retrieval.py`, `facets.py`, el umbral, el modelo, la web, las figuras y `mode="answer"` quedan intactos; ni más de dos facetas, ni recalibración, ni cambios en la abstención genérica. Las consultas de faceta las genera el modelo y no se reescriben ni se reintentan: quedan registradas en la traza (`parts[i].query`).
+`assess`, `retrieval.py`, el umbral, el modelo, la web, las figuras y `mode="answer"` quedan intactos; ni más de dos facetas, ni recalibración, ni cambios en la abstención genérica. En `facets.py` solo se añade `plan_parts` con su `PLAN_PROMPT`: `decompose` queda byte-idéntico para multi-query. Las consultas de faceta las genera el modelo y no se reescriben ni se reintentan: quedan registradas en la traza (`parts[i].query`).

@@ -15,7 +15,7 @@ from sqlalchemy import func, select, update
 from .auth import current_identity, database, require_csrf
 from .explain import (EXPLAIN_SYSTEM, FIGURE_SYSTEM, context_numbers, figure_call_schema, figure_hint,
                       synthesis_fallback, synthesis_schema, validate_synthesis, verify_synthesis)
-from .facets import decompose
+from .facets import plan_parts
 from .figures import validate_figure
 from .models import (Chunk, Conversation, Document, DocumentFile, DocumentVersion,
                      Message, NormalizedRevision, RetrievalRun, new_id)
@@ -138,33 +138,33 @@ def history_text(summary, recent):
 
 
 async def plan_facets(clients, query, timing):
-    """H8 gate: decompose the explain query before retrieval, only with the flag on.
+    """H8 gate: plan the two parts of the explain query before retrieval.
 
     Returns ("two", facets) for exactly two non-empty distinct facets —
-    decompose already deduplicates and never raises. Anything else takes
-    today's explain path and reports why: "not_two" (0 or 1 facets: single
-    topic) or "decompose_failed" (provider, timeout or invalid JSON). The
-    decision never throws, so the turn cannot die here.
+    plan_parts already deduplicates between its parts and never raises.
+    Anything else takes today's explain path and reports why: "not_two" (0 or
+    1 parts: single topic) or "plan_failed" (provider, timeout or invalid
+    JSON). The decision never throws, so the turn cannot die here.
     """
     diagnostics = {}
     started = perf_counter()
     try:
-        facets = await decompose(clients, query, diagnostics)
+        facets = await plan_parts(clients, query, diagnostics)
     except Exception:
-        # decompose promises never to raise; a broken promise degrades to the
+        # plan_parts promises never to raise; a broken promise degrades to the
         # normal path instead of failing the turn.
         facets, diagnostics = [], {"error": "provider_error"}
-    timing["decompose_ms"] = (perf_counter() - started) * 1000
+    timing["plan_ms"] = (perf_counter() - started) * 1000
     if len(facets) == 2:
         return "two", facets
-    return ("decompose_failed" if diagnostics.get("error") else "not_two"), []
+    return ("plan_failed" if diagnostics.get("error") else "not_two"), []
 
 
 def compose_facets(blocks, abstained_queries):
     """Deterministic composition of the facet blocks; never calls the model.
 
     Two blocks: intro + block A + separator + block B + the literal closing,
-    emitted exactly once. One block: the answered facet's block first and, in
+    emitted exactly once. One block: the completed facet's block first and, in
     place of the other, the fixed line naming the facet query without
     evidence; the closing stays. No blocks: the generic abstention plus the
     fixed hint inviting the user to ask the parts separately. The closing
@@ -453,10 +453,12 @@ def send(cid: str, body: Turn, request: Request, identity=Depends(require_csrf),
                 timing["rewrite_ms"] = (perf_counter() - started) * 1000
                 if "translation_ms" in diagnostics:
                     timing["translation_ms"] = diagnostics["translation_ms"]
-                # H8 answer-per-facet: only the explain route decomposes, and only
-                # before retrieval. The flag is independent of multi_query; with
-                # mode="answer" or the flag off nothing runs and no facet key is
-                # recorded, so both paths stay byte-identical.
+                # H8 answer-per-facet: only the explain route plans its two
+                # parts, and only before retrieval. The flag is independent of
+                # multi_query; this route calls facets.plan_parts, never
+                # decompose. With mode="answer" or the flag off nothing runs
+                # and no facet key is recorded, so both paths stay
+                # byte-identical.
                 facet_plan, facets = None, []
                 if body.mode == "explain" and settings.answer_per_facet:
                     facet_plan, facets = await plan_facets(clients, query, timing)
@@ -561,7 +563,7 @@ def send(cid: str, body: Turn, request: Request, identity=Depends(require_csrf),
                                                         "detail": exc.args[1] if len(exc.args) > 1 else None})
                             blocks.append(block)
                             used = used + part_used
-                            part_outcomes.append({"query": facet_query, "status": "answered", "reason": reason,
+                            part_outcomes.append({"query": facet_query, "status": "completed", "reason": reason,
                                                   "citations": len(part_used),
                                                   "documents": len({s["document_id"] for s in part_used})})
                         else:
@@ -695,7 +697,7 @@ def send(cid: str, body: Turn, request: Request, identity=Depends(require_csrf),
                         outcome_extra.update(facet_outcome)
                     elif facet_plan:
                         # The flag is on but the two-facet route did not fire
-                        # (0/1 facets or decompose failure): record why.
+                        # (0/1 parts or planner failure): record why.
                         outcome_extra["facet_plan"] = facet_plan
                     recorded.result = recorded.result | (
                         # The facet route builds its run before the per-facet
