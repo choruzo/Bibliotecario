@@ -7,7 +7,10 @@ Regenerado por `lesson.ps1 -Index`. No editar a mano.
 | api | task_3f0d66616105 | Una pregunta que solo se responde juntando dos documentos... | high | api/lessons/task_3f0d66616105/EXPERIENCE.md |
 | api | task_6f14a75af448 | Una traza guardada dice merged=65 y candidates=0 a la vez... | high | api/lessons/task_6f14a75af448/EXPERIENCE.md |
 | api | task_7832bedbdc99 | Una tarea añade una columna a un modelo y con ella una mi... | high | api/lessons/task_7832bedbdc99/EXPERIENCE.md |
+| api | task_7d7570f4ae2d | La aceptación falla por detalles de contrato que no son d... | high | api/lessons/task_7d7570f4ae2d/EXPERIENCE.md |
 | chat | task_d21aa5cbd7fb | Una tarea añade a una respuesta generada un artefacto opc... | high | chat/lessons/task_d21aa5cbd7fb/EXPERIENCE.md |
+| chat | task_dad9e469a56b | Una pregunta solo se puede responder juntando evidencia d... | high | chat/lessons/task_dad9e469a56b/EXPERIENCE.md |
+| evaluation | task_449d349d269f | Hay que aceptar una función de composición y el banco exi... | high | evaluation/lessons/task_449d349d269f/EXPERIENCE.md |
 | evaluation | task_4bedbef3b21a | Hace falta un banco que mida cobertura multi-documento y ... | high | evaluation/lessons/task_4bedbef3b21a/EXPERIENCE.md |
 | orchestration | task_440d58ac8ee8 | Una tarea lleva [HARNESS-PROBE] en su spec: el bucle la d... | high | orchestration/lessons/task_440d58ac8ee8/EXPERIENCE.md |
 | orchestration | task_440d58ac8ee8-spec-inexistente | El `## Checks obligatorios` de la spec apunta a una ruta ... | high | orchestration/lessons/task_440d58ac8ee8-spec-inexistente/EXPERIENCE.md |

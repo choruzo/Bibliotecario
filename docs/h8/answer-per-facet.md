@@ -136,3 +136,15 @@ Criterios pre-registrados en el runbook; resultados con la bandera encendida
 Decision del runbook aplicada: se fija `BIB_ANSWER_PER_FACET` por defecto en
 `compose.yaml` y H8 se cierra. Los artefactos de la aceptacion estan en
 `.artifacts/facet-acceptance/` (privados) y `evaluation/h3/` (publicos).
+
+## Comportamientos conocidos de v1 (2026-11-13)
+
+- Una faceta puede abstenerse con su documento en el pool (clase del evaluador
+  de cobertura, igual que `A001`/`A003` del banco de concepto). No es impropia;
+  la composición lo declara.
+- p95 26,9 s frente a un tope de p50 de 25 s. Sin acción hasta tener más muestra;
+  si sube, la palanca es concurrencia de verificadores.
+- La generación de una faceta recibe la pregunta original además de su consulta,
+  y puede incluir una sección de declinación sobre el tema de la otra parte
+  («Los pasajes proporcionados no contienen información sobre… [C1]»). Es honesta
+  y redundante con el otro bloque. Candidata a v1.1 solo si molesta en uso real.
