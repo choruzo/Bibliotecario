@@ -316,3 +316,25 @@ intacto y `chat_outcome` registra
 `0007_h6`, reversible). Los mensajes antiguos devuelven `[]` en
 `message_json`. Una figura validada se guarda tal cual la devuelve
 `validate_figure`; no se recalcula al leer.
+
+
+## Estado medido de la emisión (2026-11-13)
+
+Tras desplegar la pista determinista y la segunda llamada, cinco preguntas de
+figura no produjeron ninguna. Caso representativo (Revolución francesa): el turno
+recibió 4 pasajes de un solo documento con **2 años distintos** en su texto, de
+modo que `figure_hint=null` y, por diseño, no hubo segunda llamada. No hubo
+`declined` ni descarte: la pista no se disparó.
+
+La emisión está implementada, probada con dobles y desplegada, pero **no
+demostrada en vivo**. Su disparador depende de la amplitud de la evidencia que
+selecciona `assess` (aquí, 4 pasajes de un documento). No se baja el umbral ni se
+amplía la evidencia a `candidates` o a vecinos: un timeline de dos eventos no es
+un timeline, y una figura sobre pasajes no evaluados rompe el contrato de
+evidencia única del turno.
+
+Condición para reintentar **sin cambiar código**: un turno cuyo
+`chat_outcome.figure` (en `RetrievalRun.result`, no en `message_json`) traiga
+`figure_hint` distinto de `null` — es decir, 3+ años, 2+ fuentes con cifras o 3+
+pasos entre los pasajes evaluados. La vía estructural es recuperación
+multi-consulta + recalibración con banco propio: ciclo futuro, no un parche.
