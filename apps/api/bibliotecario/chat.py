@@ -13,8 +13,9 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func, select, update
 
 from .auth import current_identity, database, require_csrf
-from .explain import (EXPLAIN_SYSTEM, synthesis_fallback, synthesis_schema, validate_synthesis,
-                      verify_synthesis)
+from .explain import (EXPLAIN_SYSTEM, context_numbers, synthesis_fallback, synthesis_schema,
+                      validate_synthesis, verify_synthesis)
+from .figures import validate_figure
 from .models import (Chunk, Conversation, Document, DocumentFile, DocumentVersion,
                      Message, NormalizedRevision, RetrievalRun, new_id)
 from .retrieval import retrieve, corpus_signature
@@ -309,6 +310,28 @@ def attach_quotes(raw, sources):
     return json.dumps(payload, ensure_ascii=False)
 
 
+def turn_figure(raw, sources, text_held):
+    """Validate the one optional figure of an explain generation, once the text is settled.
+
+    Returns (figure, rejected): the cleaned contract figure (or None) and why a
+    generated figure was dropped. The extract that replaces a rejected synthesis
+    carries no figure (text_fallback): literal passages do not support the
+    synthesis the figure illustrated. Numbers are judged per citation — passage,
+    title and section_path — with the same textnums extraction as the grounding.
+    Never raises: a figure may complete a completed turn, never change its fate.
+    """
+    try:
+        payload = json.loads(raw)
+    except ValueError:
+        payload = None
+    if not isinstance(payload, dict) or "figure" not in payload:
+        return None, None
+    if not text_held:
+        return None, "text_fallback"
+    allowed = {source["citation_id"]: context_numbers(source, numbers) for source in sources}
+    return validate_figure(payload["figure"], [s["citation_id"] for s in sources], allowed)
+
+
 def event(kind, data):
     return json.dumps({"type": kind, **data}, ensure_ascii=False) + "\n"
 
@@ -376,6 +399,7 @@ def send(cid: str, body: Turn, request: Request, identity=Depends(require_csrf),
                 content, used, status = ABSTENTION, [], "abstained"
                 outcome_reason = result["decision"].get("reason", "insufficient_evidence")
                 fallback = None
+                figure, figure_rejected = None, None
                 if result["decision"]["action"] == "clarify":
                     content, status, outcome_reason = CLARIFICATION, "abstained", "clarification_required"
                 if result["decision"]["action"] == "answer":
@@ -421,6 +445,10 @@ def send(cid: str, body: Turn, request: Request, identity=Depends(require_csrf),
                                 content, used, validation = extractive_answer(sources)
                                 fallback = {"reason": outcome_reason, "detail": exc.args[1] if len(exc.args) > 1 else None}
                                 status, outcome_reason = 'completed', 'grounded_extract'
+                    # One figure, validated only after the text held: a figure can
+                    # complete a completed turn, never change its fate.
+                    if explain:
+                        figure, figure_rejected = turn_figure(raw, sources, outcome_reason == "grounded")
                 with sessions() as work:
                     conv = work.scalar(select(Conversation).where(Conversation.id == cid).with_for_update())
                     if conv.turn_token != token or conv.busy_until <= time.time():
@@ -441,14 +469,26 @@ def send(cid: str, body: Turn, request: Request, identity=Depends(require_csrf),
                         outcome_reason = "corpus_changed"
                     saved = work.get(Message, answer_id)
                     saved.content, saved.sources, saved.status, saved.retrieval_run_id = content, used, status, run_id
+                    published = status == "completed" and outcome_reason == "grounded" and figure is not None
+                    if published:
+                        # At most one figure, saved with the message it supports.
+                        saved.figures = [figure]
                     recorded = work.get(RetrievalRun, run_id)
                     timing["total_ms"] = (perf_counter() - started) * 1000
+                    # The figure slot is documented only when the model produced a
+                    # figure: turns without one keep the previous result shape.
+                    figure_outcome = {}
+                    if figure is not None or figure_rejected is not None:
+                        figure_outcome["figure"] = {"present": published, "kind": figure["kind"] if published else None}
+                        if figure_rejected is not None:
+                            figure_outcome["figure_rejected"] = figure_rejected
                     recorded.result = recorded.result | {"chat_outcome": {"status": status, "reason": outcome_reason}
                                                          | ({"fallback": fallback} if fallback and status == "completed" else {})
                                                          # The mode is only written for «explain»: an absent key
                                                          # means «answer», so answer turns keep the previous
                                                          # result shape byte-identical (see docs/h6/explain-mode.md).
-                                                         | ({"mode": "explain"} if body.mode == "explain" else {}),
+                                                         | ({"mode": "explain"} if body.mode == "explain" else {})
+                                                         | figure_outcome,
                                                          "chat_latency": {k: round(v, 2) for k, v in timing.items()},
                                                          "llm": summarize_calls(calls) | {"trace": calls}}
                     conv.turn_token, conv.busy_until, conv.updated_at = None, 0, int(time.time())

@@ -189,6 +189,75 @@ el 32.
 | `not_number` | `value` no numérico, booleano o no finito |
 | `unsupported_number` | número no presente en la unión de `allowed_numbers` de las citas de su dato |
 
+## Generación en modo explicar
+
+El modo `explain` genera **una** respuesta JSON que contiene la síntesis y,
+opcionalmente, una figura: la figura viaja en la misma generación (cero
+llamadas extra al modelo) y nunca es un documento aparte.
+
+### Orden de validación
+
+1. `validate_synthesis` valida el sobre completo: `sections` siempre y
+   `figure` opcional, **solo como objeto**. Un `figure` que no sea objeto
+   (`figure: []`, una lista con dos figuras) o una segunda figura bajo otra
+   clave raíz (`figures`) viola el esquema entero → `invalid_synthesis` →
+   extracto: no es un motivo de figura, es un fallo del sobre.
+2. `verify_synthesis` audita cada frase contra la unión de sus citas.
+3. Solo si el texto se mantiene (`grounded`), `validate_figure` valida la
+   figura contra las fuentes del turno: `source_citations` deben existir entre
+   las `sources` y cada dato se comprueba con las cifras de **sus** citas
+   (`allowed_numbers` por cita: pasaje + título + `section_path`, extraído con
+   `textnums.numbers`).
+4. Publicación: la figura válida se guarda en `Message.figures` (lista de
+   exactamente uno) y viaja en el evento `done` dentro de `message_json`.
+
+### Política de descarte
+
+- Una figura inválida **nunca** cambia el destino del turno: la respuesta se
+  publica `completed` con su texto y el motivo queda en
+  `chat_outcome.figure_rejected` (`unsupported_number`, `citation_unknown`,
+  `extra_field`, `too_large`, …). La figura se descarta entera: no se trunca
+  ni se repara. `chat_outcome.figure` documenta la ranura como
+  `{"present": bool, "kind": str|null}`, y solo se escribe cuando el modelo
+  produjo figura: un turno sin figura mantiene el resultado anterior.
+- Si el texto cae a `grounded_extract` (rechazo de `validate_synthesis` o del
+  verificador), la figura cae con él: `figure_rejected = "text_fallback"`. El
+  extracto literal no sostiene la síntesis y tampoco su figura, aunque la
+  figura en sí fuera válida.
+- El modo `answer` no cambia: su esquema cerrado `{"evidence":[…]}` no admite
+  `figure` ni siquiera opcional; si el modelo la devuelve, el turno cae por
+  `invalid_answer` como con cualquier campo extra (abstinencia) y no se
+  publica ninguna figura.
+
+### Ejemplo aceptado
+
+El pasaje `C1` dice «El sistema tiene 3 módulos.» y la síntesis ya explicó
+esa comparación; la figura la apoya visualmente:
+
+```json
+{"kind": "bars", "title": "Composición del sistema", "source_citations": ["C1"],
+ "bars": {"unit": "módulos", "series": [{"label": "Sistema", "value": 3, "citations": ["C1"]}]}}
+```
+
+`value: 3` está en las cifras de `C1` y la cita existe en el turno → se
+guarda tal cual (con `value` normalizado a `3.0`) en `Message.figures`,
+`chat_outcome.figure = {"present": true, "kind": "bars"}` y sin
+`figure_rejected`.
+
+### Ejemplo rechazado
+
+El pasaje `C2` dice «Requiere 4 sensores.», pero el dato cita `C1`, cuyo
+pasaje solo contiene 3:
+
+```json
+{"kind": "bars", "title": "Comparativa de piezas", "source_citations": ["C1"],
+ "bars": {"unit": "piezas", "series": [{"label": "Sensores requeridos", "value": 4, "citations": ["C1"]}]}}
+```
+
+→ `(None, "unsupported_number")`; el turno sigue `completed` con el texto
+intacto y `chat_outcome` registra
+`{"figure": {"present": false, "kind": null}, "figure_rejected": "unsupported_number"}`.
+
 ## Persistencia
 
 `messages.figures` es JSON NOT NULL con `server_default='[]'` (migración
