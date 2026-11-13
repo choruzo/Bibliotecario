@@ -12,6 +12,7 @@ export default function ChatView({ csrf }: { csrf: string }) {
   const [items, setItems] = useState<Conversation[]>([]);
   const [current, setCurrent] = useState<Detail | null>(null);
   const [question, setQuestion] = useState('');
+  const [mode, setMode] = useState<'answer' | 'explain'>('answer');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [progress, setProgress] = useState('');
@@ -74,7 +75,7 @@ export default function ChatView({ csrf }: { csrf: string }) {
     try {
       const response = await fetch(`/api/chat/conversations/${id}/messages`, { method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
-        body: JSON.stringify({ content: question }), signal: abort.current.signal });
+        body: JSON.stringify({ content: question, mode }), signal: abort.current.signal });
       if (!response.ok || !response.body) { const data = await response.json().catch(() => ({})); throw new Error(data.detail || 'No se pudo enviar la pregunta'); }
       setQuestion('');
       await open(id);
@@ -128,6 +129,7 @@ export default function ChatView({ csrf }: { csrf: string }) {
       </article>)}{draft && <div className="chat-text">{draft}</div>}</section>
       {progress && <p role="status">{progress}</p>}
       <form className="chat-composer" onSubmit={send}><label htmlFor="question">Pregunta a la biblioteca</label><textarea id="question" maxLength={1000} disabled={busy} value={question} onChange={e => setQuestion(e.target.value)} required/>
+        <div className="mode-toggle"><input id="explain-mode" type="checkbox" checked={mode === 'explain'} disabled={busy} onChange={e => setMode(e.target.checked ? 'explain' : 'answer')}/><label htmlFor="explain-mode">Explicar concepto</label><small className="mode-help">Respuesta didáctica por secciones, con citas y figuras si aportan</small></div>
         <div><button disabled={busy || !question.trim()} type="submit">Enviar</button>{busy && <button type="button" onClick={() => abort.current?.abort()}>Detener</button>}</div></form>
     </>}
     {source && <section ref={sourceRef} tabIndex={-1} className="source-view" aria-label="Fragmento citado"><h2>{source.source.title} · v{source.source.version}</h2>
