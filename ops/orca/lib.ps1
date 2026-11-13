@@ -646,8 +646,10 @@ function Test-TaskDepsIntegrated {
     # entrega (invariante del kit: completed != integrationSha). Un dependiente
     # de una tarea de par [HARNESS-PROBE] se despacharia antes de que la
     # ganadora este en main. Devuelve $true si todas las deps tienen
-    # integrationSha en los registros locales.
-    param([Parameter(Mandatory)]$Task, [Parameter(Mandatory)][array]$Records)
+    # integrationSha en los registros locales. $Records vacio (primer intento
+    # del bucle) cuenta como 'sin registros': una tarea ready sin registro
+    # local se despacha normal (no hay evidencia de lo contrario).
+    param([Parameter(Mandatory)]$Task, [array]$Records = @())
 
     $rawDeps = $null
     if ($Task.PSObject.Properties['deps']) { $rawDeps = $Task.deps }
