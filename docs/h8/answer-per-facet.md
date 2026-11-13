@@ -95,3 +95,44 @@ Por turno con dos facetas que responden: 1 planificación (`plan_parts`) + 2 ret
 ## Fuera de alcance (v1)
 
 `assess`, `retrieval.py`, el umbral, el modelo, la web, las figuras y `mode="answer"` quedan intactos; ni más de dos facetas, ni recalibración, ni cambios en la abstención genérica. En `facets.py` solo se añade `plan_parts` con su `PLAN_PROMPT`: `decompose` queda byte-idéntico para multi-query. Las consultas de faceta las genera el modelo y no se reescriben ni se reintentan: quedan registradas en la traza (`parts[i].query`).
+
+
+## Aceptacion en vivo (2026-11-13)
+
+Criterios pre-registrados en el runbook; resultados con la bandera encendida
+(`BIB_ANSWER_PER_FACET=1`, `BIB_MULTI_QUERY=0`):
+
+- **Banco de facetas (11 casos): 10/11, `improper=0`.** El caso 1 nuevo
+  (`?Por que son importantes las abejas para las cosechas y que produce la
+  fotosintesis?`) responde `both` grounded: bloque de abejas con cita de
+  AGN-001 y bloque de fotosintesis con 5 citas de AGN-008, cierre literal una
+  sola vez. La pregunta original del producto queda como `FAC-VAL-011`
+  (`partial`): la parte de abejas se abstiene honestamente (el corpus solo
+  menciona la polinizacion) y la de fotosintesis responde; es el control
+  permanente del limite del corpus hasta que exista un documento que afirme
+  el papel de las abejas (ciclo de corpus pendiente).
+- **Unico fallo: `FAC-VAL-007` (BERT).** La faceta del Transformer responde
+  grounded (28.4 BLEU, AGN-016); la faceta de BERT abstiene con
+  `evidence_assessed` con el paper en ingles (AGN-017) delante. Mismo
+  fenomeno del evaluador ante cobertura, sin impropia; se deja como esta.
+- **Latencia: p50 18,6 s, p95 26,9 s** (tope de producto: 25 s de p50).
+  Cumple con las dos retrievals y las dos generaciones ya en concurrente.
+- **Regresion con la bandera encendida, intacta:** coloquial 13/13,
+  agnostico 36/40 (0 indebidas), concepto 10/12 (0 indebidas; corre en
+  `mode="answer"` y no se movio: la bandera no filtra fuera de `explain`).
+- **No filtracion:** una pregunta simple en `answer` y una en `explain` sin
+  dos partes siguen el camino normal (`facet_plan` ausente y `not_two`).
+- **Observacion de calidad (v1):** el bloque de una faceta puede incluir una
+  seccion de declinacion sobre el tema de la otra ("Los pasajes proporcionados
+  no contienen informacion sobre..."), honesta y sin afirmacion factual, pero
+  redundante con el bloque que si responde. Cada afirmacion es localmente
+  verdadera y pasa la verificacion frase a frase; queda como comportamiento
+  conocido de v1 (la generacion ve la pregunta original ademas de su consulta
+  de faceta) y candidato a pulir en una v1.1 si molesta en uso real.
+- **Dos extractos literales** (FAC-VAL-002 y FAC-VAL-011): el fallback
+  `grounded_extract` por faceta funciona en produccion sin arrastrar a la
+  otra parte.
+
+Decision del runbook aplicada: se fija `BIB_ANSWER_PER_FACET` por defecto en
+`compose.yaml` y H8 se cierra. Los artefactos de la aceptacion estan en
+`.artifacts/facet-acceptance/` (privados) y `evaluation/h3/` (publicos).
