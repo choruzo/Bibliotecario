@@ -305,6 +305,35 @@ progress.active::-moz-progress-bar { background: linear-gradient(90deg, var(--ve
 .source-view pre { white-space: pre-wrap; overflow-wrap: anywhere; background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: .8rem 1rem; font-size: .85rem; }
 .source-view a { display: inline-flex; align-items: center; min-height: 44px; margin-right: 1rem; }
 
+/* Figuras declarativas del chat: componentes fijos, colores de la casa,
+   sin imágenes ni recursos externos. */
+.figure-list { display: grid; gap: .8rem; margin-top: .8rem; }
+.figure { position: relative; margin: 0; padding: .8rem 1rem; background: var(--panel2); border: 1px solid var(--line); border-radius: 10px; min-width: 0; }
+.figure figcaption { display: grid; gap: .15rem; margin-bottom: .6rem; }
+.figure-title { font-weight: 600; overflow-wrap: anywhere; }
+.figure-caption { color: var(--dim); font-size: .8rem; overflow-wrap: anywhere; }
+.figure-citations { display: flex; flex-wrap: wrap; gap: .35rem; margin: .7rem 0 0; }
+.figure-citations .citation-link { min-height: 28px; }
+.figure-citation-missing { padding: 0 .35rem; font-family: var(--mono); font-size: .8rem; color: var(--dim); }
+.figure-timeline, .figure-steps { display: grid; gap: .55rem; margin: 0; padding-left: 1.4rem; }
+.figure-timeline li::marker, .figure-steps li::marker { color: var(--verde2); font-family: var(--mono); }
+.figure-when { display: block; font-family: var(--mono); font-size: .8rem; color: var(--azul); overflow-wrap: anywhere; }
+.figure-event-label, .figure-step-label { font-weight: 600; overflow-wrap: anywhere; }
+.figure-step-detail { display: block; color: var(--dim); font-size: .85rem; overflow-wrap: anywhere; }
+.figure-inline-citations { display: inline-flex; flex-wrap: wrap; gap: .25rem; margin-left: .35rem; vertical-align: baseline; }
+.figure-inline-citations .citation-link { min-height: 24px; }
+.figure-table-wrap { overflow-x: auto; max-width: 100%; background: var(--bg); border: 1px solid var(--line); border-radius: 6px; }
+.figure-table-wrap:focus-visible { outline-offset: -2px; }
+.figure table { min-width: 540px; margin: 0; }
+.figure table caption { caption-side: top; text-align: left; padding: .7rem .8rem .45rem; font-weight: 600; }
+.figure-bars { display: grid; gap: .55rem; }
+.figure-bar-row { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr) max-content; gap: .3rem .6rem; align-items: center; }
+.figure-bar-label { font-weight: 600; overflow-wrap: anywhere; }
+.figure-bar-track { display: block; height: .8rem; min-width: 0; border: 1px solid var(--line); border-radius: 4px; background: var(--bg); overflow: hidden; }
+.figure-bar-fill { display: block; height: 100%; background: linear-gradient(90deg, var(--verde2), var(--azul)); border-radius: 3px; }
+.figure-bar-value { font-family: var(--mono); font-size: .8rem; white-space: nowrap; }
+.figure-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+
 /* Recuperación */
 .retrieval-excerpt { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 28rem; overflow: auto; font-size: .85rem; background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: .8rem 1rem; }
 
@@ -352,3 +381,10 @@ progress.active::-moz-progress-bar { background: linear-gradient(90deg, var(--ve
   .stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (forced-colors: active) { button, input, select, textarea, .tool-link, .badge { border: 1px solid ButtonText; } input[type="checkbox"] { appearance: auto; -webkit-appearance: auto; } input[type="checkbox"]::after { content: none; } }
+@media print {
+  .figure { break-inside: avoid; }
+  .figure-citations .citation-link, .figure-citation-missing, .figure-inline-citations .citation-link {
+    background: none; color: #000; border: 1px solid #000; border-radius: 3px; min-height: 0;
+  }
+  .figure-sr-only { display: none; }
+}
