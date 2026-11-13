@@ -57,7 +57,7 @@ def main():
             assert migration.returncode == 0, 'fresh_migration_failed'
             engine, sessions = build_database(settings)
             with engine.connect() as connection:
-                assert connection.scalar(text('SELECT version_num FROM alembic_version')) == '0006_h5'
+                assert connection.scalar(text('SELECT version_num FROM alembic_version')) == '0007_h6'
             report['fresh_migrations'] = 'passed'
             with sessions() as db:
                 create_user(db, 'h5-admin', 'synthetic-test-password', 'admin', bootstrap=True)
