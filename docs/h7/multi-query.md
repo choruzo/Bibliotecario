@@ -127,3 +127,22 @@ visibilidad, el criterio de cobertura o responder por facet.
 
 **No hay regresión introducida por H7 en las preguntas objetivo**: fallan igual con la
 bandera apagada.
+
+## Cierre de H7 (2026-11-13)
+
+- **Línea base del banco de concepto, bandera apagada:** 10/12, 0 indebidas,
+  0 cifras sin respaldo, p50 8,1 s. Los dos fallos son `expected_answer`
+  abstenidos en preguntas de ordenación entre dos documentos (`A001`, `A003`);
+  con la bandera encendida, 9/12: un caso menos, mismo perfil.
+- **Pregunta objetivo, yuxtaposición y bandera apagada:** abstención con
+  `assessed=60`, `support=0`, `dropped_invisible=0`. La recuperación entrega, el
+  filtro no descarta y la formulación no cambia la decisión: el límite es el
+  criterio de cobertura, no el multi-query.
+- **Disposición:** `BIB_MULTI_QUERY` apagada, `h7-multi-query-v2` aparcada. El
+  banco de concepto (con esta línea base) y `stages` quedan como instrumentos
+  permanentes: cualquier cambio futuro de recuperación se mide contra 10/12 y
+  contra 0 respuestas indebidas.
+- **Deuda declarada:** responder por facet (dos respuestas grounded compuestas)
+  queda aparcada hasta que el producto confirme que las preguntas que reparten
+  evidencia entre documentos son un caso de uso real. No se relaja `assess` para
+  conseguir cobertura: el 0 de respuestas indebidas es el activo que se protege.
