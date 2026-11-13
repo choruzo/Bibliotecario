@@ -105,3 +105,34 @@ del POST (`{ content, mode }`), marcada o no.
   prerequisite de explicaciones que crucen documentos, no de este modo.
 - Figuras (`figure`) referenciadas en las secciones.
 - Integración en la web para solicitar `mode="explain"` y mostrar los `heading` por sección.
+
+
+## Validación en vivo (2026-11-13)
+
+Smoke con el modelo real, pila completa y corpus publicado (admin):
+
+| Prueba | Resultado |
+|---|---|
+| `mode=explain`, café arábica | `completed`, 599 caracteres, secciones «Producción y origen» y «Características del cultivo», citas `[C1][C2][C3]` |
+| `mode=answer`, misma pregunta | `completed`, 573 caracteres |
+| Multi-documento (abejas + fotosíntesis) | abstención en **ambos** modos: `coverage_complete=False`, `contradiction=False`; `model_signature 2899120c` sin cambio |
+| Línea de tiempo, Revolución francesa | `completed`, 1 954 caracteres, sin figura |
+| Tabla/barras, HbA1c | abstención por cobertura en ambos modos, sin figura |
+
+**Límite medido: multi-pasaje, no multi-documento.** La respuesta buena cita tres
+pasajes pero todos del mismo documento (`Café`, versión `0a3ad36d`). La causa no
+es el modo: `assess` es el mismo de `answer` (a propósito, para no invalidar la
+política) y exige `coverage_complete`; una pregunta que reparte su evidencia entre
+dos documentos se abstiene en ambos modos. Ampliar la cobertura exige
+recuperación multi-consulta y recalibración, fuera del alcance de H6.
+
+**Figuras en la fecha del smoke.** Ninguna de las tres preguntas produjo figura,
+pero ese dato no mide el contrato: la generación y el render de figuras no
+estaban en `main` en ese momento (se integraron y luego quedaron fuera de la
+rama; recuperados en `3c78141`). El contrato, la validación y la persistencia sí
+estaban, y eran los que devolvían `figures=[]`. La prueba de emisión se repite
+con el código recuperado desplegado; hasta entonces no hay evidencia ni a favor
+ni en contra del prompt de figuras.
+
+La emisión de figuras se corrige en `h6-figure-emission` (pista determinista +
+segunda llamada); hasta su smoke en vivo, `figures=[]` no es un resultado del contrato.
