@@ -10,6 +10,7 @@ sys.path.insert(0, str(ROOT / "apps" / "api"))
 
 from facet_acceptance import (  # noqa: E402
     CLOSING,
+    build_summary,
     check_case,
     closing_counts,
     content_markers,
@@ -20,9 +21,9 @@ CASE_BOTH = {
     "id": "FAC-VAL-001",
     "kind": "both",
     "language": "es",
-    "query": "¿Qué hacen las abejas en la reproducción de las plantas y qué produce la fotosíntesis?",
+    "query": "¿Por qué son importantes las abejas para las cosechas y qué produce la fotosíntesis?",
     "parts": [
-        {"query": "¿Qué hacen las abejas en la reproducción de las plantas?", "expected_documents": ["AGN-001"]},
+        {"query": "¿Por qué son importantes las abejas para las cosechas?", "expected_documents": ["AGN-001"]},
         {"query": "¿Qué produce la fotosíntesis?", "expected_documents": ["AGN-008"]},
     ],
     "expected": "both",
@@ -101,7 +102,7 @@ class CheckCaseTests(unittest.TestCase):
         case, message, trace, mapping = fixture()
         self.assertEqual(check_case(case, message, trace, mapping), [])
 
-    def test_part_answered_without_its_documents(self) -> None:
+    def test_part_answers_without_its_documents(self) -> None:
         # Part 2's pool holds nothing of AGN-008, so it cites nothing expected.
         case, message, trace, mapping = fixture(pool_docs=(("d-bees",), ("d-bees",)),
                                                 cited=(("d-bees",), ("d-bees",)))
@@ -117,14 +118,14 @@ class CheckCaseTests(unittest.TestCase):
                                                 content="[C1] " + CLOSING)
         self.assertIn("part_missing_document", check_case(case, message, trace, mapping))
 
-    def test_part_that_should_abstain_but_answered(self) -> None:
+    def test_part_that_should_abstain_but_answers(self) -> None:
         # none case: both parts answer and cite -> improper + global status.
         case, message, trace, mapping = fixture(kind="none", outcome_status="completed")
         failures = check_case(case, message, trace, mapping)
         self.assertIn("improper_answer", failures)
         self.assertIn("global_status", failures)
 
-    def test_partial_case_with_out_of_corpus_part_answered(self) -> None:
+    def test_partial_case_with_out_of_corpus_part_answers(self) -> None:
         # partial: part 2 is out of corpus but the turn answers it anyway.
         case, message, trace, mapping = fixture(kind="partial", outcome_status="completed")
         failures = check_case(case, message, trace, mapping)
@@ -194,6 +195,71 @@ class CheckCaseTests(unittest.TestCase):
                                                 cited=((), ()), closing=0,
                                                 part_statuses=("abstained", "abstained"))
         self.assertEqual(check_case(case, message, trace, mapping), [])
+
+    def test_partial_control_case_bees_part_abstains(self) -> None:
+        # The over-specified original question is the partial control
+        # (FAC-VAL-011): part 1 (bees in plant reproduction) is out of corpus
+        # and abstains even though its pool holds the right document; part 2
+        # (photosynthesis products) answers with AGN-008.
+        case = {"id": "FAC-VAL-011", "kind": "partial", "language": "es",
+                "query": "¿Qué hacen las abejas en la reproducción de las plantas y qué produce la fotosíntesis?",
+                "parts": [{"query": "¿Qué hacen las abejas en la reproducción de las plantas?", "expected_documents": []},
+                          {"query": "¿Qué produce la fotosíntesis?", "expected_documents": ["AGN-008"]}],
+                "expected": "partial", "tags": ["parcial", "biologia", "fuera de corpus"]}
+        _, message, trace, mapping = fixture(kind="partial", part_statuses=("abstained", "completed"),
+                                             pool_docs=(("d-bees",), ("d-photo",)),
+                                             cited=((), ("d-photo",)),
+                                             sources=[{"citation_id": "C1", "chunk_id": "ch-1-0",
+                                                       "document_id": "d-photo"}],
+                                             content="[C1] " + CLOSING)
+        self.assertEqual(check_case(case, message, trace, mapping), [])
+        # If the corpus-limit part answers anyway, the case fails.
+        case, message, trace, mapping = fixture(kind="partial", part_statuses=("completed", "completed"))
+        self.assertIn("improper_answer", check_case(case, message, trace, mapping))
+
+
+def summary_row(kind="both", passed=True, failures=(), chat_latency=None, case_id="FAC-VAL-001"):
+    """One acceptance row with only the keys build_summary reads."""
+    return {"id": case_id, "kind": kind, "language": "es", "domain": "biología", "tags": [],
+            "status": "completed" if kind != "none" else "abstained", "parts": [], "chat_outcome": {},
+            "chat_latency": chat_latency, "seconds": 1.0, "failures": list(failures), "passed": passed}
+
+
+class BuildSummaryTests(unittest.TestCase):
+    def test_summary_includes_latency_percentiles(self) -> None:
+        rows = [summary_row(chat_latency={"total_ms": 27000}),
+                summary_row(case_id="FAC-VAL-002", chat_latency={"total_ms": 11000})]
+        summary = build_summary(rows, ["facet-validation-v1.jsonl"], "admin", date="2026-11-13")
+        # Nearest-rank percentiles over chat_latency.total_ms, as reported.
+        self.assertEqual(summary["latency"], {"n": 2, "p50": 11000, "p95": 27000})
+        self.assertEqual(summary["passed"], 2)
+        self.assertEqual(summary["total"], 2)
+        self.assertEqual(summary["by_kind"], {"both": {"passed": 2, "total": 2}})
+        self.assertEqual(summary["date"], "2026-11-13")
+
+    def test_summary_composes_from_rows_with_and_without_chat_latency(self) -> None:
+        # A row whose trace failed to load carries no chat_latency: it still
+        # counts for the totals and the failure counters, never for p50/p95.
+        rows = [summary_row(chat_latency={"total_ms": 12000}),
+                summary_row(case_id="FAC-VAL-011", kind="partial", passed=False,
+                            failures=["part_missing_document"], chat_latency=None),
+                summary_row(case_id="FAC-VAL-010", kind="none")]
+        summary = build_summary(rows, ["bank.jsonl"], "admin", date="2026-11-13")
+        self.assertEqual(summary["total"], 3)
+        self.assertEqual(summary["passed"], 2)
+        self.assertEqual(summary["latency"], {"n": 1, "p50": 12000, "p95": 12000})
+        self.assertEqual(summary["by_kind"], {"both": {"passed": 1, "total": 1},
+                                              "partial": {"passed": 0, "total": 1},
+                                              "none": {"passed": 1, "total": 1}})
+        self.assertEqual(summary["failures"], {"part_missing_document": 1})
+        self.assertEqual(summary["improper"], 0)
+
+    def test_summary_counts_improper_and_empty_latency(self) -> None:
+        rows = [summary_row(case_id="FAC-VAL-011", kind="partial", passed=False,
+                            failures=["improper_answer"], chat_latency=None)]
+        summary = build_summary(rows, ["bank.jsonl"], "admin", date="2026-11-13")
+        self.assertEqual(summary["improper"], 1)
+        self.assertEqual(summary["latency"], {"n": 0, "p50": None, "p95": None})
 
 
 if __name__ == "__main__":

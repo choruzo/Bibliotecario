@@ -7,12 +7,12 @@ no cubre.
 
 Archivos:
 
-- `evaluation/h3/facet-validation-v1.jsonl` — 10 casos de dos partes:
-  8 `both`, 1 `partial`, 1 `none`.
+- `evaluation/h3/facet-validation-v1.jsonl` — 11 casos de dos partes:
+  8 `both`, 2 `partial`, 1 `none`.
 - `scripts/h4/facet_acceptance.py` — aceptación en vivo del contrato
   (partes, documentos, frase de cierre, marcadores `[Cn]`, estados).
-- `tests/test_facet_bank.py` — contrato del banco (6 tests, sin corpus).
-- `tests/test_facet_acceptance_rules.py` — reglas puras del script (16 tests,
+- `tests/test_facet_bank.py` — contrato del banco (7 tests, sin corpus).
+- `tests/test_facet_acceptance_rules.py` — reglas puras del script (20 tests,
   sin red).
 
 ## Cómo se verificó
@@ -28,7 +28,11 @@ El corpus se convirtió con el arnés del repo (una pasada, layout `legacy`,
 
 y el markdown de cada documento se leyó completo (una segunda pasada del
 convertidor, guardada en `.orca-task/corpus-md/` para poder grep). Todas las
-citas de la tabla son literales del texto convertido, con línea.
+citas de la tabla son literales del texto convertido, con línea. En el arreglo
+de H8 se reconvió el corpus con el mismo arnés (`layout legacy`, los 17
+ficheros) y las líneas coinciden con las citadas por la tarea anterior; con esa
+conversión se re-verificaron las citas del caso 1 reformulado y la ausencia que
+justifica el control `partial` nuevo.
 
 ### Control anti-pseudo-multidocumento
 
@@ -38,7 +42,10 @@ parte (el modo de fallo clásico: dos documentos que dicen lo mismo).
 Resultados (0 coincidencias en cada dirección salvo nota):
 
 - FAC-VAL-001: AGN-001 no contiene «fotosíntesis», «clorofila» ni «glucosa»;
-  AGN-008 no contiene «abeja» ni «polinización».
+  AGN-008 no contiene «abeja» ni «polinización». La parte reformulada
+  («¿Por qué son importantes las abejas para las cosechas?») se responde con
+  AGN-001 L18-20 («Son importantes en la polinización de un número de
+  cosechas»), y ni AGN-008 ni otro documento responde por las abejas.
 - FAC-VAL-002: «126 mg/dL» solo está en AGN-003 (AGN-013 menciona la diabetes
   como riesgo reducido por el café, nunca el umbral diagnóstico); «Brasil» no
   está en AGN-003.
@@ -57,12 +64,51 @@ Resultados (0 coincidencias en cada dirección salvo nota):
 - FAC-VAL-009/010 (fuera de corpus): «Quijote»/«Cervantes», «Guernica»/
   «Picasso» y «Wimbledon» tienen 0 coincidencias en los 17 ficheros; la
   «hemoglobina glucosilada» solo está en AGN-003.
+- FAC-VAL-011 (el control `partial`): «reproducci» tiene **0 coincidencias en
+  AGN-001** — el documento de abejas ni siquiera menciona la palabra — y en los
+  17 ficheros solo aparece en contextos ajenos a las abejas
+  (`boe-constitucion-1978.md` L405 «medio de reproducción»,
+  `wiki-Fotosíntesis.md` L897 «reproducción artificial»,
+  `wiki-Inflación.md` L442 «sobreproducción» en una tabla). Ningún pasaje
+  afirma el papel de las abejas en la reproducción de las plantas: lo único
+  que el corpus dice de las abejas y las plantas es la polinización de
+  cosechas (AGN-001 L18-20 y la foto L45).
 
-## Tabla de los 10 casos
+### Por qué la pregunta original queda como control `partial` y no como `both`
+
+La pregunta original de FAC-VAL-001 («¿Qué hacen las abejas en la reproducción
+de las plantas y qué produce la fotosíntesis?») está **sobre-especificada**:
+pide un hecho que el corpus no afirma. El corpus solo **menciona** la
+polinización (AGN-001 dice que las abejas son importantes en la polinización de
+un número de cosechas); ningún pasaje afirma el papel de las abejas en la
+**reproducción** de las plantas — la palabra no aparece ni en el documento de
+abejas. Medido dos veces: la aceptación previa abstuvo esa faceta con el
+documento correcto delante, y la misma pregunta en `mode="answer"` (sin ruta de
+facetas) abstenía igual. Reformular la parte para forzar un `both` habría sido
+ajustar el banco a la respuesta deseada; el banco mide lo que el corpus dice,
+no lo que querríamos que dijera.
+
+Por eso el caso se reformuló a dos hechos que el corpus **sí** afirma
+(importancia de las abejas para las cosechas, productos de la fotosíntesis) y
+la pregunta original se conservó como **FAC-VAL-011 `partial`**: una parte
+responde y la otra debe abstenerse. Es el control del límite del corpus — si
+algún día responde la parte de la reproducción, o es un fallo de grounding que
+el `improper` del script debe cazar, o el corpus cambió (y eso es un ciclo de
+ingesta con republicación, reindexación y recalibración, nunca un cambio de
+banco).
+
+Este límite es del corpus, no del planificador: con el arreglo de H8,
+`plan_parts` conserva la parte literal de la pregunta (el dedup de
+`decompose` — pensado para multi-query, donde la pregunta original sí se
+recupera — era lo que dejaba las 003/006/008 en `not_two` y las hacía
+abstener). Con el planificador nuevo la faceta se recupera, y lo que abstiene
+es la evidencia: el corpus no sostiene el hecho.
+
+## Tabla de los 11 casos
 
 | id | tipo | parte | docs esperados | evidencia leída (texto convertido) |
 |---|---|---|---|---|
-| FAC-VAL-001 | both | ¿Qué hacen las abejas en la reproducción de las plantas? | AGN-001 | `wiki-Apis_mellifera.md` L19-20: «Son importantes en la polinización de un número de cosechas» y L45: «La abeja de la miel poliniza la flor de la rabina». |
+| FAC-VAL-001 | both | ¿Por qué son importantes las abejas para las cosechas? | AGN-001 | `wiki-Apis_mellifera.md` L18-20: «Son importantes en la polinización de un número de cosechas»; y la foto L45: «La abeja de la miel poliniza la flor de la rabina». |
 | FAC-VAL-001 | both | ¿Qué produce la fotosíntesis? | AGN-008 | `wiki-Fotosíntesis.md` L204-207: «A Sachs se debe la formulación de la ecuación básica de la fotosíntesis: 6 CO2 + 6 H2O → C6H12O6 + 6 O2» (produce glucosa y oxígeno; L49: «se desprende oxígeno»). |
 | FAC-VAL-002 | both | ¿A partir de qué cifra de glucosa en ayunas se diagnostica diabetes? | AGN-003 | `wiki-Diabetes_mellitus.md` L846-847: «Medición de glucosa en plasma (glucemia) en ayunas mayor o igual a 126 mg/dL (7,0 mmol/L)». |
 | FAC-VAL-002 | both | ¿Qué país concentra un tercio de la producción mundial de café? | AGN-013 | `wiki-Café.md` L136: «Brasil concentra poco más de un tercio de la producción mundial». |
@@ -82,6 +128,8 @@ Resultados (0 coincidencias en cada dirección salvo nota):
 | FAC-VAL-009 | partial | ¿Quién escribió El Quijote? | — (fuera de corpus) | «Quijote»/«Cervantes»: 0 coincidencias en los 17 ficheros convertidos; el corpus no puede responder esta parte y debe abstenerse. |
 | FAC-VAL-010 | none | ¿Quién pintó el cuadro El Guernica? | — (fuera de corpus) | «Guernica»/«Picasso»: 0 coincidencias en el corpus convertido. |
 | FAC-VAL-010 | none | ¿Quién ganó el último torneo de Wimbledon? | — (fuera de corpus) | «Wimbledon»: 0 coincidencias en el corpus convertido. |
+| FAC-VAL-011 | partial | ¿Qué hacen las abejas en la reproducción de las plantas? | — (límite del corpus) | «reproducci»: 0 coincidencias en `wiki-Apis_mellifera.md`; en los 17 ficheros solo en contextos ajenos (BOE L405, fotosíntesis artificial L897, «sobreproducción» L442). El corpus solo menciona la polinización de cosechas (AGN-001 L18-20); nunca afirma el papel de las abejas en la reproducción de las plantas. Medido en vivo en la aceptación previa (`.artifacts/facet-acceptance/admin.json`): la faceta abstuvo con el documento correcto en su pool de recuperación (`pool_documents` = AGN-001 mapeado, `cited_documents` vacío, `support=0`; 57 candidatos según la traza de esa aceptación). |
+| FAC-VAL-011 | partial | ¿Qué produce la fotosíntesis? | AGN-008 | La misma evidencia de FAC-VAL-001: la ecuación de Sachs (`wiki-Fotosíntesis.md` L203-207) y el oxígeno desprendido (L49). |
 
 ## Qué comprueba el script
 
@@ -112,11 +160,19 @@ debía abstenerse o cita fuera de sus documentos), `p50/p95` de
 `chat_latency.total_ms`, fallos agregados y estado de cada parte. Informe
 privado con textos en `.artifacts/facet-acceptance/<scope><label>.json`;
 resumen público sin pasajes en `evaluation/h3/facet-acceptance-<scope>.json`.
-Sale 1 si algún caso falla e imprime una línea `PASS/FAIL id …` por caso.
+Los dos informes se escriben **antes** del logout y el cierre va en
+`try/finally`: un logout que falle avisa por stderr y no pierde el resumen ni
+el código de salida (el `NameError` de `inspector_headers` del primer intento
+de aceptación mató el resumen justamente ahí). Sale 1 si algún caso falla e
+imprime una línea `PASS/FAIL id …` por caso.
 
 Los tests de reglas (`tests/test_facet_acceptance_rules.py`, fixtures a mano)
 cubren los cinco fallos por separado: parte respondida sin sus documentos,
 parte que debía abstenerse y respondió, cierre repetido y ausente, marcador
 huérfano y `parts` con longitud 1; más el caso correcto `both`, el `partial`
-correcto, el `none` correcto, el fallback de atribución por `document_ids` y
-el caso no-atribuible.
+correcto (el de FAC-VAL-009), el control `partial` del límite del corpus
+(FAC-VAL-011, con la parte de abejas absteniéndose y la de fotosíntesis
+respondiendo), el `none` correcto, el fallback de atribución por
+`document_ids`, el caso no-atribuible, y el resumen (`build_summary`):
+percentiles de latencia incluidos y composición desde filas con y sin
+`chat_latency`.
