@@ -6,6 +6,7 @@ Regenerado por `lesson.ps1 -Index`. No editar a mano.
 |---|---|---|---|---|
 | api | task_7832bedbdc99 | Una tarea añade una columna a un modelo y con ella una mi... | high | api/lessons/task_7832bedbdc99/EXPERIENCE.md |
 | chat | task_d21aa5cbd7fb | Una tarea añade a una respuesta generada un artefacto opc... | high | chat/lessons/task_d21aa5cbd7fb/EXPERIENCE.md |
+| default | task_9a1ae15609c0 | TODO: describe la situacion que dispara esta leccion (que... | low | default/lessons/task_9a1ae15609c0/EXPERIENCE.md |
 | orchestration | task_440d58ac8ee8 | Una tarea lleva [HARNESS-PROBE] en su spec: el bucle la d... | high | orchestration/lessons/task_440d58ac8ee8/EXPERIENCE.md |
 | orchestration | task_440d58ac8ee8-spec-inexistente | El `## Checks obligatorios` de la spec apunta a una ruta ... | high | orchestration/lessons/task_440d58ac8ee8-spec-inexistente/EXPERIENCE.md |
 | orchestration | task_7000f0aad22d | Primer review de una tarea despierta: `REVIEW=ACEPTADO` p... | high | orchestration/lessons/task_7000f0aad22d/EXPERIENCE.md |
