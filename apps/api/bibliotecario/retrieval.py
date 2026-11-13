@@ -161,6 +161,29 @@ def expand_context(db, candidates):
     return result
 
 
+def stage_counts(pools, merged, candidates_before, assessed, support, candidates_after, dropped_ids):
+    """Per-stage counters of one retrieval run: where the candidates went.
+
+    Pure instrumentation for the trace: it reads only counts and chunk ids, never
+    passages or titles. pools are the fused pool sizes per query, merged the
+    unique union, candidates_before the list the rerank produced (the same list
+    assess receives), assessed the candidates handed to the sufficiency
+    assessment, support the sources it returned, candidates_after those
+    surviving the post-assessment visibility control and dropped_ids the
+    chunk_ids that control discarded, in order. Broken invariants raise instead
+    of recording a lie; the sample keeps at most five ids so the stored run JSON
+    stays small.
+    """
+    visible, ids = candidates_after, list(dropped_ids)
+    dropped = assessed - visible
+    if min(candidates_before, assessed, support, visible) < 0 or visible > assessed \
+            or support > assessed or len(ids) != dropped:
+        raise ValueError("stage_counts_invariants")
+    return {"pools": list(pools), "merged": merged, "post_rerank": candidates_before,
+            "assessed": assessed, "support": support, "visible": visible,
+            "dropped_invisible": dropped, "dropped_sample": ids[:5]}
+
+
 def evidence_decision(db, settings, corpus, results, filtered=False, admin=True, assessment=None):
     if filtered:
         return {"action": "abstain", "reason": "filtered_scope_uncalibrated"}
@@ -276,9 +299,11 @@ async def retrieve(db, settings, clients, query, limit=10, document_id=None, adm
         rerank_query = query + " " + " ".join(facets) if facets else query
         ranking = await clients.rerank(rerank_query, [c["search_content"] for c in candidates])
         candidates = [candidates[row["index"]] | {"rerank_score": row["relevance_score"]} for row in ranking]
+    post_rerank = len(candidates)
     timing["reranking_ms"] = (perf_counter() - started) * 1000
     started = perf_counter()
     assessment = await assess(clients, query, candidates)
+    assessed, support = len(candidates), len(assessment.get("support", []))
     timing["sufficiency_ms"] = (perf_counter() - started) * 1000
     # A withdrawal/deletion during inference must invalidate the returned evidence.
     db.execute(text("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ"))
@@ -287,6 +312,7 @@ async def retrieve(db, settings, clients, query, limit=10, document_id=None, adm
         .join(Document, Document.active_version_id == DocumentVersion.id)
         .where(Chunk.id.in_(ids), Document.deleted_at.is_(None), Document.deletion_requested.is_(False),
                DocumentVersion.status.in_(["publicado", "indexando"]))).all())
+    dropped_ids = [cid for cid in ids if cid not in visible]
     candidates = [c for c in candidates if c["chunk_id"] in visible]
     changed = corpus_signature(db) != corpus
     decision = {"action": "abstain", "reason": "corpus_changed"} if changed else evidence_decision(
@@ -295,11 +321,17 @@ async def retrieve(db, settings, clients, query, limit=10, document_id=None, adm
     # Generation receives only the exact passages whose coverage was assessed.
     results = ([c for c in candidates if c["chunk_id"] in supporting]
                if assessment["action"] == "answer" else candidates)[:limit]
+    # Stage trace, always computed (flag on or off) from the lists this run
+    # already produced: no re-filtering, no decision change, counts plus at
+    # most five discarded ids.
+    stages = stage_counts(pool_sizes, len(merged), post_rerank, assessed, support,
+                          len(candidates), dropped_ids)
     return {"query": query, "candidates": candidates, "results": results,
             "pools": pools, "decision": decision,
             "scope": {"admin": admin, "document_id": document_id},
             "retrieval": {"facets": facets, "facet_error": facet_error, "merged": len(merged),
                           "pools": pool_sizes},
+            "stages": stages,
             "latency": {key: round(value, 2) for key, value in timing.items()},
             "corpus_signature": corpus, "model_signature": policy_signature(settings), "assessment": assessment}
 

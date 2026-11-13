@@ -24,6 +24,33 @@ Diagnóstico en el resultado del run: `result["retrieval"] = {"facets": [...], "
 
 El coste del reranker crece con el número de parejas consulta-documento. Reranquear una vez por aspecto multiplicaría esa llamada por 3 (original + 2 facets) sobre ~30 documentos cada una, y obligaría a fundir tres listas de `rerank_score` sin una base común comparable. La nota de diseño de la tarea lo prohíbe explícitamente salvo medición («nunca añadir 3 reranks sin medir»). La alternativa elegida — un rerank con la consulta compuesta — mantiene **una** llamada y un único `rerank_score` comparable entre sí, a cambio de cambiar su significado: pasa a medir «relevancia al conjunto de aspectos», no a la pregunta.
 
+### Traza por etapas
+
+Cada resultado de `retrieve` (y con él cada `RetrievalRun`) incluye una clave `stages` con los contadores de cada etapa del pipeline. Se calcula **siempre**, con la bandera encendida o apagada, sobre las listas que el turno ya produjo: no re-filtra nada, no cambia ninguna decisión ni el orden o el contenido de `candidates`/`results`. Solo guarda contadores y hasta cinco identificadores de fragmento — ningún pasaje, título o secreto — así que el JSON del run no crece de forma apreciable.
+
+| Contador | Significado |
+|---|---|
+| `pools` | Tamaño de cada pool fusionado por consulta (igual que `retrieval.pools`). |
+| `merged` | Unión por `chunk_id`: candidatos únicos tras la fusión, antes de `expand_context`. |
+| `post_rerank` | Candidatos que produce el rerank (la lista que recibe `assess`). |
+| `assessed` | Candidatos entregados a la evaluación de suficiencia; `assess` aplica su tope interno de 60 fuentes sobre esa lista. |
+| `support` | Soporte devuelto por el evaluador (`len(assessment.support)`). |
+| `visible` | Candidatos que sobreviven al control de visibilidad posterior a la evaluación. |
+| `dropped_invisible` | Cuántos descartó ese control: `assessed - visible` (nunca negativo). |
+| `dropped_sample` | Hasta 5 `chunk_id` descartados, en el orden de los candidatos. |
+
+Invariantes (validados por `stage_counts`, que falla con `ValueError` si se rompen): `visible <= assessed`, `dropped_invisible = assessed - visible`, `support <= assessed`, y la muestra descartada tiene exactamente `dropped_invisible` ids antes de truncarse a 5.
+
+El ejemplo de la aceptación de H7 — 65 candidatos unidos y un run guardado con `candidates=0`, `results=0` — se lee así con la traza:
+
+```json
+"stages": {"pools": [30, 30, 30], "merged": 65, "post_rerank": 65,
+           "assessed": 65, "support": 0, "visible": 0, "dropped_invisible": 65,
+           "dropped_sample": ["…", "…", "…", "…", "…"]}
+```
+
+Aquí el filtro de visibilidad **vació la evidencia**: los 65 candidatos llegaron al evaluador (`assessed=65`) y ninguno sobrevivió al control posterior (`dropped_invisible=65`), con los cinco primeros ids a la vista para auditar qué documentos eran. En cambio, un `assessed=65` con `visible=65` y `support=0` sería lo contrario: el **evaluador** abstuvo y el filtro no descartó nada. Y un `post_rerank=0` con `merged>0` señala el reranker, no el filtro. La lectura decide el siguiente paso sin conjeturas: `dropped_invisible=assessed` → tarea sobre el control de visibilidad; `support=0` con `visible>0` → criterio de cobertura del evaluador.
+
 ## Regla de firma
 
 `sufficiency.policy_signature` solo añade `DECOMPOSE_PROMPT`, `DECOMPOSE_MAX_TOKENS` y el esquema `Facets` al contrato **con la bandera encendida**. Con la bandera apagada el contrato es byte a byte el de H4: `policy_signature(settings)` devuelve exactamente el digest de `main` (golden test `test_policy_signature_stays_main_until_the_flag_turns_on`, con el digest literal capturado antes del cambio). Si un solo byte del contrato cambiara con la bandera apagada, el chat quedaría `uncalibrated` (fail-closed) sin que nadie hubiera recalibrado: el golden test existe para impedirlo.
@@ -57,6 +84,7 @@ Apagar la bandera: `BIB_MULTI_QUERY=false` (o simplemente retirarla; el defecto 
 ## Pruebas
 
 - `apps/api/tests/test_multi_query.py` (15): esquema cerrado y acotado; facets autocontenidas con dedup, descarte de repeticiones y tope de 2; `decompose` nunca lanza (error de proveedor, timeout, conexión, JSON inválido, fuera de esquema) y registra un código fijo; bandera apagada no invoca `decompose` y mantiene el camino de hoy; firma golden (apagada == `main`, encendida != `main`); 2 facets → una sola llamada de embed, tres pools con vectores propios, unión sin duplicados, un solo rerank con la consulta compuesta y un `expand_context`; fragmento compartido entre pools contado una vez con canales de ambos; `assess` recibe la unión ordenada con la pregunta original y conserva su tope de 60; fallo y crash de `decompose` degradan al camino de hoy con `facet_error` registrado; diagnóstico sin textos de pasajes; tabla de coste.
+- `apps/api/tests/test_retrieval_stages.py` (16): helper `stage_counts` puro (65→0, 65→65, 30→28 con dos ids de muestra, truncado a 5, invariantes rotos rechazados) y trazas de `retrieve` con los dobles de `test_multi_query.py`: `stages` cuadra con `pools`, `merged`, `len(candidates)`, `len(results)` y `len(support)` del mismo resultado, con la bandera encendida y apagada; el control de visibilidad deja muestra de lo descartado en orden; turno vacío con todos los contadores a cero; traza sin pasajes ni títulos.
 - Regresión: `test_h4.py`, `test_sufficiency.py`, `test_retrieval_context.py`, `test_domain_agnostic.py` sin cambios y en verde.
 
 
