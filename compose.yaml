@@ -2,6 +2,7 @@ name: bibliotecario
 
 x-app-env: &app-env
   BIB_ENVIRONMENT: ${BIB_ENVIRONMENT:-development}
+  BIB_MULTI_QUERY: ${BIB_MULTI_QUERY:-0}
   BIB_DATABASE_URL: postgresql+psycopg://bibliotecario:${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD en .env}@postgres:5432/bibliotecario?connect_timeout=5
   BIB_STORAGE_PATH: /data/documents
   BIB_PUBLIC_ORIGIN: ${BIB_PUBLIC_ORIGIN:-http://localhost:3000}
