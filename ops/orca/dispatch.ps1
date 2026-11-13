@@ -65,6 +65,20 @@ function Invoke-WorkerDispatch {
         if (-not $worktreeResponse.ok) {
             $existing = Invoke-Orca worktree show --worktree "name:$name" --json
             if (-not $existing.ok) {
+                # Bug visto en h7 (100 worktrees duplicados): Orca crea el
+                # worktree con sufijo (-2, -3...) cuando el nombre existe, y el
+                # dispatch pedia el nombre exacto y fallaba en bucle. Buscar el
+                # existente por prefijo antes de rendirse.
+                $repoRoot = Get-RepoRoot
+                $wsRoot = Split-Path (Split-Path $repoRoot -Parent) -Parent
+                $candidate = Get-ChildItem (Join-Path (Join-Path $wsRoot 'workspaces') ((Split-Path $repoRoot -Leaf))) -Directory -ErrorAction SilentlyContinue |
+                    Where-Object { $_.Name -eq $name -or $_.Name -match "^$([regex]::Escape($name))-\d+$" } |
+                    Sort-Object Name | Select-Object -First 1
+                if ($candidate) {
+                    $existing = Invoke-Orca worktree show --worktree "path:$($candidate.FullName -replace '\\','/')" --json
+                }
+            }
+            if (-not $existing.ok) {
                 throw "No se pudo crear ni reutilizar el worktree '$name': $($worktreeResponse.error.message)"
             }
             $worktree = $existing.result.worktree
