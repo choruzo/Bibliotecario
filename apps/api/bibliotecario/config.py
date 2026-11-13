@@ -37,6 +37,13 @@ class Settings(BaseSettings):
     # defecto: el umbral calibrado solo vale para el score de consulta única, así
     # que exige recalibración antes de encenderla. Ver docs/h7/multi-query.md.
     multi_query: bool = False
+    # Respuesta por facetas (H8): una pregunta de mode="explain" que el
+    # planificador parte en exactamente dos facetas se responde con dos
+    # explicaciones grounded independientes y una composición determinista que
+    # no afirma relaciones. Independiente de multi_query: cada faceta es un
+    # turno normal (misma retrieval, mismo assess, mismo umbral) y la política
+    # no cambia, así que no entra en policy_signature. Ver docs/h8/answer-per-facet.md.
+    answer_per_facet: bool = False
     sufficiency_reasoning_effort: str = Field(default="low", pattern="^(low|medium|high|disabled)$")
     worker_interval_seconds: float = Field(default=15, ge=1, le=60)
     upload_max_bytes: int = Field(default=100 * 1024 * 1024, ge=1024, le=1024 * 1024 * 1024)
