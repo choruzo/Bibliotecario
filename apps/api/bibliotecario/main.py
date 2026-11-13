@@ -40,7 +40,7 @@ def database_check(engine):
             if engine.dialect.name == "postgresql":
                 version = connection.scalar(text("SELECT extversion FROM pg_extension WHERE extname='vector'"))
                 revision = connection.scalar(text("SELECT version_num FROM alembic_version"))
-                if not version or revision != "0006_h5":
+                if not version or revision != "0007_h6":
                     return {"status": "unavailable", "error": "schema_or_pgvector_missing"}
         return {"status": "available"}
     except Exception:

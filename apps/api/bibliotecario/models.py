@@ -202,6 +202,7 @@ class Message(Base):
     content: Mapped[str] = mapped_column(Text)
     status: Mapped[str] = mapped_column(String(16))
     sources: Mapped[list] = mapped_column(JSON, default=list)
+    figures: Mapped[list] = mapped_column(JSON, default=list, server_default="[]")
     retrieval_run_id: Mapped[str | None] = mapped_column(ForeignKey("retrieval_runs.id"))
     created_at: Mapped[int] = mapped_column(Integer)
     __table_args__ = (UniqueConstraint("conversation_id", "number"),)
