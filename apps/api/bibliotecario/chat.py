@@ -5,6 +5,7 @@ import re
 import time
 import unicodedata
 from time import perf_counter
+from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import FileResponse, StreamingResponse
@@ -12,6 +13,8 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func, select, update
 
 from .auth import current_identity, database, require_csrf
+from .explain import (EXPLAIN_SYSTEM, synthesis_fallback, synthesis_schema, validate_synthesis,
+                      verify_synthesis)
 from .models import (Chunk, Conversation, Document, DocumentFile, DocumentVersion,
                      Message, NormalizedRevision, RetrievalRun, new_id)
 from .retrieval import retrieve, corpus_signature
@@ -49,6 +52,8 @@ class EditConversation(BaseModel):
 
 class Turn(BaseModel):
     content: str = Field(min_length=1, max_length=1000)
+    # Only «answer» and «explain»; any other value is rejected with 422 before the turn starts.
+    mode: Literal["answer", "explain"] = "answer"
 
 
 def owned(db, cid, uid):
@@ -377,30 +382,45 @@ def send(cid: str, body: Turn, request: Request, identity=Depends(require_csrf),
                     yield event("status", {"message": "Preparando y validando las citas…"})
                     phase = perf_counter()
                     LLM_PHASE.set("generation")
-                    prompt = [{"role": "system", "content": SYSTEM}, {"role": "user", "content": json.dumps({
+                    explain = body.mode == "explain"
+                    prompt = [{"role": "system", "content": EXPLAIN_SYSTEM if explain else SYSTEM},
+                              {"role": "user", "content": json.dumps({
                         "question": question, "query": query, "preferences": preferences,
                         "sources": sources}, ensure_ascii=False)}]
                     raw = "".join([part async for part in clients.stream_generate(prompt, max_tokens=4000,
-                                                 response_schema=answer_schema(sources))])
+                                                 response_schema=synthesis_schema(sources) if explain
+                                                 else answer_schema(sources))])
                     timing["generation_ms"] = (perf_counter() - phase) * 1000
                     try:
-                        content, used, validation = validate_answer(attach_quotes(raw, sources), sources)
+                        content, used, validation = (validate_synthesis(raw, sources) if explain else
+                                                     validate_answer(attach_quotes(raw, sources), sources))
                         phase = perf_counter()
-                        await verify_grounding(clients, validation)
+                        if explain:
+                            await verify_synthesis(clients, validation)
+                        else:
+                            await verify_grounding(clients, validation)
                         timing["verification_ms"] = (perf_counter() - phase) * 1000
                         status = "completed"
                         outcome_reason = "grounded"
                     except (ValueError, TypeError, AttributeError) as exc:
-                        content, used, status = ABSTENTION, [], "abstained"
                         known = isinstance(exc, ValueError) and exc.args and exc.args[0] in {
-                            "unsupported_claim", "invalid_answer", "invalid_claim", "no_evidence", "grounding_rejected", "incomplete_answer", "unsupported_number"}
-                        outcome_reason = exc.args[0] if known else "invalid_answer"
-                        if outcome_reason in {'grounding_rejected', 'incomplete_answer', 'unsupported_number'}:
-                            # This alternative contains only verified source strings,
-                            # rather than a second attempt at untrusted model prose.
-                            content, used, validation = extractive_answer(sources)
+                            "unsupported_claim", "invalid_answer", "invalid_claim", "no_evidence", "grounding_rejected", "incomplete_answer", "unsupported_number",
+                            "invalid_synthesis", "citation_unknown"}
+                        outcome_reason = exc.args[0] if known else ("invalid_synthesis" if explain else "invalid_answer")
+                        if explain:
+                            # No rejected synthesis is ever published partially: the turn
+                            # completes with the verified literal extracts instead.
+                            content, used, validation = synthesis_fallback(sources)
                             fallback = {"reason": outcome_reason, "detail": exc.args[1] if len(exc.args) > 1 else None}
                             status, outcome_reason = 'completed', 'grounded_extract'
+                        else:
+                            content, used, status = ABSTENTION, [], "abstained"
+                            if outcome_reason in {'grounding_rejected', 'incomplete_answer', 'unsupported_number'}:
+                                # This alternative contains only verified source strings,
+                                # rather than a second attempt at untrusted model prose.
+                                content, used, validation = extractive_answer(sources)
+                                fallback = {"reason": outcome_reason, "detail": exc.args[1] if len(exc.args) > 1 else None}
+                                status, outcome_reason = 'completed', 'grounded_extract'
                 with sessions() as work:
                     conv = work.scalar(select(Conversation).where(Conversation.id == cid).with_for_update())
                     if conv.turn_token != token or conv.busy_until <= time.time():
@@ -424,7 +444,11 @@ def send(cid: str, body: Turn, request: Request, identity=Depends(require_csrf),
                     recorded = work.get(RetrievalRun, run_id)
                     timing["total_ms"] = (perf_counter() - started) * 1000
                     recorded.result = recorded.result | {"chat_outcome": {"status": status, "reason": outcome_reason}
-                                                         | ({"fallback": fallback} if fallback and status == "completed" else {}),
+                                                         | ({"fallback": fallback} if fallback and status == "completed" else {})
+                                                         # The mode is only written for «explain»: an absent key
+                                                         # means «answer», so answer turns keep the previous
+                                                         # result shape byte-identical (see docs/h6/explain-mode.md).
+                                                         | ({"mode": "explain"} if body.mode == "explain" else {}),
                                                          "chat_latency": {k: round(v, 2) for k, v in timing.items()},
                                                          "llm": summarize_calls(calls) | {"trace": calls}}
                     conv.turn_token, conv.busy_until, conv.updated_at = None, 0, int(time.time())
